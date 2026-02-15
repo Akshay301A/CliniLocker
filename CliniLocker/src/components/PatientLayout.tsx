@@ -47,7 +47,7 @@ export function PatientLayout({ children }: { children: ReactNode }) {
           <img
             src="/logo%20(2).png"
             alt="CliniLocker"
-            className="h-9 w-auto shrink-0 object-contain object-left sm:h-10"
+            className="h-[150px] w-auto shrink-0 object-contain object-left"
           />
           <button className="ml-auto md:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="h-5 w-5 text-sidebar-foreground" />
