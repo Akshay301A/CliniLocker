@@ -355,12 +355,31 @@ const ReportViewer = () => {
                 <div className="flex-1 min-h-[480px] overflow-hidden flex flex-col">
                   <div className="flex-1 min-h-0 overflow-hidden">
                     {pdfUrl ? (
-                      <iframe
-                        src={`${pdfUrl}#toolbar=0&navpanes=0`}
-                        title={t("Report PDF")}
-                        style={{ width: "calc(100% + 14px)", height: "100%", border: "none" }}
-                        className="block min-h-[480px]"
-                      />
+                      <>
+                        {/* Mobile: many browsers don't render PDF in iframe — show Open PDF button instead */}
+                        <div className="flex h-[480px] flex-col items-center justify-center text-center p-6 md:hidden bg-muted/30">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 mb-4">
+                            <FileText className="h-7 w-7 text-primary" />
+                          </div>
+                          <p className="font-semibold text-foreground">{report?.test_name ?? t("Report PDF")}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">{t("Open the report in a new tab to view or download.")}</p>
+                          <div className="mt-6 flex flex-col sm:flex-row gap-3 w-full max-w-xs">
+                            <Button className="gap-2 min-h-[44px]" onClick={handleOpenInNewTab}>
+                              <ExternalLink className="h-4 w-4" /> {t("Open PDF")}
+                            </Button>
+                            <Button variant="outline" className="gap-2 min-h-[44px]" onClick={handleDownload} disabled={downloading}>
+                              {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} {t("Download PDF")}
+                            </Button>
+                          </div>
+                        </div>
+                        {/* Desktop: embedded PDF viewer */}
+                        <iframe
+                          src={`${pdfUrl}#toolbar=0&navpanes=0`}
+                          title={t("Report PDF")}
+                          style={{ width: "calc(100% + 14px)", height: "100%", border: "none" }}
+                          className="hidden md:block min-h-[480px]"
+                        />
+                      </>
                     ) : (
                       <div className="flex h-[480px] flex-col items-center justify-center text-center text-muted-foreground p-6">
                         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 mb-4">
