@@ -1,11 +1,23 @@
-# Deploying to Vercel (e.g. clinilocker.com)
+# Deploying CliniLocker (e.g. clinilocker.com)
 
-The frontend app lives in the **`CliniLocker`** subfolder. To fix "Could not resolve entry module index.html":
+**Supabase is already live.** Migrations are applied; new ones for new features can be run later when needed.
 
-1. In **Vercel Dashboard** → your project → **Settings** → **General**.
-2. Under **Root Directory**, click **Edit**, enter **`CliniLocker`**, and save.
+**For deployment:** Only the frontend is deployed via Vercel. The `supabase/` folder is in the repo for version control; Vercel does not deploy it.
+
+---
+
+## Vercel (frontend)
+
+1. Vercel Dashboard → your project → **Settings** → **General**.
+2. **Root Directory** → Edit → enter **`CliniLocker`** → Save.
 3. Redeploy (or push a new commit).
 
-Vercel will then run `npm install` and `npm run build` inside `CliniLocker`, where `index.html` and the Vite config are located.
+**Environment variables:**  
+Vercel → Settings → Environment Variables. Add at least:
 
-**Environment variables:** In Vercel → Settings → Environment Variables, add your production values (e.g. `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and any others from `.env.example`). Do not commit `.env` to the repo.
+- `VITE_SUPABASE_URL` – your Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` – your Supabase anon key
+
+Add any other vars from `CliniLocker/.env.example`. Do not commit `.env` to the repo.
+
+**Auth redirects:** In Supabase → Authentication → URL Configuration, add your production URL (e.g. `https://clinilocker.com/**`) to Redirect URLs and set Site URL so login works on the live site.
