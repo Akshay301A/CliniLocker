@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { Shield } from "lucide-react";
 
 export function Footer() {
   return (
@@ -8,8 +7,8 @@ export function Footer() {
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
           <div className="sm:col-span-2 md:col-span-1">
             <Link to="/" className="inline-flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
-                <Shield className="h-4 w-4 text-primary-foreground" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg gradient-primary overflow-hidden">
+                <img src="/Logo.svg" alt="CliniLocker" className="h-4 w-4 object-contain" />
               </div>
               <span className="font-display text-lg font-bold text-foreground">CliniLocker</span>
             </Link>

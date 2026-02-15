@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Shield, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
@@ -17,8 +17,8 @@ export function Navbar() {
     <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
       <div className="container flex h-14 min-h-[3.5rem] sm:h-16 items-center justify-between gap-2 px-4 sm:px-6">
         <Link to="/" className="flex min-h-[44px] min-w-[44px] items-center gap-2 md:min-w-0">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-primary">
-            <Shield className="h-5 w-5 text-primary-foreground" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-primary overflow-hidden">
+            <img src="/Logo.svg" alt="CliniLocker" className="h-5 w-5 object-contain" />
           </div>
           <span className="font-display text-lg font-bold text-foreground sm:text-xl">CliniLocker</span>
         </Link>

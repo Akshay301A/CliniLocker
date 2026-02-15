@@ -3,7 +3,6 @@ import { PublicLayout } from "@/components/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { createLabAndJoin } from "@/lib/api";
@@ -57,8 +56,8 @@ const LabCompleteSignupPage = () => {
       <section className="flex min-h-[calc(100vh-10rem)] items-center justify-center px-4 py-8 sm:py-12">
         <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-elevated sm:p-8">
           <div className="mb-5 sm:mb-6 text-center">
-            <div className="mx-auto mb-3 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl gradient-primary">
-              <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
+            <div className="mx-auto mb-3 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl gradient-primary overflow-hidden">
+              <img src="/Logo.svg" alt="CliniLocker" className="h-6 w-6 sm:h-7 sm:w-7 object-contain" />
             </div>
             <h1 className="font-display text-xl font-bold text-foreground sm:text-2xl">Complete Lab Setup</h1>
             <p className="mt-1 text-xs sm:text-sm text-muted-foreground">

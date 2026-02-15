@@ -1,13 +1,12 @@
 import { Link } from "react-router-dom";
 import { PublicLayout } from "@/components/PublicLayout";
-import { Shield } from "lucide-react";
 
 const PrivacyPolicy = () => (
   <PublicLayout>
     <section className="py-12 sm:py-16 md:py-20">
       <div className="container px-4 max-w-3xl mx-auto">
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8">
-          <Shield className="h-4 w-4" /> Back to CliniLocker
+          <img src="/favicon.png" alt="" className="h-4 w-4 object-contain" /> Back to CliniLocker
         </Link>
         <h1 className="font-display text-2xl font-extrabold text-foreground sm:text-3xl md:text-4xl">
           Privacy Policy
