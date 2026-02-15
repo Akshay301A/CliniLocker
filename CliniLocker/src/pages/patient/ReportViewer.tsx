@@ -170,6 +170,15 @@ const ReportViewer = () => {
     window.open(url, "_blank");
   };
 
+  /** Opens the actual PDF file in a new tab (for mobile "Open PDF" button). */
+  const handleOpenPdfInNewTab = () => {
+    if (!pdfUrl) {
+      toast.error(t("Report file not available."));
+      return;
+    }
+    window.open(pdfUrl, "_blank");
+  };
+
   const handleShareWhatsApp = async () => {
     const url = await getShareableUrl();
     const text = encodeURIComponent(
@@ -364,7 +373,7 @@ const ReportViewer = () => {
                           <p className="font-semibold text-foreground">{report?.test_name ?? t("Report PDF")}</p>
                           <p className="mt-1 text-sm text-muted-foreground">{t("Open the report in a new tab to view or download.")}</p>
                           <div className="mt-6 flex flex-col sm:flex-row gap-3 w-full max-w-xs">
-                            <Button className="gap-2 min-h-[44px]" onClick={handleOpenInNewTab}>
+                            <Button className="gap-2 min-h-[44px]" onClick={handleOpenPdfInNewTab}>
                               <ExternalLink className="h-4 w-4" /> {t("Open PDF")}
                             </Button>
                             <Button variant="outline" className="gap-2 min-h-[44px]" onClick={handleDownload} disabled={downloading}>
