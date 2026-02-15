@@ -255,6 +255,68 @@ export async function deleteFamilyMember(id: string): Promise<{ error?: string }
   return { error: error?.message };
 }
 
+/** Reports shared with the current user (via report_access). For "Family Reports" page. */
+export async function getReportsSharedWithMe(): Promise<ReportWithLab[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data: accessList } = await supabase
+    .from("report_access")
+    .select("report_id")
+    .eq("user_id", user.id);
+  if (!accessList?.length) return [];
+  const ids = accessList.map((a) => a.report_id);
+  const { data: reports, error } = await supabase
+    .from("reports")
+    .select("*, labs(name)")
+    .in("id", ids)
+    .order("uploaded_at", { ascending: false });
+  if (error) return [];
+  return (reports ?? []) as ReportWithLab[];
+}
+
+/** Grant a user (e.g. family member) access to a report. Caller must own the report. */
+export async function grantReportAccessToUser(
+  reportId: string,
+  sharedWithUserId: string
+): Promise<{ error?: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+  const { error } = await supabase.from("report_access").insert({
+    report_id: reportId,
+    user_id: sharedWithUserId,
+    granted_by: user.id,
+  });
+  if (error) {
+    if (error.code === "23505") return {}; // unique violation = already shared
+    return { error: error.message };
+  }
+  return {};
+}
+
+/** Create invite for a family member; returns invite link. Family member must create account via this link. */
+export async function createFamilyInvite(familyMemberId: string): Promise<{ link: string } | { error: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+  const token = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const { data: invite, error: insertError } = await supabase
+    .from("family_invites")
+    .insert({ family_member_id: familyMemberId, token, expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() })
+    .select("id")
+    .single();
+  if (insertError) return { error: insertError.message };
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return { link: `${origin}/patient/accept-invite?token=${encodeURIComponent(token)}` };
+}
+
+/** Accept family invite (call after signup). Links current user to the family_member. */
+export async function acceptFamilyInvite(token: string): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("accept_family_invite", { p_token: token });
+  if (error) return { ok: false, error: error.message };
+  const result = data as { ok?: boolean; error?: string } | null;
+  if (!result?.ok) return { ok: false, error: result?.error ?? "Invalid or expired invite" };
+  return { ok: true };
+}
+
 // --- Lab: reports, patients (lab_patient_links) ---
 export async function getLabReports(labId: string): Promise<Report[]> {
   const { data, error } = await supabase

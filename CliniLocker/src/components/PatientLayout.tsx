@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Upload, FileText, Users, Settings, LogOut, Menu, X, User } from "lucide-react";
+import { LayoutDashboard, Upload, FileText, Users, Share2, Settings, LogOut, Menu, X, User } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const navItems = [
   { icon: LayoutDashboard, labelKey: "Dashboard", to: "/patient/dashboard", iconColor: "text-blue-600" },
   { icon: FileText, labelKey: "My Reports", to: "/patient/reports", iconColor: "text-emerald-600" },
+  { icon: Share2, labelKey: "Family Reports", to: "/patient/family-reports", iconColor: "text-indigo-600" },
   { icon: Upload, labelKey: "Upload Reports", to: "/patient/upload", iconColor: "text-amber-600" },
   { icon: Users, labelKey: "Family Members", to: "/patient/family", iconColor: "text-violet-600" },
   { icon: User, labelKey: "My Profile", to: "/patient/profile", iconColor: "text-teal-600" },

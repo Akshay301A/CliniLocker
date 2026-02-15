@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { Users, Plus, FileText, Phone, Calendar, Trash2 } from "lucide-react";
+import { Users, Plus, Phone, Calendar, Trash2, Copy, Link2 } from "lucide-react";
 import { PatientLayout } from "@/components/PatientLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { getFamilyMembers, insertFamilyMember, deleteFamilyMember } from "@/lib/api";
+import { getFamilyMembers, insertFamilyMember, deleteFamilyMember, createFamilyInvite } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { FamilyMember } from "@/lib/supabase";
 
@@ -20,6 +20,7 @@ const PatientFamilyMembers = () => {
   const [phone, setPhone] = useState("");
   const [dob, setDob] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [inviteLink, setInviteLink] = useState<{ name: string; link: string } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -36,24 +37,36 @@ const PatientFamilyMembers = () => {
       toast.error(t("Please enter name."));
       return;
     }
+    const phoneTrim = phone.trim();
+    if (!phoneTrim) {
+      toast.error(t("Phone number is required. Family members must create an account."));
+      return;
+    }
     setSubmitting(true);
     const result = await insertFamilyMember({
       name: name.trim(),
       relation,
-      phone: phone.trim() || null,
+      phone: phoneTrim,
       date_of_birth: dob || null,
     });
-    setSubmitting(false);
     if ("error" in result) {
+      setSubmitting(false);
       toast.error(result.error);
       return;
     }
-    setMembers((prev) => [...prev, { id: result.id, user_id: "", name: name.trim(), relation, phone: phone.trim() || null, date_of_birth: dob || null }]);
+    const inviteResult = await createFamilyInvite(result.id);
+    setSubmitting(false);
+    if ("error" in inviteResult) {
+      toast.error(inviteResult.error);
+      getFamilyMembers().then(setMembers);
+      return;
+    }
+    setInviteLink({ name: name.trim(), link: inviteResult.link });
     setShowForm(false);
     setName("");
     setPhone("");
     setDob("");
-    toast.success(t("Family member added!"));
+    toast.success(t("Invite created. Send the link to {{name}} so they can create an account.", { name: name.trim() }));
     getFamilyMembers().then(setMembers);
   };
 
@@ -80,9 +93,46 @@ const PatientFamilyMembers = () => {
           </Button>
         </div>
 
+        <p className="text-sm text-muted-foreground">
+          {t("Everyone must have an account. Add a family member and send them an invite link to sign up.")}
+        </p>
+
+        {inviteLink && (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 sm:p-5 space-y-3">
+            <div className="flex items-center gap-2 text-foreground font-medium">
+              <Link2 className="h-4 w-4 text-primary" />
+              {t("Invite link for {{name}}", { name: inviteLink.name })}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {t("Send this link so they can create an account. The link expires in 7 days.")}
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              <Input readOnly value={inviteLink.link} className="font-mono text-xs flex-1 min-w-0" />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(inviteLink.link);
+                  toast.success(t("Link copied!"));
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" /> {t("Copy")}
+              </Button>
+            </div>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setInviteLink(null)}>
+              {t("Done")}
+            </Button>
+          </div>
+        )}
+
         {showForm && (
           <form onSubmit={handleAdd} className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
-            <h3 className="font-display text-lg font-semibold text-foreground">{t("Add Family Member")}</h3>
+            <h3 className="font-display text-lg font-semibold text-foreground">{t("Invite Family Member")}</h3>
+            <p className="text-sm text-muted-foreground">
+              {t("They will need to create a CliniLocker account using the invite link.")}
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label htmlFor="memberName">{t("Full Name")}</Label>
@@ -100,8 +150,8 @@ const PatientFamilyMembers = () => {
                 </select>
               </div>
               <div>
-                <Label htmlFor="memberPhone">{t("Phone Number")}</Label>
-                <Input id="memberPhone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 ..." />
+                <Label htmlFor="memberPhone">{t("Phone Number")} *</Label>
+                <Input id="memberPhone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 ..." required />
               </div>
               <div>
                 <Label htmlFor="memberDob">{t("Date of Birth")}</Label>
@@ -109,7 +159,7 @@ const PatientFamilyMembers = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button type="submit" disabled={submitting}>{submitting ? t("Adding…") : t("Add Member")}</Button>
+              <Button type="submit" disabled={submitting}>{submitting ? t("Creating invite…") : t("Create invite")}</Button>
               <Button type="button" variant="outline" onClick={() => setShowForm(false)}>{t("Cancel")}</Button>
             </div>
           </form>
@@ -131,7 +181,14 @@ const PatientFamilyMembers = () => {
                       </div>
                       <div className="min-w-0">
                         <h3 className="font-medium text-foreground truncate">{m.name}</h3>
-                        <Badge variant="secondary" className="mt-0.5">{t(m.relation)}</Badge>
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          <Badge variant="secondary">{t(m.relation)}</Badge>
+                          {m.linked_user_id ? (
+                            <Badge variant="outline" className="text-green-600 border-green-600/30">{t("Has account")}</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-amber-600 border-amber-600/30">{t("Invite pending")}</Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <button type="button" onClick={() => handleRemove(m.id)} className="touch-target flex shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-destructive transition-colors">

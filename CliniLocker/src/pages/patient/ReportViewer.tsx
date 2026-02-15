@@ -39,6 +39,7 @@ import {
   getSignedUrl,
   createReportShareToken,
   getFamilyMembers,
+  grantReportAccessToUser,
   extractTextFromPdfUrl,
   analyzeReportText,
   type ReportAnalysis,
@@ -207,6 +208,22 @@ const ReportViewer = () => {
     window.location.href = `sms:?body=${body}`;
   };
 
+  const handleShareWithFamilyMember = async (member: { id: string; name: string; linked_user_id?: string | null }) => {
+    if (!id) return;
+    if (member.linked_user_id) {
+      const result = await grantReportAccessToUser(id, member.linked_user_id);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(t("Report shared with") + ` ${member.name}. ` + t("They can see it under Family Reports."));
+    } else {
+      const url = await getShareableUrl();
+      await navigator.clipboard.writeText(url);
+      toast.success(t("Invite link copied. Send it to") + ` ${member.name} ` + t("so they can sign up and view the report."));
+    }
+  };
+
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async () => {
@@ -334,10 +351,14 @@ const ReportViewer = () => {
                         {familyMembers.map((member) => (
                           <DropdownMenuItem
                             key={member.id}
-                            onClick={handleCopyLink}
+                            onClick={() => handleShareWithFamilyMember(member)}
                             className="gap-2 cursor-pointer"
                           >
-                            <Users className="h-4 w-4" /> {member.name} ({member.relation})
+                            <Users className="h-4 w-4" />
+                            {member.name} ({member.relation})
+                            {!member.linked_user_id && (
+                              <span className="ml-1 text-xs text-muted-foreground">({t("invite pending")})</span>
+                            )}
                           </DropdownMenuItem>
                         ))}
                       </>

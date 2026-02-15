@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { PublicLayout } from "@/components/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { updateProfile } from "@/lib/api";
 
 const PatientLoginPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/patient/dashboard";
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -55,7 +57,7 @@ const PatientLoginPage = () => {
     // Sync profile phone so RLS shows reports linked by this phone (e.g. from lab uploads)
     await updateProfile({ phone: fullPhone });
     toast.success("Welcome!");
-    navigate("/patient/dashboard", { replace: true });
+    navigate(redirectTo, { replace: true });
   };
 
   const handleGoogleLogin = async () => {

@@ -1,6 +1,6 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FileText, Upload, Users, TrendingUp, Calendar, Shield, Sparkles, Heart } from "lucide-react";
+import { FileText, Upload, Users, Share2, TrendingUp, Calendar, Shield, Sparkles, Heart } from "lucide-react";
 import { PatientLayout } from "@/components/PatientLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getPatientReports, getFamilyMembers, getProfile } from "@/lib/api";
@@ -204,6 +204,13 @@ const PatientDashboard = () => {
             <div className="min-w-0">
               <h3 className="font-display font-semibold text-foreground">{t("Upload Report")}</h3>
               <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{t("Add reports from other labs or clinics.")}</p>
+            </div>
+          </Link>
+          <Link to="/patient/family-reports" className="group flex min-h-[44px] gap-3 rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card transition-all hover:shadow-hover hover:border-primary/30">
+            <Share2 className="h-7 w-7 sm:h-8 sm:w-8 text-primary shrink-0" />
+            <div className="min-w-0">
+              <h3 className="font-display font-semibold text-foreground">{t("Family Reports")}</h3>
+              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{t("Reports shared with you by family.")}</p>
             </div>
           </Link>
           <Link to="/patient/family" className="group flex min-h-[44px] gap-3 rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card transition-all hover:shadow-hover hover:border-primary/30">

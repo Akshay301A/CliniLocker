@@ -24,6 +24,8 @@ import PatientDashboard from "./pages/patient/Dashboard";
 import PatientMyReports from "./pages/patient/MyReports";
 import PatientUploadReports from "./pages/patient/UploadReports";
 import PatientFamilyMembers from "./pages/patient/FamilyMembers";
+import PatientFamilyReports from "./pages/patient/FamilyReports";
+import AcceptInvite from "./pages/patient/AcceptInvite";
 import PatientSettings from "./pages/patient/Settings";
 import PatientMyProfile from "./pages/patient/MyProfile";
 import ReportViewer from "./pages/patient/ReportViewer";
@@ -50,6 +52,7 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/lab/complete-signup" element={<LabCompleteSignup />} />
             <Route path="/patient-login" element={<PatientLogin />} />
+            <Route path="/patient/accept-invite" element={<AcceptInvite />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/lab/dashboard" element={<ProtectedRoute requiredRole="lab"><LabDashboard /></ProtectedRoute>} />
@@ -60,6 +63,7 @@ const App = () => (
             <Route path="/patient/dashboard" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientDashboard /></LanguageProvider></ProtectedRoute>} />
             <Route path="/patient/reports" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientMyReports /></LanguageProvider></ProtectedRoute>} />
             <Route path="/patient/upload" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientUploadReports /></LanguageProvider></ProtectedRoute>} />
+            <Route path="/patient/family-reports" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientFamilyReports /></LanguageProvider></ProtectedRoute>} />
             <Route path="/patient/family" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientFamilyMembers /></LanguageProvider></ProtectedRoute>} />
             <Route path="/patient/profile" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientMyProfile /></LanguageProvider></ProtectedRoute>} />
             <Route path="/patient/settings" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientSettings /></LanguageProvider></ProtectedRoute>} />
