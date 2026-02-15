@@ -1,0 +1,8 @@
+# Allow translate to be called with anon key (no user JWT required).
+# The function only translates text; it does not access user data.
+[functions.translate]
+verify_jwt = false
+
+# analyze-report: OpenAI analysis of report text. No report data is stored.
+[functions.analyze-report]
+verify_jwt = false

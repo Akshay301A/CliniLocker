@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 33% 98%;
+    --foreground: 215 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    --primary: 211 65% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 215 25% 15%;
+
+    --muted: 210 30% 95%;
+    --muted-foreground: 215 15% 50%;
+
+    --accent: 168 55% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 25% 90%;
+    --input: 214 25% 90%;
+    --ring: 211 65% 52%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 25% 30%;
+    --sidebar-primary: 211 65% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 215 25% 15%;
+    --sidebar-border: 214 25% 92%;
+    --sidebar-ring: 211 65% 52%;
+
+    /* Custom tokens */
+    --success: 152 55% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 100%;
+    --info: 211 65% 52%;
+    --info-foreground: 0 0% 100%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(211 65% 52%), hsl(211 75% 62%));
+    --gradient-hero: linear-gradient(135deg, hsl(210 33% 98%), hsl(211 50% 95%));
+    --gradient-accent: linear-gradient(135deg, hsl(168 55% 45%), hsl(168 65% 55%));
+    --shadow-card: 0 1px 3px 0 hsl(215 25% 15% / 0.04), 0 1px 2px -1px hsl(215 25% 15% / 0.04);
+    --shadow-elevated: 0 4px 16px -2px hsl(215 25% 15% / 0.08), 0 2px 4px -2px hsl(215 25% 15% / 0.04);
+    --shadow-hover: 0 8px 24px -4px hsl(211 65% 52% / 0.12), 0 4px 8px -4px hsl(215 25% 15% / 0.04);
+  }
+
+  .dark {
+    --background: 215 25% 8%;
+    --foreground: 210 30% 95%;
+    --card: 215 25% 12%;
+    --card-foreground: 210 30% 95%;
+    --popover: 215 25% 12%;
+    --popover-foreground: 210 30% 95%;
+    --primary: 211 65% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 20% 18%;
+    --secondary-foreground: 210 30% 95%;
+    --muted: 215 20% 18%;
+    --muted-foreground: 215 15% 55%;
+    --accent: 168 55% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 20% 22%;
+    --input: 215 20% 22%;
+    --ring: 211 65% 58%;
+    --sidebar-background: 215 25% 10%;
+    --sidebar-foreground: 210 30% 85%;
+    --sidebar-primary: 211 65% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 20% 16%;
+    --sidebar-accent-foreground: 210 30% 95%;
+    --sidebar-border: 215 20% 20%;
+    --sidebar-ring: 211 65% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply overflow-x-hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans min-h-screen;
+    font-family: 'Inter', system-ui, sans-serif;
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    /* Crisp text: use subpixel rendering (browser default). Avoid grayscale antialiasing that can look blurry. */
+    -webkit-font-smoothing: subpixel-antialiased;
+    -moz-osx-font-smoothing: auto;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-elevated {
+    box-shadow: var(--shadow-elevated);
+  }
+  .shadow-hover {
+    box-shadow: var(--shadow-hover);
+  }
+  /* Mobile: minimum touch target ~44px */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
