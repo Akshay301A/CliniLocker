@@ -6,11 +6,11 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", to: "/lab/dashboard" },
-  { icon: Upload, label: "Upload Report", to: "/lab/upload" },
-  { icon: Users, label: "Patients", to: "/lab/patients" },
-  { icon: FileText, label: "Reports", to: "/lab/reports" },
-  { icon: Settings, label: "Settings", to: "/lab/settings" },
+  { icon: LayoutDashboard, label: "Dashboard", to: "/lab/dashboard", iconColor: "text-blue-600" },
+  { icon: Upload, label: "Upload Report", to: "/lab/upload", iconColor: "text-amber-600" },
+  { icon: Users, label: "Patients", to: "/lab/patients", iconColor: "text-violet-600" },
+  { icon: FileText, label: "Reports", to: "/lab/reports", iconColor: "text-emerald-600" },
+  { icon: Settings, label: "Settings", to: "/lab/settings", iconColor: "text-slate-600" },
 ];
 
 export function LabLayout({ children }: { children: ReactNode }) {
@@ -52,7 +52,9 @@ export function LabLayout({ children }: { children: ReactNode }) {
                     : "text-sidebar-foreground hover:bg-sidebar-accent"
                 }`}
               >
-                <item.icon className="h-4 w-4" />
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? "bg-primary/15" : "bg-muted/80"}`}>
+                  <item.icon className={`h-4 w-4 ${item.iconColor || "text-sidebar-foreground"}`} />
+                </span>
                 {item.label}
               </Link>
             );
@@ -61,9 +63,11 @@ export function LabLayout({ children }: { children: ReactNode }) {
         <div className="border-t border-sidebar-border p-3">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-destructive/90"
           >
-            <LogOut className="h-4 w-4" />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/80">
+              <LogOut className="h-4 w-4 text-destructive" />
+            </span>
             Logout
           </button>
         </div>

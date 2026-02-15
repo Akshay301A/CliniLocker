@@ -30,8 +30,8 @@ export function Footer() {
           <div>
             <h4 className="mb-3 text-sm font-semibold text-foreground">Legal</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="inline-block py-1 hover:text-foreground">Terms of Service</a></li>
-              <li><a href="#" className="inline-block py-1 hover:text-foreground">Privacy Policy</a></li>
+              <li><Link to="/terms" className="inline-block py-1 hover:text-foreground">Terms of Service</Link></li>
+              <li><Link to="/privacy" className="inline-block py-1 hover:text-foreground">Privacy Policy</Link></li>
             </ul>
           </div>
 

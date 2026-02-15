@@ -26,6 +26,8 @@ import PatientFamilyMembers from "./pages/patient/FamilyMembers";
 import PatientSettings from "./pages/patient/Settings";
 import PatientMyProfile from "./pages/patient/MyProfile";
 import ReportViewer from "./pages/patient/ReportViewer";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +48,8 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/lab/complete-signup" element={<LabCompleteSignup />} />
             <Route path="/patient-login" element={<PatientLogin />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/lab/dashboard" element={<ProtectedRoute requiredRole="lab"><LabDashboard /></ProtectedRoute>} />
             <Route path="/lab/upload" element={<ProtectedRoute requiredRole="lab"><LabUpload /></ProtectedRoute>} />
             <Route path="/lab/patients" element={<ProtectedRoute requiredRole="lab"><LabPatients /></ProtectedRoute>} />

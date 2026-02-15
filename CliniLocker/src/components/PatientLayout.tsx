@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Upload, FileText, Users, Settings, LogOut, Menu, X, Heart, User } from "lucide-react";
+import { LayoutDashboard, Upload, FileText, Users, Settings, LogOut, Menu, X, Shield, User } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -8,12 +8,12 @@ import { getProfile } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const navItems = [
-  { icon: LayoutDashboard, labelKey: "Dashboard", to: "/patient/dashboard" },
-  { icon: FileText, labelKey: "My Reports", to: "/patient/reports" },
-  { icon: Upload, labelKey: "Upload Reports", to: "/patient/upload" },
-  { icon: Users, labelKey: "Family Members", to: "/patient/family" },
-  { icon: User, labelKey: "My Profile", to: "/patient/profile" },
-  { icon: Settings, labelKey: "Settings", to: "/patient/settings" },
+  { icon: LayoutDashboard, labelKey: "Dashboard", to: "/patient/dashboard", iconColor: "text-blue-600" },
+  { icon: FileText, labelKey: "My Reports", to: "/patient/reports", iconColor: "text-emerald-600" },
+  { icon: Upload, labelKey: "Upload Reports", to: "/patient/upload", iconColor: "text-amber-600" },
+  { icon: Users, labelKey: "Family Members", to: "/patient/family", iconColor: "text-violet-600" },
+  { icon: User, labelKey: "My Profile", to: "/patient/profile", iconColor: "text-teal-600" },
+  { icon: Settings, labelKey: "Settings", to: "/patient/settings", iconColor: "text-slate-600" },
 ];
 
 export function PatientLayout({ children }: { children: ReactNode }) {
@@ -45,9 +45,9 @@ export function PatientLayout({ children }: { children: ReactNode }) {
       <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform md:relative md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-6">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
-            <Heart className="h-4 w-4 text-primary-foreground" />
+            <Shield className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="font-display text-lg font-bold text-sidebar-foreground">{t("My Health")}</span>
+          <span className="font-display text-lg font-bold text-sidebar-foreground">CliniLocker</span>
           <button className="ml-auto md:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="h-5 w-5 text-sidebar-foreground" />
           </button>
@@ -66,7 +66,9 @@ export function PatientLayout({ children }: { children: ReactNode }) {
                     : "text-sidebar-foreground hover:bg-sidebar-accent"
                 }`}
               >
-                <item.icon className="h-4 w-4" />
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? "bg-primary/15" : "bg-muted/80"}`}>
+                  <item.icon className={`h-4 w-4 ${item.iconColor || "text-sidebar-foreground"}`} />
+                </span>
                 {t(item.labelKey)}
               </Link>
             );
@@ -75,9 +77,11 @@ export function PatientLayout({ children }: { children: ReactNode }) {
         <div className="border-t border-sidebar-border p-3">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-destructive/90"
           >
-            <LogOut className="h-4 w-4" />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/80">
+              <LogOut className="h-4 w-4 text-destructive" />
+            </span>
             {t("Logout")}
           </button>
         </div>
