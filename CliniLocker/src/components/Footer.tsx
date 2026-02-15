@@ -45,7 +45,7 @@ export function Footer() {
         </div>
 
         <div className="mt-8 border-t border-border pt-6 text-center text-xs sm:text-sm text-muted-foreground">
-          © {new Date().getFullYear()} CliniLocker. All rights reserved.
+          © {new Date().getFullYear()} CliniLocker. Developed by CliniLocker developers. From RNJ PVT LTD. All rights reserved.
         </div>
       </div>
     </footer>

@@ -40,6 +40,9 @@ const AboutPage = () => (
             </p>
           </div>
         </div>
+        <p className="mt-12 text-center text-sm text-muted-foreground">
+          Developed by CliniLocker developers. From RNJ PVT LTD.
+        </p>
       </div>
     </section>
   </PublicLayout>
