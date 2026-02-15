@@ -53,8 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    async function onAuthChange() {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
+    function applySession(currentSession: Session | null) {
       if (!mounted) return;
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
@@ -74,12 +73,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    async function onAuthChange() {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!mounted) return;
+      // If URL has OAuth hash but no session yet, Supabase may still be parsing it.
+      // Don't set loading=false yet so we don't redirect to login; onAuthStateChange will fire.
+      const hasOAuthHash =
+        typeof window !== "undefined" &&
+        /#.*(access_token|refresh_token)=/.test(window.location.hash);
+      if (!currentSession && hasOAuthHash) {
+        return;
+      }
+      applySession(currentSession);
+    }
+
     onAuthChange();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (!mounted) return;
+      if (newSession && typeof window !== "undefined" && window.location.hash) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      }
       setSession(newSession);
       setUser(newSession?.user ?? null);
+      setLoading(false);
       if (newSession?.user) {
         setRoleLoading(true);
         fetchRole(newSession.user.id).then(({ role: r, labId: lid }) => {
@@ -96,8 +113,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
+    // If we skipped setLoading(false) due to OAuth hash, give Supabase time to parse then re-check.
+    const fallbackTimer = window.setTimeout(() => {
+      if (!mounted) return;
+      supabase.auth.getSession().then(({ data: { session: s } }) => {
+        if (!mounted) return;
+        if (s) {
+          applySession(s);
+        } else {
+          setLoading(false);
+        }
+      });
+    }, 800);
+
     return () => {
       mounted = false;
+      window.clearTimeout(fallbackTimer);
       subscription.unsubscribe();
     };
   }, []);

@@ -20,4 +20,41 @@ Vercel → Settings → Environment Variables. Add at least:
 
 Add any other vars from `CliniLocker/.env.example`. Do not commit `.env` to the repo.
 
-**Auth redirects:** In Supabase → Authentication → URL Configuration, add your production URL (e.g. `https://clinilocker.com/**`) to Redirect URLs and set Site URL so login works on the live site.
+---
+
+## Production URL checklist (clinilocker.com)
+
+### 1. Application code – no changes needed
+
+The app uses **`window.location.origin`** for:
+
+- Login/Signup/Patient login redirects (where to send the user after auth)
+- Report share links (copy link uses current domain)
+
+So on **clinilocker.com** it already uses `https://clinilocker.com` automatically. No code updates required for the live domain.
+
+### 2. Supabase Dashboard – update for live site
+
+You **must** add your live domain in Supabase so login (including Google OAuth) works on clinilocker.com.
+
+**Where:** Supabase Dashboard → your project → **Authentication** → **URL Configuration**.
+
+**What to set:**
+
+| Setting | What to enter |
+|--------|----------------|
+| **Site URL** | `https://clinilocker.com` |
+| **Redirect URLs** | Add these (one per line). Keep any localhost entries if you still develop locally. |
+| | `https://clinilocker.com/**` |
+| | `https://www.clinilocker.com/**` (if you use www) |
+| | `http://localhost:8080/**` (optional, for local dev) |
+
+**Steps:**
+
+1. Open [Supabase Dashboard](https://supabase.com/dashboard) → select your project.
+2. Left sidebar → **Authentication** → **URL Configuration**.
+3. **Site URL:** set to `https://clinilocker.com` (or `https://www.clinilocker.com` if that’s your main URL).
+4. **Redirect URLs:** add the lines from the table above. The `/**` means “any path on this domain” (e.g. `/patient/dashboard`, `/lab/dashboard`).
+5. Click **Save**.
+
+After this, when a user signs in (or uses Google login) on **clinilocker.com**, Supabase will redirect them back to clinilocker.com instead of localhost or another URL.

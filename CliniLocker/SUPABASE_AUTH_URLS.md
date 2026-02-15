@@ -37,3 +37,16 @@ http://192.168.1.5:8080/**
 5. Click **Save**.
 
 After this, Google login from your phone at `http://192.168.1.5:8080/` will redirect back to `http://192.168.1.5:8080/patient/dashboard` instead of localhost:3000.
+
+---
+
+## Production (clinilocker.com)
+
+For the live site, set the same page as follows:
+
+- **Site URL:** `https://clinilocker.com`
+- **Redirect URLs** (add these lines):
+  - `https://clinilocker.com/**`
+  - `https://www.clinilocker.com/**`
+
+See **VERCEL_DEPLOY.md** (Production URL checklist) for the full steps.
