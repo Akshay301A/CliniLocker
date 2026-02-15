@@ -32,9 +32,12 @@
 
     --border: 214 25% 90%;
     --input: 214 25% 90%;
-    --ring: 211 65% 52%;
+    --ring: 214 25% 75%;
 
     --radius: 0.75rem;
+
+    /* Logo size: change this to resize the logo in the main Navbar */
+    --nav-logo-size: 2.75rem;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 215 25% 30%;
@@ -43,7 +46,7 @@
     --sidebar-accent: 210 40% 96%;
     --sidebar-accent-foreground: 215 25% 15%;
     --sidebar-border: 214 25% 92%;
-    --sidebar-ring: 211 65% 52%;
+    --sidebar-ring: 214 25% 75%;
 
     /* Custom tokens */
     --success: 152 55% 45%;
@@ -80,7 +83,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 215 20% 22%;
     --input: 215 20% 22%;
-    --ring: 211 65% 58%;
+    --ring: 215 20% 45%;
     --sidebar-background: 215 25% 10%;
     --sidebar-foreground: 210 30% 85%;
     --sidebar-primary: 211 65% 58%;
@@ -88,7 +91,7 @@
     --sidebar-accent: 215 20% 16%;
     --sidebar-accent-foreground: 210 30% 95%;
     --sidebar-border: 215 20% 20%;
-    --sidebar-ring: 211 65% 58%;
+    --sidebar-ring: 215 20% 45%;
   }
 }
 
@@ -145,5 +148,11 @@
   .touch-target {
     min-height: 44px;
     min-width: 44px;
+  }
+  /* Logo block: no text, no border/outline/ring – reference dashboard style */
+  .logo-block:focus,
+  .logo-block:focus-visible {
+    outline: none !important;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04) !important;
   }
 }

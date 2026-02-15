@@ -16,12 +16,13 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
       <div className="container flex h-14 min-h-[3.5rem] sm:h-16 items-center justify-between gap-2 px-4 sm:px-6">
-        <Link to="/" className="flex min-h-[44px] min-w-[44px] items-center gap-2 md:min-w-0">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-primary overflow-hidden">
-            <img src="/Logo.svg" alt="CliniLocker" className="h-5 w-5 object-contain" />
-          </div>
-          <span className="font-display text-lg font-bold text-foreground sm:text-xl">CliniLocker</span>
-        </Link>
+        <div className="flex min-w-0 flex-1 items-center md:mr-2">
+          <img
+            src="/logo%20(2).png"
+            alt="CliniLocker"
+            className="h-[200px] w-auto min-h-[3rem] max-w-full flex-shrink-0 object-contain object-left select-none outline-none sm:h-[200px]"
+          />
+        </div>
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">

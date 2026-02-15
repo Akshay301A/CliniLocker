@@ -6,12 +6,11 @@ export function Footer() {
       <div className="container px-4 py-8 sm:px-6 sm:py-12">
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
           <div className="sm:col-span-2 md:col-span-1">
-            <Link to="/" className="inline-flex items-center gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg gradient-primary overflow-hidden">
-                <img src="/Logo.svg" alt="CliniLocker" className="h-4 w-4 object-contain" />
-              </div>
-              <span className="font-display text-lg font-bold text-foreground">CliniLocker</span>
-            </Link>
+            <img
+              src="/logo%20(2).png"
+              alt="CliniLocker"
+              className="h-[150px] w-auto object-contain object-left"
+            />
             <p className="mt-3 text-sm text-muted-foreground max-w-xs">
               Secure digital health reports for every patient.
             </p>
