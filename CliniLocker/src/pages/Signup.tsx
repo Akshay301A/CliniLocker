@@ -109,6 +109,15 @@ const SignupPage = () => {
             Already have an account?{" "}
             <Link to="/login" className="font-medium text-primary hover:underline">Log in</Link>
           </p>
+          <Button variant="outline" className="mt-3 w-full min-h-[44px]" asChild>
+            <Link to="/login">Log in to lab account</Link>
+          </Button>
+          <div className="mt-4 pt-4 border-t border-border text-center space-y-1">
+            <p className="text-xs text-muted-foreground">Patient?</p>
+            <Link to="/patient-login" className="text-sm font-medium text-primary hover:underline inline-block">
+              Log in or create account →
+            </Link>
+          </div>
         </div>
       </section>
     </PublicLayout>

@@ -85,11 +85,15 @@ const LoginPage = () => {
           </Button>
           <p className="mt-4 text-center text-xs sm:text-sm text-muted-foreground">
             Don't have an account?{" "}
-            <Link to="/signup" className="font-medium text-primary hover:underline">Sign up</Link>
+            <Link to="/signup" className="font-medium text-primary hover:underline">Create account</Link>
           </p>
-          <div className="mt-4 text-center">
-            <Link to="/patient-login" className="text-sm text-muted-foreground hover:text-primary min-h-[44px] inline-flex items-center">
-              Patient? Login here →
+          <Button variant="outline" className="mt-3 w-full min-h-[44px]" asChild>
+            <Link to="/signup">Create lab account</Link>
+          </Button>
+          <div className="mt-4 pt-4 border-t border-border text-center space-y-1">
+            <p className="text-xs text-muted-foreground">Patient?</p>
+            <Link to="/patient-login" className="text-sm font-medium text-primary hover:underline inline-block">
+              Log in or create account →
             </Link>
           </div>
         </div>

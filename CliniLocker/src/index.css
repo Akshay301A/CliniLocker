@@ -100,6 +100,11 @@
   html {
     @apply overflow-x-hidden;
     -webkit-tap-highlight-color: transparent;
+    /* Allow native scroll and pinch-zoom on mobile */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Explicitly allow touch scroll and pinch-zoom (fixes mobile Safari/Chrome) */
+    touch-action: manipulation;
   }
 
   body {
@@ -111,6 +116,8 @@
     /* Crisp text: use subpixel rendering (browser default). Avoid grayscale antialiasing that can look blurry. */
     -webkit-font-smoothing: subpixel-antialiased;
     -moz-osx-font-smoothing: auto;
+    /* Smooth momentum scrolling on iOS when document scrolls */
+    -webkit-overflow-scrolling: touch;
   }
 
   h1, h2, h3, h4, h5, h6 {

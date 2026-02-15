@@ -127,8 +127,13 @@ const PatientLoginPage = () => {
             {googleLoading ? "Redirecting…" : "Google"}
           </Button>
           <p className="mt-4 text-center text-xs sm:text-sm text-muted-foreground">
-            <Link to="/login" className="font-medium text-primary hover:underline">Lab? Log in here</Link>
+            Don't have an account? Use Google or enter your phone above to create one.
           </p>
+          <div className="mt-4 pt-4 border-t border-border text-center space-y-1">
+            <p className="text-xs text-muted-foreground">Lab?</p>
+            <Link to="/login" className="text-sm font-medium text-primary hover:underline inline-block mr-3">Log in</Link>
+            <Link to="/signup" className="text-sm font-medium text-primary hover:underline inline-block">Create lab account</Link>
+          </div>
         </div>
       </section>
     </PublicLayout>
