@@ -81,6 +81,16 @@ const PatientFamilyMembers = () => {
     toast.success(t("Family member removed."));
   };
 
+  const handleCopyInviteLink = async (member: FamilyMember) => {
+    const result = await createFamilyInvite(member.id);
+    if ("error" in result) {
+      toast.error(result.error);
+      return;
+    }
+    await navigator.clipboard.writeText(result.link);
+    toast.success(t("Invite link copied! Send it to {{name}} via WhatsApp or SMS.", { name: member.name }));
+  };
+
   return (
     <PatientLayout>
       <div className="animate-fade-in space-y-6">
@@ -206,6 +216,17 @@ const PatientFamilyMembers = () => {
                       </div>
                     )}
                   </div>
+                  {!m.linked_user_id && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-4 w-full gap-2"
+                      onClick={() => handleCopyInviteLink(m)}
+                    >
+                      <Link2 className="h-3.5 w-3.5" /> {t("Copy invite link")}
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

@@ -62,10 +62,11 @@ const PatientLoginPage = () => {
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
-    // redirectTo uses current origin (e.g. http://192.168.1.5:8080 on mobile). Add that URL in Supabase → Auth → URL Configuration → Redirect URLs.
+    // Use redirect param so invite flow works: after OAuth user returns to e.g. /patient/accept-invite?token=xxx
+    const returnPath = redirectTo.startsWith("/") ? redirectTo : `/${redirectTo}`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/patient/dashboard` },
+      options: { redirectTo: `${window.location.origin}${returnPath}` },
     });
     if (error) {
       toast.error(error.message);
