@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { PatientLayout } from "@/components/PatientLayout";
+import { Preloader } from "@/components/Preloader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -211,9 +212,7 @@ const PatientMyProfile = () => {
   if (loading) {
     return (
       <PatientLayout>
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
+        <Preloader />
       </PatientLayout>
     );
   }

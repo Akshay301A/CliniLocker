@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Preloader } from "@/components/Preloader";
 
 type Role = "lab" | "patient";
 
@@ -14,11 +15,7 @@ export function ProtectedRoute({
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
+    return <Preloader fullScreen />;
   }
 
   if (!user) {
@@ -33,11 +30,7 @@ export function ProtectedRoute({
 
   if (requiredRole === "lab") {
     if (roleLoading) {
-      return (
-        <div className="flex min-h-screen items-center justify-center bg-background">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
-      );
+      return <Preloader fullScreen />;
     }
     if (role === null) return <Navigate to="/lab/complete-signup" replace />;
     if (role !== "lab") return <Navigate to="/patient/dashboard" replace />;

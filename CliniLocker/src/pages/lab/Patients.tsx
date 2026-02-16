@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { LabLayout } from "@/components/LabLayout";
+import { Preloader } from "@/components/Preloader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { getLabPatients } from "@/lib/api";
@@ -29,9 +30,7 @@ const LabPatients = () => {
   if (loading) {
     return (
       <LabLayout>
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
+        <Preloader />
       </LabLayout>
     );
   }

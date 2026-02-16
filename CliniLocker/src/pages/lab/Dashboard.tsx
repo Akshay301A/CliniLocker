@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { LabLayout } from "@/components/LabLayout";
+import { Preloader } from "@/components/Preloader";
 import { FileText, Users, TrendingUp, Calendar } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getLabStats, getLabReports } from "@/lib/api";
@@ -40,9 +41,7 @@ const LabDashboard = () => {
   if (loading) {
     return (
       <LabLayout>
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
+        <Preloader />
       </LabLayout>
     );
   }

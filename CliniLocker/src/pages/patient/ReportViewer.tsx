@@ -46,6 +46,7 @@ import {
 } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PatientLayout } from "@/components/PatientLayout";
+import { Preloader } from "@/components/Preloader";
 
 function formatDate(s: string | undefined) {
   if (!s) return "â€”";
@@ -274,9 +275,7 @@ const ReportViewer = () => {
   if (loading || !report) {
     return (
       <PatientLayout>
-        <div className="flex min-h-[50vh] items-center justify-center bg-background">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
+        <Preloader />
       </PatientLayout>
     );
   }

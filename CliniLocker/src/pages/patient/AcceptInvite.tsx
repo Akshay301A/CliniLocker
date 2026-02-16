@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { acceptFamilyInvite } from "@/lib/api";
 import { toast } from "sonner";
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
+import { Preloader } from "@/components/Preloader";
 
 const AcceptInvitePage = () => {
   const [searchParams] = useSearchParams();
@@ -84,10 +85,7 @@ const AcceptInvitePage = () => {
   return (
     <PublicLayout>
       <section className="flex min-h-[calc(100vh-10rem)] items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 sm:p-8 text-center shadow-elevated">
-          <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
-          <p className="mt-4 text-sm text-muted-foreground">Linking your account…</p>
-        </div>
+        <Preloader />
       </section>
     </PublicLayout>
   );

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getPatientReports } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Preloader } from "@/components/Preloader";
 import type { ReportWithLab } from "@/lib/api";
 
 const CATEGORY_KEYS = ["All", "Blood", "Hormone", "Imaging", "Cardiac", "Urine"] as const;
@@ -131,9 +132,7 @@ const PatientMyReports = () => {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
+          <Preloader />
         ) : (
           <>
             <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">

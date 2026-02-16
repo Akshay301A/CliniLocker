@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FileText, Upload, Users, Share2, TrendingUp, Calendar, Shield, Sparkles, Heart } from "lucide-react";
+import { Preloader } from "@/components/Preloader";
 import { PatientLayout } from "@/components/PatientLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getPatientReports, getFamilyMembers, getProfile } from "@/lib/api";
@@ -107,9 +108,7 @@ const PatientDashboard = () => {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
+          <Preloader />
         ) : (
           <>
         {/* Quick Stats */}

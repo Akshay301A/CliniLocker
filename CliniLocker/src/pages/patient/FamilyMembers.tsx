@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { getFamilyMembers, insertFamilyMember, deleteFamilyMember, createFamilyInvite } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Preloader } from "@/components/Preloader";
 import type { FamilyMember } from "@/lib/supabase";
 
 const PatientFamilyMembers = () => {
@@ -166,9 +167,7 @@ const PatientFamilyMembers = () => {
         )}
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
+          <Preloader />
         ) : (
           <>
             <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">

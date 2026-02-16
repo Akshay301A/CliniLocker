@@ -5,6 +5,7 @@ import { PatientLayout } from "@/components/PatientLayout";
 import { Button } from "@/components/ui/button";
 import { getReportsSharedWithMe } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Preloader } from "@/components/Preloader";
 import type { ReportWithLab } from "@/lib/api";
 
 function formatDate(s: string | undefined) {
@@ -37,9 +38,7 @@ const PatientFamilyReports = () => {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
+          <Preloader />
         ) : (
           <>
             <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
