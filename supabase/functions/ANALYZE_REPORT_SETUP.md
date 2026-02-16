@@ -7,7 +7,7 @@ The **analyze-report** Edge Function uses OpenAI to explain lab reports in simpl
 In **Supabase Dashboard** → **Edge Functions** → **Secrets**, add:
 
 - **Name:** `OPENAI_API_KEY`
-- **Value:** your OpenAI API key (same one you use in `.env` as `VITE_OPENAI_API_KEY` for reference; the function uses the secret, not the env var)
+- **Value:** your OpenAI API key (never put this in `.env` as a `VITE_` variable – that would expose it in the browser and get it disabled by OpenAI)
 
 Or via CLI:
 

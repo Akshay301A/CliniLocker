@@ -18,7 +18,7 @@ Vercel → Settings → Environment Variables. Add at least:
 - `VITE_SUPABASE_URL` – your Supabase project URL
 - `VITE_SUPABASE_ANON_KEY` – your Supabase anon key
 
-Add any other vars from `CliniLocker/.env.example`. Do not commit `.env` to the repo.
+Do not add an OpenAI API key as a Vercel env var for the frontend – it would be bundled and exposed. OpenAI is used only in Supabase Edge Functions (secrets). Do not commit `.env` to the repo.
 
 ---
 
