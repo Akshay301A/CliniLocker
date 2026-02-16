@@ -16,6 +16,7 @@ const AcceptInvitePage = () => {
   const [status, setStatus] = useState<"idle" | "prompt" | "loading" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
+  // Always show Accept/Not now first when we have a token (never auto-accept in background)
   useEffect(() => {
     if (authLoading) return;
     if (!token) {
@@ -23,27 +24,28 @@ const AcceptInvitePage = () => {
       setErrorMessage("Missing invite token.");
       return;
     }
-    if (!user) {
+    if (status === "idle") {
       setStatus("prompt");
+    }
+  }, [authLoading, token, status]);
+
+  const handleAcceptClick = async () => {
+    if (!token) return;
+    if (!user) {
+      const redirectUrl = `/patient/accept-invite?token=${encodeURIComponent(token)}`;
+      navigate(`/patient-login?redirect=${encodeURIComponent(redirectUrl)}`, { replace: true });
       return;
     }
-    if (status !== "idle" && status !== "prompt") return;
     setStatus("loading");
-    acceptFamilyInvite(token).then((result) => {
-      if (result.ok) {
-        setStatus("success");
-        toast.success("You're now linked. You can see reports shared with you under Family Reports.");
-        setTimeout(() => navigate("/patient/dashboard", { replace: true }), 2000);
-      } else {
-        setStatus("error");
-        setErrorMessage(result.error ?? "Invalid or expired invite.");
-      }
-    });
-  }, [authLoading, user, token, navigate, status]);
-
-  const goToLogin = () => {
-    const redirectUrl = `/patient/accept-invite?token=${encodeURIComponent(token ?? "")}`;
-    navigate(`/patient-login?redirect=${encodeURIComponent(redirectUrl)}`, { replace: true });
+    const result = await acceptFamilyInvite(token);
+    if (result.ok) {
+      setStatus("success");
+      toast.success("You're now linked. You can see reports shared with you under Family Reports.");
+      setTimeout(() => navigate("/patient/dashboard", { replace: true }), 2000);
+    } else {
+      setStatus("error");
+      setErrorMessage(result.error ?? "Invalid or expired invite.");
+    }
   };
 
   if (status === "prompt") {
@@ -63,7 +65,11 @@ const AcceptInvitePage = () => {
               A family member has invited you to CliniLocker. Accept to view health reports they share with you.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <Button className="min-h-[44px] flex-1 sm:flex-initial" onClick={goToLogin}>
+              <Button
+                className="min-h-[44px] flex-1 sm:flex-initial"
+                onClick={handleAcceptClick}
+                disabled={authLoading}
+              >
                 <UserPlus className="mr-2 h-4 w-4" /> Accept
               </Button>
               <Button variant="outline" className="min-h-[44px] flex-1 sm:flex-initial" asChild>

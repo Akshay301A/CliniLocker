@@ -1,12 +1,20 @@
-import { useState, useEffect } from "react";
-import { Users, Plus, Phone, Calendar, Trash2, Copy, Link2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Users, Plus, Phone, Calendar, Trash2, Copy, Link2, Inbox, Send } from "lucide-react";
 import { PatientLayout } from "@/components/PatientLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { getFamilyMembers, insertFamilyMember, deleteFamilyMember, createFamilyInvite } from "@/lib/api";
+import {
+  getFamilyMembers,
+  insertFamilyMember,
+  deleteFamilyMember,
+  createFamilyInvite,
+  getPendingInvitesReceived,
+  acceptFamilyInvite,
+} from "@/lib/api";
+import type { PendingInviteReceived } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Preloader } from "@/components/Preloader";
 import type { FamilyMember } from "@/lib/supabase";
@@ -14,6 +22,7 @@ import type { FamilyMember } from "@/lib/supabase";
 const PatientFamilyMembers = () => {
   const { t } = useLanguage();
   const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [receivedInvites, setReceivedInvites] = useState<PendingInviteReceived[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -21,12 +30,21 @@ const PatientFamilyMembers = () => {
   const [phone, setPhone] = useState("");
   const [dob, setDob] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [acceptingToken, setAcceptingToken] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<{ name: string; link: string } | null>(null);
+
+  const loadData = useCallback(() => {
+    getFamilyMembers().then(setMembers);
+    getPendingInvitesReceived().then(setReceivedInvites);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
-    getFamilyMembers().then((data) => {
-      if (mounted) setMembers(data);
+    Promise.all([getFamilyMembers(), getPendingInvitesReceived()]).then(([m, r]) => {
+      if (mounted) {
+        setMembers(m);
+        setReceivedInvites(r);
+      }
       if (mounted) setLoading(false);
     });
     return () => { mounted = false; };
@@ -91,6 +109,21 @@ const PatientFamilyMembers = () => {
     toast.success(t("Invite link copied! Send it to {{name}} via WhatsApp or SMS.", { name: member.name }));
   };
 
+  const handleAcceptReceived = async (token: string) => {
+    setAcceptingToken(token);
+    const result = await acceptFamilyInvite(token);
+    setAcceptingToken(null);
+    if (result.ok) {
+      toast.success(t("You're now linked. They'll appear in your family list."));
+      loadData();
+    } else {
+      toast.error(result.error ?? t("Invalid or expired invite."));
+      loadData();
+    }
+  };
+
+  const pendingSent = members.filter((m) => !m.linked_user_id);
+
   return (
     <PatientLayout>
       <div className="animate-fade-in space-y-6">
@@ -107,6 +140,70 @@ const PatientFamilyMembers = () => {
         <p className="text-sm text-muted-foreground">
           {t("Everyone must have an account. Add a family member and send them an invite link to sign up.")}
         </p>
+
+        {receivedInvites.length > 0 && (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 sm:p-5 space-y-3">
+            <h2 className="flex items-center gap-2 font-display font-semibold text-foreground">
+              <Inbox className="h-4 w-4 text-primary" /> {t("Invites you received")}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {t("Someone added you as a family member. Accept to link accounts and see shared reports.")}
+            </p>
+            <div className="space-y-2">
+              {receivedInvites.map((inv) => (
+                <div
+                  key={inv.token}
+                  className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {inv.inviter_name} {t("invited you")} ({inv.member_label})
+                    </p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      onClick={() => handleAcceptReceived(inv.token)}
+                      disabled={acceptingToken === inv.token}
+                    >
+                      {acceptingToken === inv.token ? t("Accepting…") : t("Accept")}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {pendingSent.length > 0 && (
+          <div className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-3">
+            <h2 className="flex items-center gap-2 font-display font-semibold text-foreground">
+              <Send className="h-4 w-4 text-muted-foreground" /> {t("Invites you sent")}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {t("Copy the invite link and send it to them. They can accept from the link or from their Family Members page.")}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {pendingSent.map((m) => (
+                <div
+                  key={m.id}
+                  className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2"
+                >
+                  <span className="text-sm font-medium text-foreground">{m.name}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1"
+                    onClick={() => handleCopyInviteLink(m)}
+                  >
+                    <Copy className="h-3 w-3" /> {t("Copy link")}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {inviteLink && (
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 sm:p-5 space-y-3">

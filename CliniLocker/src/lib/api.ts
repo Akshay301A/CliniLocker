@@ -317,6 +317,22 @@ export async function acceptFamilyInvite(token: string): Promise<{ ok: boolean; 
   return { ok: true };
 }
 
+export type PendingInviteReceived = {
+  token: string;
+  inviter_name: string;
+  member_label: string;
+  expires_at: string;
+};
+
+/** Pending family invites for the current user (matched by profile phone). For "Invites you received" section. */
+export async function getPendingInvitesReceived(): Promise<PendingInviteReceived[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase.rpc("get_pending_invites_received");
+  if (error) return [];
+  return (data ?? []) as PendingInviteReceived[];
+}
+
 // --- Lab: reports, patients (lab_patient_links) ---
 export async function getLabReports(labId: string): Promise<Report[]> {
   const { data, error } = await supabase
