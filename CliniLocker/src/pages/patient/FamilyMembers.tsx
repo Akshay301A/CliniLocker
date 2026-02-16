@@ -141,14 +141,15 @@ const PatientFamilyMembers = () => {
           {t("Everyone must have an account. Add a family member and send them an invite link to sign up.")}
         </p>
 
-        {receivedInvites.length > 0 && (
-          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 sm:p-5 space-y-3">
-            <h2 className="flex items-center gap-2 font-display font-semibold text-foreground">
-              <Inbox className="h-4 w-4 text-primary" /> {t("Invites you received")}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {t("Someone added you as a family member. Accept to link accounts and see shared reports.")}
-            </p>
+        {/* Invites you received – always visible so users can accept missed invites here */}
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 sm:p-5 space-y-3">
+          <h2 className="flex items-center gap-2 font-display font-semibold text-foreground">
+            <Inbox className="h-4 w-4 text-primary" /> {t("Invites you received")}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {t("If someone added you as a family member, you'll see it here. Accept to link accounts and see shared reports. Check this section if you missed an invite link.")}
+          </p>
+          {receivedInvites.length > 0 ? (
             <div className="space-y-2">
               {receivedInvites.map((inv) => (
                 <div
@@ -172,17 +173,20 @@ const PatientFamilyMembers = () => {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-sm text-muted-foreground py-2">{t("No pending invites right now.")}</p>
+          )}
+        </div>
 
-        {pendingSent.length > 0 && (
-          <div className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-3">
-            <h2 className="flex items-center gap-2 font-display font-semibold text-foreground">
-              <Send className="h-4 w-4 text-muted-foreground" /> {t("Invites you sent")}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {t("Copy the invite link and send it to them. They can accept from the link or from their Family Members page.")}
-            </p>
+        {/* Invites you sent – always visible so users can resend links for pending invites */}
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-3">
+          <h2 className="flex items-center gap-2 font-display font-semibold text-foreground">
+            <Send className="h-4 w-4 text-muted-foreground" /> {t("Invites you sent")}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {t("Pending invites you've sent. Copy the link again to resend. They can accept from the link or under “Invites you received” on their Family Members page.")}
+          </p>
+          {pendingSent.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {pendingSent.map((m) => (
                 <div
@@ -202,8 +206,10 @@ const PatientFamilyMembers = () => {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-sm text-muted-foreground py-2">{t("No pending invites. Add a member to send an invite.")}</p>
+          )}
+        </div>
 
         {inviteLink && (
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 sm:p-5 space-y-3">
