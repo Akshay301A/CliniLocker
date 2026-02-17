@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Lock, Bell, Shield, Globe, Trash2, Download } from "lucide-react";
-import { updatePassword, getProfile, updateProfile } from "@/lib/api";
+import { updatePassword, getProfile, updateProfile, getLinkedLabs, type LinkedLab } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const MIN_PASSWORD_LENGTH = 6;
@@ -64,6 +64,9 @@ const PatientSettings = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
 
+  const [linkedLabs, setLinkedLabs] = useState<LinkedLab[]>([]);
+  const [linkedLabsLoading, setLinkedLabsLoading] = useState(true);
+
   const handleSavePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < MIN_PASSWORD_LENGTH) {
@@ -104,6 +107,12 @@ const PatientSettings = () => {
           });
           setPreferredLanguage(p.preferred_language ?? "en");
         }
+      }
+    });
+    getLinkedLabs().then((labs) => {
+      if (mounted) {
+        setLinkedLabs(labs);
+        setLinkedLabsLoading(false);
       }
     });
     return () => { mounted = false; };
@@ -348,19 +357,28 @@ const PatientSettings = () => {
         {/* Linked Labs */}
         <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
           <h3 className="font-display text-lg font-semibold text-foreground">{t("Linked Labs")}</h3>
-          <div className="space-y-3">
-            {["City Diagnostics", "HealthFirst Lab", "MedScan Labs"].map((lab) => (
-              <div key={lab} className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-sm">
-                    {lab.charAt(0)}
+          {linkedLabsLoading ? (
+            <div className="text-sm text-muted-foreground">{t("Loading...")}</div>
+          ) : linkedLabs.length === 0 ? (
+            <div className="text-sm text-muted-foreground">{t("No linked labs yet. Labs will appear here once they upload reports for you.")}</div>
+          ) : (
+            <div className="space-y-3">
+              {linkedLabs.map((lab) => (
+                <div key={lab.lab_id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-sm">
+                      {lab.lab_name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-foreground block">{lab.lab_name}</span>
+                      <span className="text-xs text-muted-foreground">{lab.reports_count} {lab.reports_count === 1 ? t("report") : t("reports")}</span>
+                    </div>
                   </div>
-                  <span className="text-sm font-medium text-foreground">{lab}</span>
+                  <Badge variant="outline">{t("Active")}</Badge>
                 </div>
-                <Badge variant="outline">{t("Active")}</Badge>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Danger Zone */}

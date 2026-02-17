@@ -144,6 +144,34 @@ export async function getPatientReports(): Promise<ReportWithLab[]> {
   return (data ?? []) as ReportWithLab[];
 }
 
+export type LinkedLab = {
+  lab_id: string;
+  lab_name: string;
+  reports_count: number;
+  first_report_at: string | null;
+  last_report_at: string | null;
+};
+
+/** Get labs linked to the current patient (through lab_patient_links). */
+export async function getLinkedLabs(): Promise<LinkedLab[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  
+  const { data, error } = await supabase
+    .from("lab_patient_links")
+    .select("lab_id, reports_count, first_report_at, last_report_at, labs(name)")
+    .eq("patient_id", user.id)
+    .order("last_report_at", { ascending: false });
+  if (error) return [];
+  return (data ?? []).map((link: any) => ({
+    lab_id: link.lab_id,
+    lab_name: link.labs?.name || "Unknown Lab",
+    reports_count: link.reports_count || 0,
+    first_report_at: link.first_report_at,
+    last_report_at: link.last_report_at,
+  }));
+}
+
 export async function getReportById(id: string): Promise<(Report & { labs?: { name: string } | null }) | null> {
   const { data, error } = await supabase.from("reports").select("*, labs(name)").eq("id", id).single();
   if (error || !data) return null;
