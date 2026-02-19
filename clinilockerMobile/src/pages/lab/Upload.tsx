@@ -70,42 +70,48 @@ const LabUpload = () => {
 
   return (
     <LabLayout>
-      <div className="mx-auto max-w-lg w-full animate-fade-in">
-        <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground">Upload Report</h1>
-        <p className="mt-1 text-sm sm:text-base text-muted-foreground">Fill in the details and upload the PDF report.</p>
+      <div className="animate-fade-in space-y-3 md:space-y-4 pb-4">
+        <div>
+          <h1 className="font-display text-xl md:text-2xl font-semibold text-foreground">Upload Report</h1>
+          <p className="mt-1.5 text-xs md:text-sm text-muted-foreground">Fill in the details and upload the PDF report.</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <Label htmlFor="patientName">Patient Name</Label>
-            <Input id="patientName" value={form.patientName} onChange={(e) => setForm({ ...form, patientName: e.target.value })} placeholder="Anita Sharma" required />
-          </div>
-          <div>
-            <Label htmlFor="phone">Patient Phone Number</Label>
-            <Input id="phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+91 98765 43210" />
-          </div>
-          <div>
-            <Label htmlFor="testName">Test Name</Label>
-            <Input id="testName" value={form.testName} onChange={(e) => setForm({ ...form, testName: e.target.value })} placeholder="CBC + ESR" required />
-          </div>
-          <div>
-            <Label htmlFor="file">PDF Report</Label>
-            <div className="mt-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 p-8 transition-colors hover:border-primary/50">
-              <label htmlFor="file" className="flex cursor-pointer flex-col items-center gap-2">
-                <UploadIcon className="h-8 w-8 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  {form.file ? form.file.name : "Click to upload PDF"}
-                </span>
-                <input
-                  id="file"
-                  type="file"
-                  accept=".pdf"
-                  className="hidden"
-                  onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })}
-                />
-              </label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="rounded-xl border border-border bg-card p-4 md:p-5 shadow-sm space-y-3">
+            <div>
+              <Label htmlFor="patientName" className="text-xs md:text-sm font-semibold">Patient Name</Label>
+              <Input id="patientName" className="mt-1.5 min-h-[44px] rounded-lg text-sm" value={form.patientName} onChange={(e) => setForm({ ...form, patientName: e.target.value })} placeholder="Anita Sharma" required />
+            </div>
+            <div>
+              <Label htmlFor="phone" className="text-xs md:text-sm font-semibold">Patient Phone Number</Label>
+              <Input id="phone" className="mt-1.5 min-h-[44px] rounded-lg text-sm" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+91 98765 43210" />
+            </div>
+            <div>
+              <Label htmlFor="testName" className="text-xs md:text-sm font-semibold">Test Name</Label>
+              <Input id="testName" className="mt-1.5 min-h-[44px] rounded-lg text-sm" value={form.testName} onChange={(e) => setForm({ ...form, testName: e.target.value })} placeholder="CBC + ESR" required />
+            </div>
+            <div>
+              <Label htmlFor="file" className="text-xs md:text-sm font-semibold">PDF Report</Label>
+              <div className="mt-1.5 flex items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 p-4 md:p-6 transition-colors hover:border-primary/50">
+                <label htmlFor="file" className="flex cursor-pointer flex-col items-center gap-2">
+                  <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-sm">
+                    <UploadIcon className="h-5 w-5 md:h-6 md:w-6" />
+                  </div>
+                  <span className="text-xs md:text-sm text-muted-foreground">
+                    {form.file ? form.file.name : "Click to upload PDF"}
+                  </span>
+                  <input
+                    id="file"
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })}
+                  />
+                </label>
+              </div>
             </div>
           </div>
-          <Button type="submit" className="w-full min-h-[44px]" size="lg" disabled={loading || !form.file}>
+          <Button type="submit" className="w-full min-h-[44px] rounded-lg text-sm font-semibold" disabled={loading || !form.file}>
             {loading ? "Uploading…" : "Send Report"}
           </Button>
         </form>

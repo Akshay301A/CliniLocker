@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { Capacitor } from "@capacitor/core";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -6,11 +7,29 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     "Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. " +
-    "Set them in .env (local) or in Vercel → Settings → Environment Variables (production), then redeploy."
+    "Set them in .env file."
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Get redirect URL based on platform
+const getRedirectUrl = () => {
+  if (Capacitor.isNativePlatform()) {
+    // Mobile app: use custom URL scheme
+    return 'clinilocker://auth/callback';
+  } else {
+    // Browser: use current origin (localhost in dev, or production URL)
+    return `${window.location.origin}/auth/callback`;
+  }
+};
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    redirectTo: getRedirectUrl(),
+    detectSessionInUrl: true,
+    persistSession: true,
+    autoRefreshToken: true
+  }
+});
 
 export type Profile = {
   id: string;

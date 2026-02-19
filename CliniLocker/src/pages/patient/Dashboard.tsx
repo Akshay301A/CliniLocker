@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FileText, Upload, Users, Share2, TrendingUp, Calendar, Shield, Sparkles, Heart } from "lucide-react";
 import { Preloader } from "@/components/Preloader";
 import { PatientLayout } from "@/components/PatientLayout";
+import { AdSense } from "@/components/AdSense";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getPatientReports, getFamilyMembers, getProfile } from "@/lib/api";
 import { fetchHealthQuotes } from "@/lib/healthQuotes";
@@ -107,6 +108,29 @@ const PatientDashboard = () => {
           )}
         </div>
 
+        {/* Ad Space - Health Related Ads - After Welcome Card */}
+        <div className="rounded-xl border border-border/40 bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
+              <span className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Health & Wellness
+              </span>
+            </div>
+            <span className="text-[9px] text-muted-foreground/60 px-1.5 py-0.5 rounded bg-muted/50 font-medium">Ad</span>
+          </div>
+          <div className="w-full min-h-[50px] max-h-[120px] overflow-hidden">
+            <AdSense
+              publisherId={import.meta.env.VITE_ADSENSE_PUBLISHER_ID}
+              adSlot={import.meta.env.VITE_ADSENSE_AD_SLOT}
+              format="auto"
+              minHeight={50}
+              showPlaceholder={true}
+              className="w-full rounded-lg"
+            />
+          </div>
+        </div>
+
         {loading ? (
           <Preloader />
         ) : (
@@ -187,6 +211,29 @@ const PatientDashboard = () => {
             <Link to="/patient/reports" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
               {t("View all reports")} →
             </Link>
+        </div>
+
+        {/* Ad Space - Health Related Ads - After Recent Reports */}
+        <div className="rounded-xl border border-border/40 bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
+              <span className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Health & Wellness
+              </span>
+            </div>
+            <span className="text-[9px] text-muted-foreground/60 px-1.5 py-0.5 rounded bg-muted/50 font-medium">Ad</span>
+          </div>
+          <div className="w-full min-h-[50px] max-h-[120px] overflow-hidden">
+            <AdSense
+              publisherId={import.meta.env.VITE_ADSENSE_PUBLISHER_ID}
+              adSlot={import.meta.env.VITE_ADSENSE_AD_SLOT}
+              format="auto"
+              minHeight={50}
+              showPlaceholder={true}
+              className="w-full rounded-lg"
+            />
+          </div>
         </div>
 
         {/* Quick Actions */}

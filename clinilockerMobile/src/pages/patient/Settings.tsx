@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
-import { Lock, Bell, Shield, Globe, Trash2, Download } from "lucide-react";
+import { Lock, Bell, Shield, Globe, Trash2, Download, Building2 } from "lucide-react";
 import { updatePassword, getProfile, updateProfile, getLinkedLabs, type LinkedLab } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -175,14 +176,25 @@ const PatientSettings = () => {
 
   return (
     <PatientLayout>
-      <div className="mx-auto max-w-2xl animate-fade-in space-y-6">
+      <div className="animate-fade-in space-y-3 md:space-y-4 pb-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">{t("Settings")}</h1>
-          <p className="mt-1 text-muted-foreground">{t("Manage your account, privacy, and preferences.")}</p>
+          <h1 className="font-display text-xl md:text-2xl font-semibold text-foreground">{t("Settings")}</h1>
+          <p className="mt-1.5 text-xs md:text-sm text-muted-foreground">{t("Manage your account, privacy, and preferences.")}</p>
         </div>
 
-        {/* Change Password */}
-        <form onSubmit={handleSavePassword} className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
+        <Accordion type="single" collapsible className="space-y-3" defaultValue="password">
+          {/* Change Password */}
+          <AccordionItem value="password" className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <AccordionTrigger className="px-4 md:px-5 py-3 hover:no-underline">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600">
+                  <Lock className="h-4 w-4 md:h-5 md:w-5" />
+                </div>
+                <h3 className="font-display text-base md:text-lg font-semibold text-foreground">{t("Change Password")}</h3>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <form onSubmit={handleSavePassword} className="px-4 md:px-5 pb-4 md:pb-5 space-y-3">
           <div className="flex items-center gap-2">
             <Lock className="h-5 w-5 text-primary" />
             <h3 className="font-display text-lg font-semibold text-foreground">{t("Change Password")}</h3>
@@ -228,17 +240,25 @@ const PatientSettings = () => {
               />
             </div>
           </div>
-          <Button type="submit" variant="outline" disabled={passwordLoading}>
-            {passwordLoading ? t("Updating…") : t("Update Password")}
-          </Button>
-        </form>
+                <Button type="submit" variant="default" className="w-full min-h-[44px] rounded-lg text-sm" disabled={passwordLoading}>
+                  {passwordLoading ? t("Updating…") : t("Update Password")}
+                </Button>
+              </form>
+            </AccordionContent>
+          </AccordionItem>
 
-        {/* Notifications */}
-        <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-primary" />
-            <h3 className="font-display text-lg font-semibold text-foreground">{t("Notifications")}</h3>
-          </div>
+          {/* Notifications */}
+          <AccordionItem value="notifications" className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <AccordionTrigger className="px-4 md:px-5 py-3 hover:no-underline">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+                  <Bell className="h-4 w-4 md:h-5 md:w-5" />
+                </div>
+                <h3 className="font-display text-base md:text-lg font-semibold text-foreground">{t("Notifications")}</h3>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="px-4 md:px-5 pb-4 md:pb-5 space-y-3">
           <div className="space-y-4">
             {[
               { key: "sms" as const, label: t("SMS Notifications"), desc: t("Receive report updates via SMS") },
@@ -247,27 +267,35 @@ const PatientSettings = () => {
               { key: "reportReady" as const, label: t("Report Ready Alerts"), desc: t("Get notified when a new report is available") },
               { key: "healthTips" as const, label: t("Health Tips"), desc: t("Receive weekly health tips") },
               { key: "promotional" as const, label: t("Promotional Updates"), desc: t("Lab offers and discounts") },
-            ].map((item) => (
-              <div key={item.key} className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{item.desc}</p>
-                </div>
-                <Switch checked={notifications[item.key]} onCheckedChange={(val) => setNotifications((prev) => ({ ...prev, [item.key]: val }))} />
+                ].map((item) => (
+                  <div key={item.key} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs md:text-sm font-semibold text-foreground">{item.label}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                    </div>
+                    <Switch checked={notifications[item.key]} onCheckedChange={(val) => setNotifications((prev) => ({ ...prev, [item.key]: val }))} className="ml-3" />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <Button variant="outline" onClick={handleSaveNotifications} disabled={!notificationsLoaded || notificationsLoading}>
-            {notificationsLoading ? t("Saving…") : t("Save Preferences")}
-          </Button>
-        </div>
+              <Button variant="default" className="w-full min-h-[44px] rounded-lg text-sm" onClick={handleSaveNotifications} disabled={!notificationsLoaded || notificationsLoading}>
+                {notificationsLoading ? t("Saving…") : t("Save Preferences")}
+              </Button>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
         {/* Privacy & Security */}
-        <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <h3 className="font-display text-lg font-semibold text-foreground">{t("Privacy & Security")}</h3>
-          </div>
+        <AccordionItem value="privacy" className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+          <AccordionTrigger className="px-4 md:px-5 py-3 hover:no-underline">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg bg-green-500/10 text-green-600">
+                <Shield className="h-4 w-4 md:h-5 md:w-5" />
+              </div>
+              <h3 className="font-display text-base md:text-lg font-semibold text-foreground">{t("Privacy & Security")}</h3>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="px-4 md:px-5 pb-4 md:pb-5 space-y-3">
           <p className="text-sm text-muted-foreground">
             {t("Control how you sign in and what labs can see or do with your account. Your choices are saved and applied across the app.")}
           </p>
@@ -333,64 +361,86 @@ const PatientSettings = () => {
               <option value="ml">Malayalam</option>
             </select>
           </div>
-          <Button variant="outline" onClick={handleSaveLanguage} disabled={languageLoading}>
-            {languageLoading ? t("Saving…") : t("Save language")}
-          </Button>
-        </div>
+              <Button variant="default" className="w-full min-h-[48px] rounded-xl" onClick={handleSaveLanguage} disabled={languageLoading}>
+                {languageLoading ? t("Saving…") : t("Save language")}
+              </Button>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
         {/* Data Management */}
-        <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
-          <div className="flex items-center gap-2">
-            <Download className="h-5 w-5 text-primary" />
-            <h3 className="font-display text-lg font-semibold text-foreground">{t("Data Management")}</h3>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button variant="outline" onClick={handleExportData}>
-              <Download className="mr-2 h-4 w-4" /> {t("Export All Data")}
-            </Button>
-            <Button variant="outline" onClick={() => toast.success(t("Download link sent to your email."))}>
-              <Download className="mr-2 h-4 w-4" /> {t("Download All Reports")}
-            </Button>
-          </div>
-        </div>
+        <AccordionItem value="data" className="rounded-2xl border border-border bg-card shadow-md overflow-hidden">
+          <AccordionTrigger className="px-5 md:px-6 py-4 hover:no-underline">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600">
+                <Download className="h-5 w-5" />
+              </div>
+              <h3 className="font-display text-lg font-semibold text-foreground">{t("Data Management")}</h3>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="px-5 md:px-6 pb-5 md:pb-6 space-y-3">
+              <Button variant="default" className="w-full min-h-[48px] rounded-xl" onClick={handleExportData}>
+                <Download className="mr-2 h-4 w-4" /> {t("Export All Data")}
+              </Button>
+              <Button variant="outline" className="w-full min-h-[48px] rounded-xl" onClick={() => toast.success(t("Download link sent to your email."))}>
+                <Download className="mr-2 h-4 w-4" /> {t("Download All Reports")}
+              </Button>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
         {/* Linked Labs */}
-        <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
-          <h3 className="font-display text-lg font-semibold text-foreground">{t("Linked Labs")}</h3>
-          {linkedLabsLoading ? (
-            <div className="text-sm text-muted-foreground">{t("Loading...")}</div>
-          ) : linkedLabs.length === 0 ? (
-            <div className="text-sm text-muted-foreground">{t("No linked labs yet. Labs will appear here once they upload reports for you.")}</div>
-          ) : (
-            <div className="space-y-3">
-              {linkedLabs.map((lab) => (
-                <div key={lab.lab_id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-sm">
-                      {lab.lab_name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-foreground block">{lab.lab_name}</span>
-                      <span className="text-xs text-muted-foreground">{lab.reports_count} {lab.reports_count === 1 ? t("report") : t("reports")}</span>
-                    </div>
-                  </div>
-                  <Badge variant="outline">{t("Active")}</Badge>
-                </div>
-              ))}
+        <AccordionItem value="labs" className="rounded-2xl border border-border bg-card shadow-md overflow-hidden">
+          <AccordionTrigger className="px-5 md:px-6 py-4 hover:no-underline">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <h3 className="font-display text-lg font-semibold text-foreground">{t("Linked Labs")}</h3>
             </div>
-          )}
-        </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="px-5 md:px-6 pb-5 md:pb-6 space-y-4">
+              {linkedLabsLoading ? (
+                <div className="text-sm text-muted-foreground">{t("Loading...")}</div>
+              ) : linkedLabs.length === 0 ? (
+                <div className="text-sm text-muted-foreground text-center py-4">{t("No linked labs yet. Labs will appear here once they upload reports for you.")}</div>
+              ) : (
+                <div className="space-y-3">
+                  {linkedLabs.map((lab) => (
+                    <div key={lab.lab_id} className="flex items-center justify-between rounded-xl border border-border bg-muted/30 p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white font-bold text-lg shadow-md">
+                          {lab.lab_name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <span className="text-sm font-semibold text-foreground block">{lab.lab_name}</span>
+                          <span className="text-xs text-muted-foreground">{lab.reports_count} {lab.reports_count === 1 ? t("report") : t("reports")}</span>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="rounded-lg">{t("Active")}</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        </Accordion>
 
         {/* Danger Zone */}
-        <div className="rounded-xl border border-destructive/30 bg-card p-6 shadow-card space-y-4">
-          <div className="flex items-center gap-2">
-            <Trash2 className="h-5 w-5 text-destructive" />
+        <div className="rounded-2xl border-2 border-destructive/50 bg-card p-5 md:p-6 shadow-md space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+              <Trash2 className="h-5 w-5" />
+            </div>
             <h3 className="font-display text-lg font-semibold text-destructive">{t("Danger Zone")}</h3>
           </div>
           <p className="text-sm text-muted-foreground">
             {t("Deleting your account will permanently remove all your data, reports, and family member records. This action cannot be undone.")}
           </p>
-          <Button variant="destructive" onClick={handleDeleteAccount}>{t("Delete My Account")}</Button>
+          <Button variant="destructive" className="w-full min-h-[48px] rounded-xl" onClick={handleDeleteAccount}>{t("Delete My Account")}</Button>
         </div>
       </div>
     </PatientLayout>

@@ -92,36 +92,36 @@ const PatientMyReports = () => {
 
   return (
     <PatientLayout>
-      <div className="animate-fade-in space-y-6">
+      <div className="animate-fade-in space-y-3 md:space-y-4 pb-4">
         <div>
-          <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground">{t("My Reports")}</h1>
-          <p className="mt-1 text-sm sm:text-base text-muted-foreground">{t("Browse, search, and download all your health reports.")}</p>
+          <h1 className="font-display text-xl md:text-2xl font-semibold text-foreground">{t("My Reports")}</h1>
+          <p className="mt-1.5 text-xs md:text-sm text-muted-foreground">{t("Browse, search, and download all your health reports.")}</p>
         </div>
 
         <div className="flex flex-col gap-3">
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <Input placeholder={t("Search reports...")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 min-h-[44px] w-full" />
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input placeholder={t("Search reports...")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-11 min-h-[44px] w-full text-sm md:text-base rounded-lg border" />
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="flex-1 min-w-0">
-              <TabsList className="w-full sm:w-auto justify-start sm:justify-center h-9">
+              <TabsList className="w-full md:w-auto justify-start h-10 bg-muted/50 rounded-xl p-1">
                 {CATEGORY_KEYS.map((c) => (
-                  <TabsTrigger key={c} value={c} className="min-h-[36px] shrink-0 text-xs sm:text-sm">{t(c)}</TabsTrigger>
+                  <TabsTrigger key={c} value={c} className="min-h-[36px] shrink-0 text-xs md:text-sm px-3 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">{t(c)}</TabsTrigger>
                 ))}
               </TabsList>
             </Tabs>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label={t("Sort reports")}>
-                  <ArrowUpDown className="h-4 w-4" />
+                <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" aria-label={t("Sort reports")}>
+                  <ArrowUpDown className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuContent align="end" className="w-56 rounded-xl">
                 <DropdownMenuRadioGroup value={sortOption} onValueChange={(v) => setSortOption(v as SortOption)}>
                   {SORT_OPTION_VALUES.map((value) => (
-                    <DropdownMenuRadioItem key={value} value={value}>
+                    <DropdownMenuRadioItem key={value} value={value} className="rounded-lg">
                       {t(SORT_OPTION_LABELS[value])}
                     </DropdownMenuRadioItem>
                   ))}
@@ -135,32 +135,32 @@ const PatientMyReports = () => {
           <Preloader />
         ) : (
           <>
-            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+            <div className="grid gap-3 grid-cols-1">
               {sorted.map((r) => (
-                <div key={r.id} className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card transition-all hover:shadow-hover">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <FileText className="h-5 w-5" />
+                <div key={r.id} className="group relative overflow-hidden rounded-xl border border-border bg-gradient-to-r from-card to-muted/30 p-3 md:p-4 shadow-sm transition-all hover:shadow-md hover:border-primary/50">
+                  <div className="flex items-start justify-between gap-2.5 mb-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="flex h-9 w-9 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-sm">
+                        <FileText className="h-4 w-4 md:h-5 md:w-5" />
                       </div>
-                      <div className="min-w-0">
-                        <h3 className="font-medium text-foreground truncate">{r.test_name}</h3>
-                        <p className="text-xs text-muted-foreground truncate">{r.labs?.name ?? "—"}</p>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-sm md:text-base text-foreground truncate">{r.test_name}</h3>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{r.labs?.name ?? "—"}</p>
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          <span className="text-[10px] md:text-xs text-muted-foreground">{formatDate(r.uploaded_at)}</span>
+                          <Badge variant="outline" className="text-[10px]">{r.patient_name ?? t("Self")}</Badge>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-xs text-muted-foreground block">{formatDate(r.uploaded_at)}</span>
-                      <Badge variant="outline" className="mt-1 text-xs">{r.patient_name ?? t("Self")}</Badge>
                     </div>
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" className="min-h-[40px]" asChild>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="default" className="min-h-[40px] flex-1 rounded-lg text-xs md:text-sm" asChild>
                       <Link to={`/patient/report/${r.id}`}>
-                        <Eye className="mr-1 h-3.5 w-3.5" /> {t("View")}
+                        <Eye className="mr-1.5 h-3.5 w-3.5" /> {t("View")}
                       </Link>
                     </Button>
-                    <Button size="sm" variant="ghost" className="min-h-[40px]" onClick={() => handleDownload(r)}>
-                      <Download className="mr-1 h-3.5 w-3.5" /> {t("Download")}
+                    <Button size="sm" variant="outline" className="min-h-[40px] flex-1 rounded-lg text-xs md:text-sm" onClick={() => handleDownload(r)}>
+                      <Download className="mr-1.5 h-3.5 w-3.5" /> {t("Download")}
                     </Button>
                   </div>
                 </div>
@@ -168,9 +168,9 @@ const PatientMyReports = () => {
             </div>
 
             {sorted.length === 0 && (
-              <div className="rounded-xl border border-dashed border-border py-12 text-center">
-                <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
-                <p className="mt-2 text-muted-foreground">{t("No reports found.")}</p>
+              <div className="rounded-2xl border-2 border-dashed border-border bg-muted/30 py-16 text-center">
+                <FileText className="mx-auto h-16 w-16 text-muted-foreground opacity-50 mb-4" />
+                <p className="text-base text-muted-foreground font-medium">{t("No reports found.")}</p>
               </div>
             )}
           </>

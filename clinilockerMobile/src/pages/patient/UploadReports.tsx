@@ -92,12 +92,14 @@ const PatientUploadReports = () => {
 
   return (
     <PatientLayout>
-      <div className="mx-auto max-w-xl animate-fade-in w-full">
-        <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground">{t("Upload Report")}</h1>
-        <p className="mt-1 text-sm sm:text-base text-muted-foreground">{t("Add reports from other labs or clinics to your health vault.")}</p>
+      <div className="animate-fade-in space-y-3 md:space-y-4 pb-4">
+        <div>
+          <h1 className="font-display text-xl md:text-2xl font-semibold text-foreground">{t("Upload Report")}</h1>
+          <p className="mt-1.5 text-xs md:text-sm text-muted-foreground">{t("Add reports from other labs or clinics to your health vault.")}</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-          <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="rounded-xl border border-border bg-card p-4 md:p-5 shadow-sm space-y-3">
             <div>
               <Label htmlFor="testName">{t("Test Name")}</Label>
               <Input id="testName" placeholder={t("e.g., CBC, Lipid Profile")} value={testName} onChange={(e) => setTestName(e.target.value)} required />
@@ -112,33 +114,37 @@ const PatientUploadReports = () => {
             </div>
           </div>
 
-          <div className="rounded-xl border border-dashed border-border bg-card p-6 shadow-card">
-            <label htmlFor="fileInput" className="flex cursor-pointer flex-col items-center gap-3 py-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Upload className="h-6 w-6" />
+          <div className="rounded-xl border-2 border-dashed border-border bg-muted/30 p-6 md:p-8 shadow-sm">
+            <label htmlFor="fileInput" className="flex cursor-pointer flex-col items-center gap-3 py-4 md:py-6">
+              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md">
+                <Upload className="h-6 w-6 md:h-7 md:w-7" />
               </div>
               <div className="text-center">
-                <p className="font-medium text-foreground">{t("Click to upload PDF")}</p>
-                <p className="text-xs text-muted-foreground">{t("PDF only (max 10MB)")}</p>
+                <p className="font-semibold text-sm md:text-base text-foreground">{t("Click to upload PDF")}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("PDF only (max 10MB)")}</p>
               </div>
             </label>
             <input id="fileInput" type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
 
             {file && (
-              <div className="mt-4 flex items-center justify-between rounded-lg border border-border p-3">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-foreground">{file.name}</span>
-                  <span className="text-xs text-muted-foreground">({(file.size / 1024).toFixed(1)} KB)</span>
+              <div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-card p-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600">
+                    <FileText className="h-4 w-4 md:h-5 md:w-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs md:text-sm font-medium text-foreground block">{file.name}</span>
+                    <span className="text-[10px] md:text-xs text-muted-foreground">({(file.size / 1024).toFixed(1)} KB)</span>
+                  </div>
                 </div>
-                <button type="button" onClick={removeFile} className="text-muted-foreground hover:text-destructive">
+                <button type="button" onClick={removeFile} className="text-muted-foreground hover:text-destructive p-1.5 rounded-lg hover:bg-muted">
                   <X className="h-4 w-4" />
                 </button>
               </div>
             )}
           </div>
 
-          <Button type="submit" className="w-full min-h-[44px]" disabled={loading || !file}>
+          <Button type="submit" className="w-full min-h-[44px] rounded-lg text-sm font-semibold" disabled={loading || !file}>
             {loading ? t("Uploading…") : t("Upload Report")}
           </Button>
         </form>

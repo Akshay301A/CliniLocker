@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getProfile } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BottomNav } from "@/components/BottomNav";
 
 const navItems = [
   { icon: LayoutDashboard, labelKey: "Dashboard", to: "/patient/dashboard", iconColor: "text-blue-600" },
@@ -42,8 +43,8 @@ export function PatientLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform md:relative md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      {/* Sidebar - Desktop Only */}
+      <aside className={`hidden md:flex fixed inset-y-0 left-0 z-40 w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform md:relative md:translate-x-0`}>
         <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-6">
           <img
             src="/logo%20(2).png"
@@ -89,17 +90,46 @@ export function PatientLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      {/* Overlay */}
+      {/* Overlay - Desktop Only */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-30 bg-foreground/20 md:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="hidden md:block fixed inset-0 z-30 bg-foreground/20" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Main */}
       <div className="flex flex-1 flex-col min-w-0">
-        <header className="flex h-14 min-h-[3.5rem] sm:h-16 items-center border-b border-border bg-card px-3 sm:px-4 md:px-6 gap-2">
+        {/* Mobile Header - Logo Left, Profile Right */}
+        <header className="flex h-16 items-center justify-between bg-card px-4 border-b border-border/30 md:hidden">
+          <Link
+            to="/patient/dashboard"
+            className="flex items-center"
+            aria-label="Home"
+          >
+            <img
+              src="/logo%20(2).png"
+              alt="CliniLocker"
+              style={{ height: '150px', width: 'auto', maxWidth: 'none' }}
+              className="object-contain"
+            />
+          </Link>
+          <Link
+            to="/patient/profile"
+            className="flex items-center justify-center rounded-full transition-opacity hover:opacity-80"
+            aria-label={t("Profile")}
+          >
+            <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
+              {avatarUrl && <AvatarImage src={avatarUrl} alt={profileName ?? t("Profile")} />}
+              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                {profileName ? profileName.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
+        </header>
+
+        {/* Desktop Header */}
+        <header className="hidden md:flex h-14 min-h-[3.5rem] sm:h-16 items-center border-b border-border bg-card px-3 sm:px-4 md:px-6 gap-2">
           <button
             type="button"
-            className="touch-target flex shrink-0 md:hidden -ml-1 items-center justify-center rounded-md text-foreground hover:bg-muted/80"
+            className="touch-target flex shrink-0 -ml-1 items-center justify-center rounded-md text-foreground hover:bg-muted/80"
             onClick={() => setSidebarOpen(true)}
             aria-label={t("Open menu")}
           >
@@ -107,7 +137,7 @@ export function PatientLayout({ children }: { children: ReactNode }) {
           </button>
           <Link
             to="/patient/dashboard"
-            className="font-display text-lg font-bold text-foreground shrink-0 hidden sm:inline hover:opacity-90"
+            className="font-display text-lg font-bold text-foreground shrink-0 hover:opacity-90"
           >
             CliniLocker
           </Link>
@@ -129,7 +159,12 @@ export function PatientLayout({ children }: { children: ReactNode }) {
             </Avatar>
           </Link>
         </header>
-        <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden">{children}</main>
+        
+        {/* Main Content - Add bottom padding for mobile nav */}
+        <main className="flex-1 p-4 md:p-6 overflow-x-hidden pb-20 md:pb-6 bg-background">{children}</main>
+        
+        {/* Bottom Navigation - Mobile Only */}
+        <BottomNav />
       </div>
     </div>
   );

@@ -219,23 +219,23 @@ const PatientMyProfile = () => {
 
   return (
     <PatientLayout>
-      <div className="mx-auto max-w-2xl animate-fade-in space-y-6">
+      <div className="animate-fade-in space-y-3 md:space-y-4 pb-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">{t("My Profile")}</h1>
-          <p className="mt-1 text-muted-foreground">{t("Your personal and emergency contact information.")}</p>
+          <h1 className="font-display text-xl md:text-2xl font-semibold text-foreground">{t("My Profile")}</h1>
+          <p className="mt-1.5 text-xs md:text-sm text-muted-foreground">{t("Your personal and emergency contact information.")}</p>
         </div>
 
         {/* Profile Image */}
-        <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-          <h3 className="font-display text-lg font-semibold text-foreground mb-4">{t("Profile Photo")}</h3>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <Avatar className="h-24 w-24 sm:h-28 sm:w-28">
+        <div className="rounded-xl border border-border bg-gradient-to-br from-card to-muted/30 p-4 md:p-5 shadow-sm">
+          <h3 className="font-display text-base md:text-lg font-semibold text-foreground mb-3">{t("Profile Photo")}</h3>
+          <div className="flex flex-col items-center gap-3">
+            <Avatar className="h-24 w-24 md:h-28 md:w-28 border-2 border-primary/20 shadow-md">
               {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={t("Profile")} />}
-              <AvatarFallback className="bg-primary/10 text-primary text-2xl">
-                <User className="h-10 w-10 sm:h-12 sm:w-12" />
+              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xl md:text-2xl">
+                <User className="h-12 w-12 md:h-14 md:w-14" />
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 w-full max-w-xs">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -245,8 +245,8 @@ const PatientMyProfile = () => {
               />
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
+                variant="default"
+                className="w-full min-h-[44px] rounded-lg text-sm"
                 disabled={uploadingAvatar}
                 onClick={() => fileInputRef.current?.click()}
               >
@@ -254,8 +254,8 @@ const PatientMyProfile = () => {
                 {uploadingAvatar ? t("Uploading…") : profile?.avatar_url ? t("Change photo") : t("Add photo")}
               </Button>
               {profile?.avatar_url && (
-                <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={handleRemoveAvatar}>
-                  <Trash2 className="mr-2 h-4 w-4" />
+                <Button type="button" variant="outline" className="w-full min-h-[40px] rounded-lg text-sm" onClick={handleRemoveAvatar}>
+                  <Trash2 className="mr-2 h-3.5 w-3.5" />
                   {t("Remove photo")}
                 </Button>
               )}
@@ -264,15 +264,17 @@ const PatientMyProfile = () => {
         </div>
 
         {/* Personal Information */}
-        <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
-              <h3 className="font-display text-lg font-semibold text-foreground">{t("Personal Information")}</h3>
+        <div className="rounded-xl border border-border bg-card p-4 md:p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600">
+                <User className="h-4 w-4 md:h-5 md:w-5" />
+              </div>
+              <h3 className="font-display text-base md:text-lg font-semibold text-foreground">{t("Personal Information")}</h3>
             </div>
             {!editingPersonal && (
-              <Button variant="ghost" size="icon" onClick={() => setEditingPersonal(true)} aria-label={t("Edit personal information")}>
-                <Pencil className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-lg" onClick={() => setEditingPersonal(true)} aria-label={t("Edit personal information")}>
+                <Pencil className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
             )}
           </div>
@@ -322,8 +324,8 @@ const PatientMyProfile = () => {
                 <Input id="address" value={personalForm.address ?? ""} onChange={(e) => setPersonalForm((p) => ({ ...p, address: e.target.value }))} placeholder={t("Address")} />
               </div>
               <div className="flex gap-2">
-                <Button type="submit" disabled={savingPersonal}>{savingPersonal ? t("Saving…") : t("Save")}</Button>
-                <Button type="button" variant="outline" onClick={handleCancelPersonal}>{t("Cancel")}</Button>
+                <Button type="submit" className="flex-1 min-h-[44px] rounded-lg text-sm" disabled={savingPersonal}>{savingPersonal ? t("Saving…") : t("Save")}</Button>
+                <Button type="button" variant="outline" className="flex-1 min-h-[44px] rounded-lg text-sm" onClick={handleCancelPersonal}>{t("Cancel")}</Button>
               </div>
             </form>
           ) : (
@@ -340,15 +342,17 @@ const PatientMyProfile = () => {
         </div>
 
         {/* BP & Weight */}
-        <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Heart className="h-5 w-5 text-primary" />
-              <h3 className="font-display text-lg font-semibold text-foreground">{t("BP & Weight")}</h3>
+        <div className="rounded-xl border border-border bg-card p-4 md:p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600">
+                <Heart className="h-4 w-4 md:h-5 md:w-5" />
+              </div>
+              <h3 className="font-display text-base md:text-lg font-semibold text-foreground">{t("BP & Weight")}</h3>
             </div>
             {!editingVitals && (
-              <Button variant="ghost" size="icon" onClick={() => setEditingVitals(true)} aria-label={t("Edit BP and weight")}>
-                <Pencil className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-lg" onClick={() => setEditingVitals(true)} aria-label={t("Edit BP and weight")}>
+                <Pencil className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
             )}
           </div>
@@ -366,8 +370,8 @@ const PatientMyProfile = () => {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button type="submit" disabled={savingVitals}>{savingVitals ? t("Saving…") : t("Save")}</Button>
-                <Button type="button" variant="outline" onClick={handleCancelVitals}>{t("Cancel")}</Button>
+                <Button type="submit" className="flex-1 min-h-[44px] rounded-lg text-sm" disabled={savingVitals}>{savingVitals ? t("Saving…") : t("Save")}</Button>
+                <Button type="button" variant="outline" className="flex-1 min-h-[44px] rounded-lg text-sm" onClick={handleCancelVitals}>{t("Cancel")}</Button>
               </div>
             </form>
           ) : (
@@ -379,15 +383,17 @@ const PatientMyProfile = () => {
         </div>
 
         {/* Emergency Contact */}
-        <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Phone className="h-5 w-5 text-primary" />
-              <h3 className="font-display text-lg font-semibold text-foreground">{t("Emergency Contact")}</h3>
+        <div className="rounded-xl border border-border bg-card p-4 md:p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
+                <Phone className="h-4 w-4 md:h-5 md:w-5" />
+              </div>
+              <h3 className="font-display text-base md:text-lg font-semibold text-foreground">{t("Emergency Contact")}</h3>
             </div>
             {!editingEmergency && (
-              <Button variant="ghost" size="icon" onClick={() => setEditingEmergency(true)} aria-label={t("Edit emergency contact")}>
-                <Pencil className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-lg" onClick={() => setEditingEmergency(true)} aria-label={t("Edit emergency contact")}>
+                <Pencil className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
             )}
           </div>
@@ -409,8 +415,8 @@ const PatientMyProfile = () => {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button type="submit" disabled={savingEmergency}>{savingEmergency ? t("Saving…") : t("Save")}</Button>
-                <Button type="button" variant="outline" onClick={handleCancelEmergency}>{t("Cancel")}</Button>
+                <Button type="submit" className="flex-1 min-h-[44px] rounded-lg text-sm" disabled={savingEmergency}>{savingEmergency ? t("Saving…") : t("Save")}</Button>
+                <Button type="button" variant="outline" className="flex-1 min-h-[44px] rounded-lg text-sm" onClick={handleCancelEmergency}>{t("Cancel")}</Button>
               </div>
             </form>
           ) : (
