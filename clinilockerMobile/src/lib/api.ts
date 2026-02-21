@@ -4,8 +4,14 @@ import type { Profile, Report, FamilyMember, Lab } from "./supabase";
 export async function getProfile(): Promise<Profile | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (error) return null;
   return data as Profile | null;
+}
+
+/** Ensure a profile row exists for the current user (e.g. trigger missed). Uses RPC to avoid 409. */
+export async function ensureProfileExists(): Promise<void> {
+  await supabase.rpc("ensure_profile_exists");
 }
 
 /** Coerce empty strings to null for optional profile fields to avoid DB/trigger issues. */
@@ -30,8 +36,9 @@ export async function updateProfile(updates: Partial<Profile>): Promise<Profile 
   if (!user) return { error: "Not signed in" };
   const payload = sanitizeProfileUpdates(updates);
   if (Object.keys(payload).length === 0) return null;
-  const { data, error } = await supabase.from("profiles").update(payload).eq("id", user.id).select().single();
+  const { data, error } = await supabase.from("profiles").update(payload).eq("id", user.id).select().maybeSingle();
   if (error) return { error: error.message };
+  if (!data) return { error: "Profile not found. Try signing out and back in." };
   return data as Profile | null;
 }
 
@@ -662,4 +669,63 @@ export async function generateNotificationMessage(
   } catch (error: any) {
     return { error: error.message || "Failed to generate message" };
   }
+}
+
+/** Remote flag: show ads section (set to true in Supabase app_config after AdSense verification). */
+export async function getShowAds(): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("app_config")
+    .select("value")
+    .eq("key", "show_ads")
+    .maybeSingle();
+  if (error || !data?.value) return false;
+  return data.value === true || data.value === "true";
+}
+
+/** Check if a phone number already has a patient account (profile). Used to show Login vs Create account. */
+export async function checkPatientPhoneExists(phone: string): Promise<boolean> {
+  const normalized = phone.replace(/\s/g, "").replace(/^0/, "");
+  const fullPhone = normalized.startsWith("+") ? normalized : `+91${normalized}`;
+  const { data, error } = await supabase.rpc("patient_phone_exists", { phone_input: fullPhone });
+  if (error) return false;
+  return data === true;
+}
+
+/** Check if phone is linked to any account. Returns: 'auth' = log in with OTP, 'profile_only' = use Google, 'none' = create account. */
+export async function getPatientPhoneStatus(phone: string): Promise<"auth" | "profile_only" | "none"> {
+  const normalized = phone.replace(/\s/g, "").replace(/^0/, "");
+  const fullPhone = normalized.startsWith("+") ? normalized : `+91${normalized}`;
+  const { data, error } = await supabase.rpc("patient_phone_status", { phone_input: fullPhone });
+  if (error || data == null) return "none";
+  if (data === "auth" || data === "profile_only") return data;
+  return "none";
+}
+
+/** Check if email is linked to any account. Returns: 'auth' = log in with magic link, 'profile_only' = use phone/Google, 'none' = create account. */
+export async function getPatientEmailStatus(email: string): Promise<"auth" | "profile_only" | "none"> {
+  const trimmed = email.trim().toLowerCase();
+  if (!trimmed || !trimmed.includes("@")) return "none";
+  const { data, error } = await supabase.rpc("patient_email_status", { email_input: trimmed });
+  if (error || data == null) return "none";
+  if (data === "auth" || data === "profile_only") return data;
+  return "none";
+}
+
+/** True if this email is in profiles for a different user (same person, other auth). Used after Google sign-in to avoid duplicate account. */
+export async function checkPatientEmailOwnedByOtherUser(email: string, currentUserId: string): Promise<boolean> {
+  const trimmed = email?.trim()?.toLowerCase();
+  if (!trimmed || !trimmed.includes("@")) return false;
+  const { data, error } = await supabase.rpc("patient_email_owned_by_other_user", {
+    email_input: trimmed,
+    current_uid: currentUserId,
+  });
+  return !error && data === true;
+}
+
+/** Whether profile has required fields filled (full_name + phone). Used to gate dashboard until user completes profile. */
+export function isProfileComplete(profile: { full_name?: string | null; phone?: string | null } | null): boolean {
+  if (!profile) return false;
+  const name = (profile.full_name ?? "").trim();
+  const ph = (profile.phone ?? "").trim();
+  return name.length > 0 && ph.length > 0;
 }

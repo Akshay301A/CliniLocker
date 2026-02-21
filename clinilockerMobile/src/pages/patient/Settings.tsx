@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
-import { Lock, Bell, Shield, Globe, Trash2, Download, Building2 } from "lucide-react";
+import { Lock, Bell, Shield, Globe, Trash2, Download, Building2, LogOut } from "lucide-react";
 import { updatePassword, getProfile, updateProfile, getLinkedLabs, type LinkedLab } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -50,6 +51,7 @@ const DEFAULT_PRIVACY = {
 };
 
 const PatientSettings = () => {
+  const { signOut } = useAuth();
   const [notifications, setNotifications] = useState<NotificationPrefs>(DEFAULT_NOTIFICATIONS);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsLoaded, setNotificationsLoaded] = useState(false);
@@ -172,6 +174,10 @@ const PatientSettings = () => {
 
   const handleDeleteAccount = () => {
     toast.error(t("Account deletion requires verification. An OTP has been sent to your phone."));
+  };
+
+  const handleLogout = async () => {
+    await signOut();
   };
 
   return (
@@ -428,6 +434,18 @@ const PatientSettings = () => {
           </AccordionContent>
         </AccordionItem>
         </Accordion>
+
+        {/* Log out */}
+        <div className="rounded-2xl border border-border bg-card p-5 md:p-6 shadow-md">
+          <Button
+            variant="outline"
+            className="w-full min-h-[48px] rounded-xl border-border text-foreground hover:bg-muted hover:text-destructive"
+            onClick={handleLogout}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            {t("Log out")}
+          </Button>
+        </div>
 
         {/* Danger Zone */}
         <div className="rounded-2xl border-2 border-destructive/50 bg-card p-5 md:p-6 shadow-md space-y-4">

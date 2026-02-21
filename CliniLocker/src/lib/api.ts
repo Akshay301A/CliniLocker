@@ -455,3 +455,54 @@ export async function analyzeReportText(text: string): Promise<ReportAnalysis | 
     actions: Array.isArray(data.actions) ? data.actions : [],
   };
 }
+
+/** Remote flag: show ads section (set to true in Supabase app_config after AdSense verification). */
+export async function getShowAds(): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("app_config")
+    .select("value")
+    .eq("key", "show_ads")
+    .maybeSingle();
+  if (error || !data?.value) return false;
+  return data.value === true || data.value === "true";
+}
+
+/** Check if a phone number already has a patient account (profile). Used to show Login vs Create account. */
+export async function checkPatientPhoneExists(phone: string): Promise<boolean> {
+  const normalized = phone.replace(/\s/g, "").replace(/^0/, "");
+  const fullPhone = normalized.startsWith("+") ? normalized : `+91${normalized}`;
+  const { data, error } = await supabase.rpc("patient_phone_exists", { phone_input: fullPhone });
+  if (error) return false;
+  return data === true;
+}
+
+/** Check if phone is linked to any account. Returns: 'auth' = log in with OTP, 'profile_only' = use Google, 'none' = create account. */
+export async function getPatientPhoneStatus(phone: string): Promise<"auth" | "profile_only" | "none"> {
+  const normalized = phone.replace(/\s/g, "").replace(/^0/, "");
+  const fullPhone = normalized.startsWith("+") ? normalized : `+91${normalized}`;
+  const { data, error } = await supabase.rpc("patient_phone_status", { phone_input: fullPhone });
+  if (error || data == null) return "none";
+  if (data === "auth" || data === "profile_only") return data;
+  return "none";
+}
+
+/** Check if email is linked to any account. Returns: 'auth' = log in with magic link, 'profile_only' = use phone/Google, 'none' = create account. */
+export async function getPatientEmailStatus(email: string): Promise<"auth" | "profile_only" | "none"> {
+  const trimmed = email.trim().toLowerCase();
+  if (!trimmed || !trimmed.includes("@")) return "none";
+  const { data, error } = await supabase.rpc("patient_email_status", { email_input: trimmed });
+  if (error || data == null) return "none";
+  if (data === "auth" || data === "profile_only") return data;
+  return "none";
+}
+
+/** True if this email is in profiles for a different user (same person, other auth). Used after Google sign-in to avoid duplicate account. */
+export async function checkPatientEmailOwnedByOtherUser(email: string, currentUserId: string): Promise<boolean> {
+  const trimmed = email?.trim()?.toLowerCase();
+  if (!trimmed || !trimmed.includes("@")) return false;
+  const { data, error } = await supabase.rpc("patient_email_owned_by_other_user", {
+    email_input: trimmed,
+    current_uid: currentUserId,
+  });
+  return !error && data === true;
+}

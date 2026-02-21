@@ -5,7 +5,7 @@ import { Preloader } from "@/components/Preloader";
 import { PatientLayout } from "@/components/PatientLayout";
 import { AdSense } from "@/components/AdSense";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getPatientReports, getFamilyMembers, getProfile, getMedicationReminders } from "@/lib/api";
+import { getPatientReports, getFamilyMembers, getProfile, getMedicationReminders, getShowAds } from "@/lib/api";
 import { fetchHealthQuotes } from "@/lib/healthQuotes";
 import type { ReportWithLab } from "@/lib/api";
 
@@ -59,6 +59,7 @@ const PatientDashboard = () => {
   const [healthQuotes, setHealthQuotes] = useState<string[]>([]);
   const [healthTipIndex, setHealthTipIndex] = useState(0);
   const [reminders, setReminders] = useState<any[]>([]);
+  const [showAds, setShowAds] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -91,6 +92,14 @@ const PatientDashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    getShowAds().then((v) => {
+      if (mounted) setShowAds(v);
+    });
+    return () => { mounted = false; };
+  }, []);
+
   const recentReports = reports.slice(0, 3);
   const lastReport = reports[0];
   const lastCheckup = lastReport?.uploaded_at ? formatDate(lastReport.uploaded_at) : "—";
@@ -121,7 +130,8 @@ const PatientDashboard = () => {
           <div className="absolute top-1/2 right-1/4 w-20 h-20 bg-white/5 rounded-full blur-lg"></div>
         </div>
 
-        {/* Ad Space - Health Related Ads - Compact */}
+        {/* Ad Space - shown only when show_ads is true in app_config (after AdSense verification) */}
+        {showAds && (
         <div className="rounded-xl border border-border/40 bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50 p-2.5 md:p-3 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
@@ -132,7 +142,6 @@ const PatientDashboard = () => {
             </div>
             <span className="text-[9px] text-muted-foreground/60 px-1.5 py-0.5 rounded bg-muted/50 font-medium">Ad</span>
           </div>
-          {/* AdSense Component - Compact size */}
           <div className="w-full min-h-[50px] max-h-[120px] overflow-hidden">
             <AdSense
               publisherId={import.meta.env.VITE_ADSENSE_PUBLISHER_ID}
@@ -144,6 +153,7 @@ const PatientDashboard = () => {
             />
           </div>
         </div>
+        )}
 
         {loading ? (
           <Preloader />

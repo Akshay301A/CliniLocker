@@ -5,7 +5,7 @@ import { Preloader } from "@/components/Preloader";
 import { PatientLayout } from "@/components/PatientLayout";
 import { AdSense } from "@/components/AdSense";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getPatientReports, getFamilyMembers, getProfile } from "@/lib/api";
+import { getPatientReports, getFamilyMembers, getProfile, getShowAds } from "@/lib/api";
 import { fetchHealthQuotes } from "@/lib/healthQuotes";
 import type { ReportWithLab } from "@/lib/api";
 
@@ -48,6 +48,7 @@ const PatientDashboard = () => {
   const [reports, setReports] = useState<ReportWithLab[]>([]);
   const [familyCount, setFamilyCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showAds, setShowAds] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
   const [bloodPressure, setBloodPressure] = useState<string | null>(null);
   const [weight, setWeight] = useState<number | null>(null);
@@ -84,6 +85,14 @@ const PatientDashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    getShowAds().then((v) => {
+      if (mounted) setShowAds(v);
+    });
+    return () => { mounted = false; };
+  }, []);
+
   const recentReports = reports.slice(0, 3);
   const lastReport = reports[0];
   const lastCheckup = lastReport?.uploaded_at ? formatDate(lastReport.uploaded_at) : "—";
@@ -108,7 +117,8 @@ const PatientDashboard = () => {
           )}
         </div>
 
-        {/* Ad Space - Health Related Ads - After Welcome Card */}
+        {/* Ad Space - shown only when show_ads is true in app_config (after AdSense verification) */}
+        {showAds && (
         <div className="rounded-xl border border-border/40 bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50 p-3 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
@@ -130,6 +140,7 @@ const PatientDashboard = () => {
             />
           </div>
         </div>
+        )}
 
         {loading ? (
           <Preloader />
@@ -213,7 +224,8 @@ const PatientDashboard = () => {
             </Link>
         </div>
 
-        {/* Ad Space - Health Related Ads - After Recent Reports */}
+        {/* Ad Space - shown only when show_ads is true in app_config (after AdSense verification) */}
+        {showAds && (
         <div className="rounded-xl border border-border/40 bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50 p-3 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
@@ -235,6 +247,7 @@ const PatientDashboard = () => {
             />
           </div>
         </div>
+        )}
 
         {/* Quick Actions */}
         <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">

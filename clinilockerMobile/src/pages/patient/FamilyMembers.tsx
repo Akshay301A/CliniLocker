@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   getFamilyMembers,
@@ -85,7 +86,7 @@ const PatientFamilyMembers = () => {
     setName("");
     setPhone("");
     setDob("");
-    toast.success(t("Invite created. Send the link to {{name}} so they can create an account.", { name: name.trim() }));
+    toast.success(t("Invite created. Send the link to ") + name.trim() + t(" so they can create an account."));
     getFamilyMembers().then(setMembers);
   };
 
@@ -106,7 +107,7 @@ const PatientFamilyMembers = () => {
       return;
     }
     await navigator.clipboard.writeText(result.link);
-    toast.success(t("Invite link copied! Send it to {{name}} via WhatsApp or SMS.", { name: member.name }));
+    toast.success(t("Invite link copied! Send it to ") + member.name + t(" via WhatsApp or SMS."));
   };
 
   const handleAcceptReceived = async (token: string) => {
@@ -141,85 +142,106 @@ const PatientFamilyMembers = () => {
           {t("Everyone must have an account. Add a family member and send them an invite link to sign up.")}
         </p>
 
-        {/* Invites you received – always visible so users can accept missed invites here */}
-        <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 md:p-5 space-y-3 shadow-sm">
-          <h2 className="flex items-center gap-2 font-display text-base md:text-lg font-semibold text-foreground">
-            <div className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg bg-primary text-white">
-              <Inbox className="h-4 w-4 md:h-5 md:w-5" />
-            </div>
-            {t("Invites you received")}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t("If someone added you as a family member, you'll see it here. Accept to link accounts and see shared reports. Check this section if you missed an invite link.")}
-          </p>
-          {receivedInvites.length > 0 ? (
-            <div className="space-y-2">
-              {receivedInvites.map((inv) => (
-                <div
-                  key={inv.token}
-                  className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 shadow-sm md:flex-row md:items-center md:justify-between"
-                >
-                  <div>
-                    <p className="text-sm md:text-base font-semibold text-foreground">
-                      {inv.inviter_name} {t("invited you")}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">({inv.member_label})</p>
+        {/* Tabs: Invites you received | Invites you sent – colorful card-style tabs like dashboard */}
+        <Tabs defaultValue="received" className="w-full">
+          <TabsList className="w-full grid grid-cols-2 gap-3 p-0 h-auto min-h-0 bg-transparent border-0 shadow-none">
+            <TabsTrigger
+              value="received"
+              className="flex items-center gap-3 rounded-2xl min-h-[52px] px-4 py-3 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 border border-blue-200/60 dark:border-blue-800/60 shadow-md text-blue-700 dark:text-blue-300 data-[state=active]:from-blue-100 data-[state=active]:to-blue-200 dark:data-[state=active]:from-blue-900/70 dark:data-[state=active]:to-blue-800/70 data-[state=active]:border-blue-300/80 dark:data-[state=active]:border-blue-600 data-[state=active]:shadow-lg data-[state=inactive]:opacity-90"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md">
+                <Inbox className="h-4 w-4" />
+              </div>
+              <span className="truncate text-sm font-semibold">{t("Invites you received")}</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="sent"
+              className="flex items-center gap-3 rounded-2xl min-h-[52px] px-4 py-3 bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-950/50 dark:to-purple-900/50 border border-violet-200/60 dark:border-violet-800/60 shadow-md text-violet-700 dark:text-violet-300 data-[state=active]:from-violet-100 data-[state=active]:to-violet-200 dark:data-[state=active]:from-violet-900/70 dark:data-[state=active]:to-violet-800/70 data-[state=active]:border-violet-300/80 dark:data-[state=active]:border-violet-600 data-[state=active]:shadow-lg data-[state=inactive]:opacity-90"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-md">
+                <Send className="h-4 w-4" />
+              </div>
+              <span className="truncate text-sm font-semibold">{t("Invites you sent")}</span>
+            </TabsTrigger>
+          </TabsList>
+          <div className="mt-3 rounded-2xl border border-border/60 bg-card p-4 md:p-5 shadow-md min-h-[120px]">
+            <TabsContent value="received" className="mt-0">
+              {members.length === 0 ? (
+                <div className="py-8 text-center">
+                  <Users className="mx-auto h-10 w-10 text-muted-foreground" />
+                  <p className="mt-2 text-muted-foreground">{t("No family members added yet.")}</p>
+                </div>
+              ) : receivedInvites.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {t("If someone added you as a family member, you'll see it here. Accept to link accounts and see shared reports.")}
+                  </p>
+                  {receivedInvites.map((inv) => (
+                    <div
+                      key={inv.token}
+                      className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3 md:flex-row md:items-center md:justify-between"
+                    >
+                      <div>
+                        <p className="text-sm md:text-base font-semibold text-foreground">
+                          {inv.inviter_name} {t("invited you")}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">({inv.member_label})</p>
+                      </div>
+                      <Button
+                        className="w-full md:w-auto min-h-[40px] rounded-lg text-sm"
+                        onClick={() => handleAcceptReceived(inv.token)}
+                        disabled={acceptingToken === inv.token}
+                      >
+                        {acceptingToken === inv.token ? t("Accepting…") : t("Accept")}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground py-2">{t("No pending invites right now.")}</p>
+              )}
+            </TabsContent>
+            <TabsContent value="sent" className="mt-0">
+              {members.length === 0 ? (
+                <div className="py-8 text-center">
+                  <Users className="mx-auto h-10 w-10 text-muted-foreground" />
+                  <p className="mt-2 text-muted-foreground">{t("No family members added yet.")}</p>
+                </div>
+              ) : pendingSent.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {t("Pending invites you've sent. Copy the link again to resend. They can accept from the link or under \"Invites you received\" on their Family Members page.")}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {pendingSent.map((m) => (
+                      <div
+                        key={m.id}
+                        className="flex flex-col md:flex-row items-start md:items-center gap-2.5 rounded-lg border border-border bg-muted/30 p-3"
+                      >
+                        <span className="text-xs md:text-sm font-semibold text-foreground flex-1">{m.name}</span>
+                        <Button
+                          type="button"
+                          variant="default"
+                          className="w-full md:w-auto min-h-[40px] rounded-lg text-sm"
+                          onClick={() => handleCopyInviteLink(m)}
+                        >
+                          <Copy className="mr-1.5 h-3.5 w-3.5" /> {t("Copy link")}
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                  <Button
-                    className="w-full md:w-auto min-h-[40px] rounded-lg text-sm"
-                    onClick={() => handleAcceptReceived(inv.token)}
-                    disabled={acceptingToken === inv.token}
-                  >
-                    {acceptingToken === inv.token ? t("Accepting…") : t("Accept")}
-                  </Button>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground py-2">{t("No pending invites right now.")}</p>
-          )}
-        </div>
-
-        {/* Invites you sent – always visible so users can resend links for pending invites */}
-        <div className="rounded-xl border border-border bg-card p-4 md:p-5 space-y-3 shadow-sm">
-          <h2 className="flex items-center gap-2 font-display text-base md:text-lg font-semibold text-foreground">
-            <div className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg bg-muted text-foreground">
-              <Send className="h-4 w-4 md:h-5 md:w-5" />
-            </div>
-            {t("Invites you sent")}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t("Pending invites you've sent. Copy the link again to resend. They can accept from the link or under “Invites you received” on their Family Members page.")}
-          </p>
-          {pendingSent.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {pendingSent.map((m) => (
-                <div
-                  key={m.id}
-                  className="flex flex-col md:flex-row items-start md:items-center gap-2.5 rounded-lg border border-border bg-muted/30 p-3"
-                >
-                  <span className="text-xs md:text-sm font-semibold text-foreground flex-1">{m.name}</span>
-                  <Button
-                    type="button"
-                    variant="default"
-                    className="w-full md:w-auto min-h-[40px] rounded-lg text-sm"
-                    onClick={() => handleCopyInviteLink(m)}
-                  >
-                    <Copy className="mr-1.5 h-3.5 w-3.5" /> {t("Copy link")}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground py-2">{t("No pending invites. Add a member to send an invite.")}</p>
-          )}
-        </div>
-
+              ) : (
+                <p className="text-sm text-muted-foreground py-2">{t("No pending invites. Add a member to send an invite.")}</p>
+              )}
+            </TabsContent>
+          </div>
+        </Tabs>
         {inviteLink && (
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 sm:p-5 space-y-3">
             <div className="flex items-center gap-2 text-foreground font-medium">
               <Link2 className="h-4 w-4 text-primary" />
-              {t("Invite link for {{name}}", { name: inviteLink.name })}
+              {t("Invite link for ") + inviteLink.name}
             </div>
             <p className="text-sm text-muted-foreground">
               {t("Send this link so they can create an account. The link expires in 7 days.")}
@@ -337,13 +359,6 @@ const PatientFamilyMembers = () => {
                 </div>
               ))}
             </div>
-
-            {members.length === 0 && (
-              <div className="rounded-xl border border-dashed border-border py-12 text-center">
-                <Users className="mx-auto h-10 w-10 text-muted-foreground" />
-                <p className="mt-2 text-muted-foreground">{t("No family members added yet.")}</p>
-              </div>
-            )}
           </>
         )}
       </div>
