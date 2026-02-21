@@ -455,3 +455,211 @@ export async function analyzeReportText(text: string): Promise<ReportAnalysis | 
     actions: Array.isArray(data.actions) ? data.actions : [],
   };
 }
+
+// --- Prescription Analysis & Reminders ---
+
+export type MedicationReminder = {
+  medication_name: string;
+  dosage: string;
+  frequency: string; // e.g., "2 times daily", "once in morning"
+  duration_days?: number;
+  start_date?: string;
+  times?: string[]; // e.g., ["08:00", "20:00"]
+  notes?: string;
+};
+
+export type PrescriptionAnalysis = {
+  summary: string;
+  medications: MedicationReminder[];
+  doctor_name?: string;
+  prescription_date?: string;
+};
+
+/** Call Edge Function to analyze prescription text with OpenAI. */
+export async function analyzePrescriptionText(text: string): Promise<PrescriptionAnalysis | { error: string }> {
+  const { data, error } = await supabase.functions.invoke("analyze-prescription", {
+    body: { text: text.slice(0, 12000) },
+  });
+  if (error) return { error: error.message };
+  if (data?.error) return { error: String(data.error) };
+  if (!data || !Array.isArray(data.medications)) return { error: "Invalid response" };
+  
+  return {
+    summary: data.summary || "",
+    medications: data.medications.map((m: any) => ({
+      medication_name: m.medication_name || "",
+      dosage: m.dosage || "",
+      frequency: m.frequency || "",
+      duration_days: m.duration_days || undefined,
+      start_date: m.start_date || undefined,
+      times: Array.isArray(m.times) ? m.times : undefined,
+      notes: m.notes || undefined,
+    })),
+    doctor_name: data.doctor_name,
+    prescription_date: data.prescription_date,
+  };
+}
+
+/** Upload prescription file to storage */
+export async function uploadPrescriptionFile(path: string, file: File): Promise<{ error?: string }> {
+  const { error } = await supabase.storage.from("prescriptions").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+  if (error) return { error: error.message };
+  return {};
+}
+
+/** Insert prescription with reminders */
+export async function insertPrescription(prescription: {
+  patient_id: string;
+  patient_name: string;
+  file_url: string;
+  doctor_name?: string | null;
+  prescription_date?: string | null;
+  reminders: MedicationReminder[];
+}): Promise<{ id: string } | { error: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+  
+  // Insert prescription
+  const { data: presc, error: prescError } = await supabase
+    .from("prescriptions")
+    .insert({
+      patient_id: prescription.patient_id,
+      patient_name: prescription.patient_name,
+      file_url: prescription.file_url,
+      doctor_name: prescription.doctor_name,
+      prescription_date: prescription.prescription_date,
+    })
+    .select()
+    .single();
+  
+  if (prescError || !presc) return { error: prescError?.message || "Failed to create prescription" };
+  
+  // Insert reminders
+  if (prescription.reminders.length > 0) {
+    const remindersToInsert = prescription.reminders.map((r) => ({
+      prescription_id: presc.id,
+      patient_id: prescription.patient_id,
+      medication_name: r.medication_name,
+      dosage: r.dosage,
+      frequency: r.frequency,
+      duration_days: r.duration_days || null,
+      start_date: r.start_date || new Date().toISOString().split('T')[0],
+      times: r.times || null,
+      notes: r.notes || null,
+      is_active: true,
+    }));
+    
+    const { data: insertedReminders, error: remError } = await supabase
+      .from("medication_reminders")
+      .insert(remindersToInsert)
+      .select();
+    
+    if (remError) {
+      console.error("Failed to create reminders:", remError);
+      // Don't fail the whole operation, just log
+    } else if (insertedReminders) {
+      // Schedule notifications for active reminders with times
+      const { scheduleMedicationReminder } = await import("./notifications");
+      for (const reminder of insertedReminders) {
+        if (reminder.is_active && reminder.times && reminder.times.length > 0) {
+          await scheduleMedicationReminder(
+            reminder.id,
+            reminder.medication_name,
+            reminder.dosage,
+            reminder.times,
+            reminder.start_date,
+            reminder.duration_days
+          );
+        }
+      }
+    }
+  }
+  
+  return { id: presc.id };
+}
+
+/** Get all prescriptions for current user */
+export async function getPrescriptions(): Promise<any[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from("prescriptions")
+    .select("*")
+    .eq("patient_id", user.id)
+    .order("prescription_date", { ascending: false });
+  return data || [];
+}
+
+/** Get all active medication reminders */
+export async function getMedicationReminders(): Promise<any[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from("medication_reminders")
+    .select("*, prescriptions(file_url, doctor_name, prescription_date)")
+    .eq("patient_id", user.id)
+    .eq("is_active", true)
+    .order("start_date", { ascending: true });
+  return data || [];
+}
+
+/** Update medication reminder */
+export async function updateMedicationReminder(
+  reminderId: string,
+  updates: Partial<MedicationReminder & { is_active?: boolean }>
+): Promise<{ error?: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+  
+  const { error } = await supabase
+    .from("medication_reminders")
+    .update(updates)
+    .eq("id", reminderId)
+    .eq("patient_id", user.id);
+  
+  if (error) return { error: error.message };
+  return {};
+}
+
+/** Delete medication reminder */
+export async function deleteMedicationReminder(reminderId: string): Promise<{ error?: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+  
+  const { error } = await supabase
+    .from("medication_reminders")
+    .delete()
+    .eq("id", reminderId)
+    .eq("patient_id", user.id);
+  
+  if (error) return { error: error.message };
+  return {};
+}
+
+/** Generate a fun, friendly notification message using AI */
+export async function generateNotificationMessage(
+  medicationName: string,
+  dosage: string,
+  timeOfDay?: string
+): Promise<{ message: string } | { error: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke("generate-notification-message", {
+      body: {
+        medication_name: medicationName,
+        dosage: dosage,
+        time_of_day: timeOfDay,
+      },
+    });
+    
+    if (error) return { error: error.message };
+    if (data?.error) return { error: String(data.error) };
+    if (!data?.message) return { error: "Invalid response" };
+    
+    return { message: data.message };
+  } catch (error: any) {
+    return { error: error.message || "Failed to generate message" };
+  }
+}

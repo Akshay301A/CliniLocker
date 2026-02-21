@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FileText, Users, TrendingUp, Calendar, Shield, Sparkles, Heart, Tag, Megaphone, Building2, Stethoscope } from "lucide-react";
+import { FileText, Users, TrendingUp, Calendar, Shield, Sparkles, Heart, Tag, Megaphone, Building2, Stethoscope, Pill, Bell } from "lucide-react";
 import { Preloader } from "@/components/Preloader";
 import { PatientLayout } from "@/components/PatientLayout";
 import { AdSense } from "@/components/AdSense";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getPatientReports, getFamilyMembers, getProfile } from "@/lib/api";
+import { getPatientReports, getFamilyMembers, getProfile, getMedicationReminders } from "@/lib/api";
 import { fetchHealthQuotes } from "@/lib/healthQuotes";
 import type { ReportWithLab } from "@/lib/api";
 
@@ -58,16 +58,18 @@ const PatientDashboard = () => {
   const [weight, setWeight] = useState<number | null>(null);
   const [healthQuotes, setHealthQuotes] = useState<string[]>([]);
   const [healthTipIndex, setHealthTipIndex] = useState(0);
+  const [reminders, setReminders] = useState<any[]>([]);
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([getPatientReports(), getFamilyMembers(), getProfile()]).then(([r, f, p]) => {
+    Promise.all([getPatientReports(), getFamilyMembers(), getProfile(), getMedicationReminders()]).then(([r, f, p, rem]) => {
       if (mounted) {
         setReports(r);
         setFamilyCount(f.length);
         setUserName(p?.full_name ?? null);
         setBloodPressure(p?.blood_pressure ?? null);
         setWeight(p?.weight ?? null);
+        setReminders(rem || []);
         setLoading(false);
       }
     });
@@ -231,6 +233,64 @@ const PatientDashboard = () => {
           <Link to="/patient/reports" className="mt-5 inline-flex items-center gap-2 text-sm md:text-base font-bold text-primary hover:text-primary/80 hover:underline transition-colors">
             {t("View all reports")} <span className="text-lg">→</span>
           </Link>
+        </div>
+
+        {/* Medication Reminders Section */}
+        <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5 shadow-md">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-lg md:text-xl font-bold text-foreground flex items-center gap-2">
+              <Pill className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+              {t("Medication Reminders")}
+            </h2>
+            <Link to="/patient/reminders" className="text-xs md:text-sm text-primary hover:underline font-medium">
+              {t("Manage")}
+            </Link>
+          </div>
+          {reminders.length > 0 ? (
+            <div className="space-y-3">
+              {reminders.slice(0, 3).map((reminder) => {
+                const times = reminder.times || [];
+                const nextTime = times.length > 0 ? times[0] : null;
+                return (
+                  <div key={reminder.id} className="flex items-start gap-3 rounded-xl border border-border/60 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 p-3 md:p-4">
+                    <div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-md">
+                      <Bell className="h-5 w-5 md:h-6 md:w-6" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-base md:text-lg text-foreground">{reminder.medication_name}</p>
+                      <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
+                        {reminder.dosage} • {reminder.frequency}
+                      </p>
+                      {nextTime && (
+                        <p className="text-xs text-primary font-medium mt-1">
+                          {t("Next dose")}: {nextTime}
+                        </p>
+                      )}
+                      {reminder.notes && (
+                        <p className="text-xs text-muted-foreground mt-1 italic">{reminder.notes}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {reminders.length > 3 && (
+                <Link to="/patient/reminders" className="block text-center text-sm text-primary hover:underline font-medium pt-2">
+                  {t("View all")} {reminders.length - 3} {t("more reminders")} →
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Pill className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm md:text-base font-medium mb-2">{t("No active reminders")}</p>
+              <p className="text-xs text-muted-foreground mb-4">{t("Upload a prescription to create medication reminders")}</p>
+              <Link to="/patient/upload">
+                <button className="text-sm font-semibold text-primary hover:underline">
+                  {t("Upload Prescription")} →
+                </button>
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Lab offers & promotions - Hidden until labs are added */}

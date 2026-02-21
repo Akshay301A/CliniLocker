@@ -6,3 +6,11 @@ verify_jwt = false
 # analyze-report: OpenAI analysis of report text. No report data is stored.
 [functions.analyze-report]
 verify_jwt = false
+
+# analyze-prescription: OpenAI analysis of prescription text to extract medications and create reminders.
+[functions.analyze-prescription]
+verify_jwt = false
+
+# generate-notification-message: Generate fun, friendly notification messages using AI.
+[functions.generate-notification-message]
+verify_jwt = false

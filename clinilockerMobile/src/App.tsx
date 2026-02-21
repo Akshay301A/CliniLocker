@@ -9,6 +9,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { Preloader } from "@/components/Preloader";
+import { setupNotificationHandlers } from "@/lib/notifications";
 import Index from "./pages/Index";
 import Features from "./pages/Features";
 import Pricing from "./pages/Pricing";
@@ -30,6 +31,7 @@ import PatientFamilyReports from "./pages/patient/FamilyReports";
 import AcceptInvite from "./pages/patient/AcceptInvite";
 import PatientSettings from "./pages/patient/Settings";
 import PatientMyProfile from "./pages/patient/MyProfile";
+import PatientReminders from "./pages/patient/Reminders";
 import ReportViewer from "./pages/patient/ReportViewer";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -40,6 +42,15 @@ const queryClient = new QueryClient();
 const PRELOADER_MIN_MS = 3000;
 
 function AppRoutes() {
+  // Setup notification handlers when app loads
+  useEffect(() => {
+    const cleanup = setupNotificationHandlers((data) => {
+      // When user taps notification, navigate to reminders page
+      window.location.href = "/patient/reminders";
+    });
+    return cleanup;
+  }, []);
+
   return (
     <TooltipProvider>
       <Toaster />
@@ -70,6 +81,7 @@ function AppRoutes() {
           <Route path="/patient/family" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientFamilyMembers /></LanguageProvider></ProtectedRoute>} />
           <Route path="/patient/profile" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientMyProfile /></LanguageProvider></ProtectedRoute>} />
           <Route path="/patient/settings" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientSettings /></LanguageProvider></ProtectedRoute>} />
+          <Route path="/patient/reminders" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientReminders /></LanguageProvider></ProtectedRoute>} />
           <Route path="/patient/report/:id" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><ReportViewer /></LanguageProvider></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
