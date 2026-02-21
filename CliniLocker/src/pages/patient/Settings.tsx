@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Bell, Shield, Globe, Download } from "lucide-react";
-import { getProfile, updateProfile, getLinkedLabs, type LinkedLab } from "@/lib/api";
+import { getProfile, updateProfile, getLinkedLabs, getPatientReports, getFamilyMembers, getSignedUrl, type LinkedLab, type ReportWithLab } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export type NotificationPrefs = {
@@ -25,8 +25,12 @@ const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
   email: false,
   reportReady: true,
   healthTips: false,
-  promotional: false,
+  promotional: true, // enabled by default
 };
+
+/** WhatsApp and Email toggles hidden until integration is ready; state still saved. */
+const NOTIFICATION_KEYS_VISIBLE: (keyof NotificationPrefs)[] = ["sms", "reportReady", "healthTips", "promotional"];
+/** First toggle ("sms" key) is shown as "Push Notifications": controls app push only. OTP is always sent via Twilio; do not gate OTP on this. */
 
 function prefsFromProfile(p: { notify_sms?: boolean; notify_whatsapp?: boolean; notify_email?: boolean; notify_report_ready?: boolean; notify_health_tips?: boolean; notify_promotional?: boolean } | null): NotificationPrefs {
   if (!p) return DEFAULT_NOTIFICATIONS;
@@ -59,6 +63,8 @@ const PatientSettings = () => {
 
   const [linkedLabs, setLinkedLabs] = useState<LinkedLab[]>([]);
   const [linkedLabsLoading, setLinkedLabsLoading] = useState(true);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [downloadReportsLoading, setDownloadReportsLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -132,8 +138,73 @@ const PatientSettings = () => {
     toast.success(t("Language saved. The app will use this language."));
   };
 
-  const handleExportData = () => {
-    toast.success(t("Your data export has been initiated. You'll receive a download link via email."));
+  const handleExportData = async () => {
+    setExportLoading(true);
+    try {
+      const [profile, reports, familyMembers] = await Promise.all([
+        getProfile(),
+        getPatientReports(),
+        getFamilyMembers(),
+      ]);
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        profile: profile ?? null,
+        reports: (reports ?? []).map((r) => ({
+          id: r.id,
+          test_name: r.test_name,
+          patient_name: r.patient_name,
+          uploaded_at: r.uploaded_at,
+          test_date: r.test_date,
+          lab_name: (r as ReportWithLab).labs?.name ?? null,
+        })),
+        familyMembers: familyMembers ?? [],
+      };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `clinilocker-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t("Export downloaded."));
+    } catch {
+      toast.error(t("Export failed. Please try again."));
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleDownloadAllReports = async () => {
+    setDownloadReportsLoading(true);
+    try {
+      const reports = await getPatientReports();
+      if (!reports.length) {
+        toast.info(t("No reports to download."));
+        setDownloadReportsLoading(false);
+        return;
+      }
+      for (let i = 0; i < reports.length; i++) {
+        const r = reports[i];
+        const signedUrl = r.file_url ? await getSignedUrl(r.file_url) : null;
+        if (signedUrl) {
+          const name = (r.test_name || r.id).replace(/[^a-zA-Z0-9._-]/g, "_") + ".pdf";
+          const a = document.createElement("a");
+          a.href = signedUrl;
+          a.download = name;
+          a.rel = "noopener noreferrer";
+          a.target = "_blank";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+        if (i < reports.length - 1) await new Promise((r) => setTimeout(r, 400));
+      }
+      toast.success(reports.length === 1 ? t("Download started. Check your downloads.") : `${reports.length} ${t("reports")}. ${t("Check your downloads.")}`);
+    } catch {
+      toast.error(t("Download failed. Please try again."));
+    } finally {
+      setDownloadReportsLoading(false);
+    }
   };
 
   return (
@@ -152,13 +223,11 @@ const PatientSettings = () => {
           </div>
           <div className="space-y-4">
             {[
-              { key: "sms" as const, label: t("SMS Notifications"), desc: t("Receive report updates via SMS") },
-              { key: "whatsapp" as const, label: t("WhatsApp Notifications"), desc: t("Get notified on WhatsApp") },
-              { key: "email" as const, label: t("Email Notifications"), desc: t("Receive email updates") },
-              { key: "reportReady" as const, label: t("Report Ready Alerts"), desc: t("Get notified when a new report is available") },
-              { key: "healthTips" as const, label: t("Health Tips"), desc: t("Receive weekly health tips") },
+              { key: "sms" as const, label: t("Push Notifications"), desc: t("Receive notifications from the app. If enabled, you get push from the app; if disabled, you don't. Does not affect OTP delivery.") },
+              { key: "reportReady" as const, label: t("Report Ready Alerts"), desc: t("Get notified when a new report is available (from app)") },
+              { key: "healthTips" as const, label: t("Health Tips"), desc: t("Receive weekly health tips from the app") },
               { key: "promotional" as const, label: t("Promotional Updates"), desc: t("Lab offers and discounts") },
-            ].map((item) => (
+            ].filter((item) => NOTIFICATION_KEYS_VISIBLE.includes(item.key)).map((item) => (
               <div key={item.key} className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">{item.label}</p>
@@ -256,11 +325,11 @@ const PatientSettings = () => {
             <h3 className="font-display text-lg font-semibold text-foreground">{t("Data Management")}</h3>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button variant="outline" onClick={handleExportData}>
-              <Download className="mr-2 h-4 w-4" /> {t("Export All Data")}
+            <Button variant="outline" onClick={handleExportData} disabled={exportLoading}>
+              <Download className="mr-2 h-4 w-4" /> {exportLoading ? t("Exporting…") : t("Export All Data")}
             </Button>
-            <Button variant="outline" onClick={() => toast.success(t("Download link sent to your email."))}>
-              <Download className="mr-2 h-4 w-4" /> {t("Download All Reports")}
+            <Button variant="outline" onClick={handleDownloadAllReports} disabled={downloadReportsLoading}>
+              <Download className="mr-2 h-4 w-4" /> {downloadReportsLoading ? t("Preparing…") : t("Download All Reports")}
             </Button>
           </div>
         </div>
