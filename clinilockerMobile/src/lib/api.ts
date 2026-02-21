@@ -14,6 +14,17 @@ export async function ensureProfileExists(): Promise<void> {
   await supabase.rpc("ensure_profile_exists");
 }
 
+/** Upsert FCM/APNs token for the current user. Call after push registration on native. */
+export async function savePushToken(token: string, platform: "android" | "ios" | "web"): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const now = new Date().toISOString();
+  await supabase.from("push_tokens").upsert(
+    { user_id: user.id, token, platform, updated_at: now },
+    { onConflict: "user_id,token" }
+  );
+}
+
 /** Coerce empty strings to null for optional profile fields to avoid DB/trigger issues. */
 function sanitizeProfileUpdates(updates: Partial<Profile>): Record<string, unknown> {
   const out: Record<string, unknown> = {};

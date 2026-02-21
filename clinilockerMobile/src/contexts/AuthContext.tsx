@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { registerPushAndSaveToken } from "@/lib/pushRegistration";
 
 type Role = "lab" | "patient" | null;
 
@@ -132,6 +133,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Register FCM/APNs token when patient is logged in (native only; no-op on web).
+  useEffect(() => {
+    if (user && role !== "lab") {
+      registerPushAndSaveToken();
+    }
+  }, [user?.id, role]);
 
   async function signOut() {
     await supabase.auth.signOut();
