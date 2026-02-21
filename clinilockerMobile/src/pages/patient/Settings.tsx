@@ -7,12 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
-import { Lock, Bell, Shield, Globe, Trash2, Download, Building2, LogOut } from "lucide-react";
-import { updatePassword, getProfile, updateProfile, getLinkedLabs, type LinkedLab } from "@/lib/api";
+import { Bell, Shield, Globe, Download, Building2, LogOut } from "lucide-react";
+import { getProfile, updateProfile, getLinkedLabs, type LinkedLab } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-
-const MIN_PASSWORD_LENGTH = 6;
 
 export type NotificationPrefs = {
   sms: boolean;
@@ -62,39 +60,8 @@ const PatientSettings = () => {
   const [preferredLanguage, setPreferredLanguage] = useState("en");
   const [languageLoading, setLanguageLoading] = useState(false);
 
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordLoading, setPasswordLoading] = useState(false);
-
   const [linkedLabs, setLinkedLabs] = useState<LinkedLab[]>([]);
   const [linkedLabsLoading, setLinkedLabsLoading] = useState(true);
-
-  const handleSavePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword.length < MIN_PASSWORD_LENGTH) {
-      toast.error(t("New password must be at least 6 characters"));
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error(t("New password and confirmation do not match"));
-      return;
-    }
-    setPasswordLoading(true);
-    const result = await updatePassword(
-      currentPassword.trim() || null,
-      newPassword
-    );
-    setPasswordLoading(false);
-    if (result.error) {
-      toast.error(result.error);
-      return;
-    }
-    toast.success(t("Password updated successfully."));
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-  };
 
   useEffect(() => {
     let mounted = true;
@@ -172,10 +139,6 @@ const PatientSettings = () => {
     toast.success(t("Your data export has been initiated. You'll receive a download link via email."));
   };
 
-  const handleDeleteAccount = () => {
-    toast.error(t("Account deletion requires verification. An OTP has been sent to your phone."));
-  };
-
   const handleLogout = async () => {
     await signOut();
   };
@@ -188,71 +151,7 @@ const PatientSettings = () => {
           <p className="mt-1.5 text-xs md:text-sm text-muted-foreground">{t("Manage your account, privacy, and preferences.")}</p>
         </div>
 
-        <Accordion type="single" collapsible className="space-y-3" defaultValue="password">
-          {/* Change Password */}
-          <AccordionItem value="password" className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-            <AccordionTrigger className="px-4 md:px-5 py-3 hover:no-underline">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600">
-                  <Lock className="h-4 w-4 md:h-5 md:w-5" />
-                </div>
-                <h3 className="font-display text-base md:text-lg font-semibold text-foreground">{t("Change Password")}</h3>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <form onSubmit={handleSavePassword} className="px-4 md:px-5 pb-4 md:pb-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <Lock className="h-5 w-5 text-primary" />
-            <h3 className="font-display text-lg font-semibold text-foreground">{t("Change Password")}</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {t("Signed in with Google or phone? Leave current password empty and enter a new password below. You can then sign in with your email and this password as well.")}
-          </p>
-          <div>
-            <Label htmlFor="currentPass">{t("Current Password (leave empty if you use Google or phone sign-in)")}</Label>
-            <Input
-              id="currentPass"
-              type="password"
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder={t("Enter current password")}
-              className="mt-1.5"
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="newPass">{t("New Password (min 6 characters)")}</Label>
-              <Input
-                id="newPass"
-                type="password"
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder={t("New password")}
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label htmlFor="confirmPass">{t("Confirm New Password")}</Label>
-              <Input
-                id="confirmPass"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder={t("Confirm new password")}
-                className="mt-1.5"
-              />
-            </div>
-          </div>
-                <Button type="submit" variant="default" className="w-full min-h-[44px] rounded-lg text-sm" disabled={passwordLoading}>
-                  {passwordLoading ? t("Updating…") : t("Update Password")}
-                </Button>
-              </form>
-            </AccordionContent>
-          </AccordionItem>
-
+        <Accordion type="single" collapsible className="space-y-3" defaultValue="notifications">
           {/* Notifications */}
           <AccordionItem value="notifications" className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
             <AccordionTrigger className="px-4 md:px-5 py-3 hover:no-underline">
@@ -445,20 +344,6 @@ const PatientSettings = () => {
             <LogOut className="mr-2 h-4 w-4" />
             {t("Log out")}
           </Button>
-        </div>
-
-        {/* Danger Zone */}
-        <div className="rounded-2xl border-2 border-destructive/50 bg-card p-5 md:p-6 shadow-md space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
-              <Trash2 className="h-5 w-5" />
-            </div>
-            <h3 className="font-display text-lg font-semibold text-destructive">{t("Danger Zone")}</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {t("Deleting your account will permanently remove all your data, reports, and family member records. This action cannot be undone.")}
-          </p>
-          <Button variant="destructive" className="w-full min-h-[48px] rounded-xl" onClick={handleDeleteAccount}>{t("Delete My Account")}</Button>
         </div>
       </div>
     </PatientLayout>

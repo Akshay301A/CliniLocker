@@ -7,6 +7,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { getProfile } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BottomNav } from "@/components/BottomNav";
+import { AppFooter } from "@/components/AppFooter";
 
 const navItems = [
   { icon: LayoutDashboard, labelKey: "Dashboard", to: "/patient/dashboard", iconColor: "text-blue-600" },
@@ -161,7 +162,10 @@ export function PatientLayout({ children }: { children: ReactNode }) {
         </header>
         
         {/* Main Content - Add bottom padding for mobile nav */}
-        <main className="flex-1 p-4 md:p-6 overflow-x-hidden pb-20 md:pb-6 bg-background">{children}</main>
+        <main className="flex-1 flex flex-col p-4 md:p-6 overflow-x-hidden pb-20 md:pb-6 bg-background">
+          <div className="flex-1 min-h-0">{children}</div>
+          <AppFooter />
+        </main>
         
         {/* Bottom Navigation - Mobile Only */}
         <BottomNav />

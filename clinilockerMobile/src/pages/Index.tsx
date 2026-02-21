@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { ArrowLeft } from "lucide-react";
 import type { UseEmblaCarouselType } from "embla-carousel-react";
+import { AppFooter } from "@/components/AppFooter";
 
 type CarouselApi = UseEmblaCarouselType[1];
 
@@ -193,6 +194,7 @@ const Index = () => {
           {currentSlide === onboardingSlides.length - 1 ? "Get Started 🚀" : "Continue →"}
         </Button>
       </div>
+      <AppFooter />
     </div>
   );
 };

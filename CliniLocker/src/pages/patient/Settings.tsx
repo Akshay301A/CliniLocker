@@ -6,11 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Lock, Bell, Shield, Globe, Trash2, Download } from "lucide-react";
-import { updatePassword, getProfile, updateProfile, getLinkedLabs, type LinkedLab } from "@/lib/api";
+import { Bell, Shield, Globe, Download } from "lucide-react";
+import { getProfile, updateProfile, getLinkedLabs, type LinkedLab } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
-
-const MIN_PASSWORD_LENGTH = 6;
 
 export type NotificationPrefs = {
   sms: boolean;
@@ -59,39 +57,8 @@ const PatientSettings = () => {
   const [preferredLanguage, setPreferredLanguage] = useState("en");
   const [languageLoading, setLanguageLoading] = useState(false);
 
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordLoading, setPasswordLoading] = useState(false);
-
   const [linkedLabs, setLinkedLabs] = useState<LinkedLab[]>([]);
   const [linkedLabsLoading, setLinkedLabsLoading] = useState(true);
-
-  const handleSavePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword.length < MIN_PASSWORD_LENGTH) {
-      toast.error(t("New password must be at least 6 characters"));
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error(t("New password and confirmation do not match"));
-      return;
-    }
-    setPasswordLoading(true);
-    const result = await updatePassword(
-      currentPassword.trim() || null,
-      newPassword
-    );
-    setPasswordLoading(false);
-    if (result.error) {
-      toast.error(result.error);
-      return;
-    }
-    toast.success(t("Password updated successfully."));
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-  };
 
   useEffect(() => {
     let mounted = true;
@@ -169,10 +136,6 @@ const PatientSettings = () => {
     toast.success(t("Your data export has been initiated. You'll receive a download link via email."));
   };
 
-  const handleDeleteAccount = () => {
-    toast.error(t("Account deletion requires verification. An OTP has been sent to your phone."));
-  };
-
   return (
     <PatientLayout>
       <div className="mx-auto max-w-2xl animate-fade-in space-y-6">
@@ -180,58 +143,6 @@ const PatientSettings = () => {
           <h1 className="font-display text-2xl font-bold text-foreground">{t("Settings")}</h1>
           <p className="mt-1 text-muted-foreground">{t("Manage your account, privacy, and preferences.")}</p>
         </div>
-
-        {/* Change Password */}
-        <form onSubmit={handleSavePassword} className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
-          <div className="flex items-center gap-2">
-            <Lock className="h-5 w-5 text-primary" />
-            <h3 className="font-display text-lg font-semibold text-foreground">{t("Change Password")}</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {t("Signed in with Google or phone? Leave current password empty and enter a new password below. You can then sign in with your email and this password as well.")}
-          </p>
-          <div>
-            <Label htmlFor="currentPass">{t("Current Password (leave empty if you use Google or phone sign-in)")}</Label>
-            <Input
-              id="currentPass"
-              type="password"
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder={t("Enter current password")}
-              className="mt-1.5"
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="newPass">{t("New Password (min 6 characters)")}</Label>
-              <Input
-                id="newPass"
-                type="password"
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder={t("New password")}
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label htmlFor="confirmPass">{t("Confirm New Password")}</Label>
-              <Input
-                id="confirmPass"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder={t("Confirm new password")}
-                className="mt-1.5"
-              />
-            </div>
-          </div>
-          <Button type="submit" variant="outline" disabled={passwordLoading}>
-            {passwordLoading ? t("Updating…") : t("Update Password")}
-          </Button>
-        </form>
 
         {/* Notifications */}
         <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
@@ -379,18 +290,6 @@ const PatientSettings = () => {
               ))}
             </div>
           )}
-        </div>
-
-        {/* Danger Zone */}
-        <div className="rounded-xl border border-destructive/30 bg-card p-6 shadow-card space-y-4">
-          <div className="flex items-center gap-2">
-            <Trash2 className="h-5 w-5 text-destructive" />
-            <h3 className="font-display text-lg font-semibold text-destructive">{t("Danger Zone")}</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {t("Deleting your account will permanently remove all your data, reports, and family member records. This action cannot be undone.")}
-          </p>
-          <Button variant="destructive" onClick={handleDeleteAccount}>{t("Delete My Account")}</Button>
         </div>
       </div>
     </PatientLayout>

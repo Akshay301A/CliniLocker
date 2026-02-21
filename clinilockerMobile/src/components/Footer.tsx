@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { AppFooter } from "./AppFooter";
 
 export function Footer() {
   return (
@@ -46,6 +47,7 @@ export function Footer() {
           © {new Date().getFullYear()} CliniLocker. Developed by CliniLocker developers. From RNJ PVT LTD. All rights reserved.
         </div>
       </div>
+      <AppFooter />
     </footer>
   );
 }
