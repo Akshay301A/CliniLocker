@@ -170,6 +170,14 @@ export type LinkedLab = {
   last_report_at: string | null;
 };
 
+type LabPatientLinkRow = {
+  lab_id: string;
+  reports_count: number | null;
+  first_report_at: string | null;
+  last_report_at: string | null;
+  labs?: { name?: string | null } | null;
+};
+
 /** Get labs linked to the current patient (through lab_patient_links). */
 export async function getLinkedLabs(): Promise<LinkedLab[]> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -181,7 +189,7 @@ export async function getLinkedLabs(): Promise<LinkedLab[]> {
     .eq("patient_id", user.id)
     .order("last_report_at", { ascending: false });
   if (error) return [];
-  return (data ?? []).map((link: any) => ({
+  return ((data ?? []) as LabPatientLinkRow[]).map((link) => ({
     lab_id: link.lab_id,
     lab_name: link.labs?.name || "Unknown Lab",
     reports_count: link.reports_count || 0,
@@ -441,7 +449,7 @@ export async function extractTextFromPdfUrl(pdfUrl: string): Promise<string> {
   for (let i = 1; i <= numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    const strings = content.items.map((item: { str?: string }) => item.str ?? "").filter(Boolean);
+    const strings = content.items.map((item) => ("str" in item ? item.str : "")).filter(Boolean);
     text += strings.join(" ") + "\n";
   }
   return text.trim();
@@ -474,6 +482,30 @@ export async function analyzeReportText(text: string): Promise<ReportAnalysis | 
   };
 }
 
+/** Notify a patient device when a report is ready (best-effort; requires push token on patient's device). */
+export async function sendReportReadyPush(params: {
+  patientPhone: string;
+  testName: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const phone = params.patientPhone?.trim();
+  const testName = params.testName?.trim();
+  if (!phone || !testName) return { ok: false, error: "Missing phone or test name" };
+  const { data, error } = await supabase.functions.invoke("send-push", {
+    body: {
+      patient_phone: phone,
+      title: "Report Ready",
+      body: `Your ${testName} report is ready in CliniLocker.`,
+      data: {
+        route: "/patient/reports",
+        type: "report_ready",
+      },
+    },
+  });
+  if (error) return { ok: false, error: error.message };
+  if (data?.error) return { ok: false, error: String(data.error) };
+  return { ok: true };
+}
+
 // --- Prescription Analysis & Reminders ---
 
 export type MedicationReminder = {
@@ -493,6 +525,16 @@ export type PrescriptionAnalysis = {
   prescription_date?: string;
 };
 
+type PrescriptionMedicationRow = {
+  medication_name?: string | null;
+  dosage?: string | null;
+  frequency?: string | null;
+  duration_days?: number | null;
+  start_date?: string | null;
+  times?: string[] | null;
+  notes?: string | null;
+};
+
 /** Call Edge Function to analyze prescription text with OpenAI. */
 export async function analyzePrescriptionText(text: string): Promise<PrescriptionAnalysis | { error: string }> {
   const { data, error } = await supabase.functions.invoke("analyze-prescription", {
@@ -504,7 +546,7 @@ export async function analyzePrescriptionText(text: string): Promise<Prescriptio
   
   return {
     summary: data.summary || "",
-    medications: data.medications.map((m: any) => ({
+    medications: (data.medications as PrescriptionMedicationRow[]).map((m) => ({
       medication_name: m.medication_name || "",
       dosage: m.dosage || "",
       frequency: m.frequency || "",
@@ -600,7 +642,18 @@ export async function insertPrescription(prescription: {
 }
 
 /** Get all prescriptions for current user */
-export async function getPrescriptions(): Promise<any[]> {
+type PrescriptionRow = {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  file_url: string;
+  doctor_name?: string | null;
+  prescription_date?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export async function getPrescriptions(): Promise<PrescriptionRow[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
   const { data } = await supabase
@@ -608,11 +661,30 @@ export async function getPrescriptions(): Promise<any[]> {
     .select("*")
     .eq("patient_id", user.id)
     .order("prescription_date", { ascending: false });
-  return data || [];
+  return (data ?? []) as PrescriptionRow[];
 }
 
 /** Get all active medication reminders */
-export async function getMedicationReminders(): Promise<any[]> {
+type MedicationReminderRow = {
+  id: string;
+  prescription_id?: string | null;
+  patient_id: string;
+  medication_name: string;
+  dosage: string;
+  frequency: string;
+  duration_days?: number | null;
+  start_date: string;
+  times?: string[] | null;
+  notes?: string | null;
+  is_active?: boolean;
+  prescriptions?: {
+    file_url?: string | null;
+    doctor_name?: string | null;
+    prescription_date?: string | null;
+  } | null;
+};
+
+export async function getMedicationReminders(): Promise<MedicationReminderRow[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
   const { data } = await supabase
@@ -621,7 +693,7 @@ export async function getMedicationReminders(): Promise<any[]> {
     .eq("patient_id", user.id)
     .eq("is_active", true)
     .order("start_date", { ascending: true });
-  return data || [];
+  return (data ?? []) as MedicationReminderRow[];
 }
 
 /** Update medication reminder */
@@ -677,8 +749,9 @@ export async function generateNotificationMessage(
     if (!data?.message) return { error: "Invalid response" };
     
     return { message: data.message };
-  } catch (error: any) {
-    return { error: error.message || "Failed to generate message" };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to generate message";
+    return { error: message };
   }
 }
 

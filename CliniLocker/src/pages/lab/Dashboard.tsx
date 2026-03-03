@@ -5,6 +5,7 @@ import { FileText, Users, TrendingUp, Calendar } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getLabStats, getLabReports } from "@/lib/api";
 import type { Report } from "@/lib/supabase";
+import { toast } from "sonner";
 
 function formatTimeAgo(dateStr: string) {
   const d = new Date(dateStr);
@@ -37,6 +38,16 @@ const LabDashboard = () => {
     });
     return () => { mounted = false; };
   }, [labId]);
+
+  useEffect(() => {
+    if (loading) return;
+    const key = `welcome_dashboard_lab_${labId ?? "unknown"}`;
+    if (sessionStorage.getItem(key) === "1") return;
+    toast.success("Welcome back!", {
+      description: "Great to see you. Your lab dashboard is ready to work.",
+    });
+    sessionStorage.setItem(key, "1");
+  }, [loading, labId]);
 
   if (loading) {
     return (

@@ -152,6 +152,14 @@ export type LinkedLab = {
   last_report_at: string | null;
 };
 
+type LabPatientLinkRow = {
+  lab_id: string;
+  reports_count: number | null;
+  first_report_at: string | null;
+  last_report_at: string | null;
+  labs?: { name?: string | null } | null;
+};
+
 /** Get labs linked to the current patient (through lab_patient_links). */
 export async function getLinkedLabs(): Promise<LinkedLab[]> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -163,7 +171,7 @@ export async function getLinkedLabs(): Promise<LinkedLab[]> {
     .eq("patient_id", user.id)
     .order("last_report_at", { ascending: false });
   if (error) return [];
-  return (data ?? []).map((link: any) => ({
+  return ((data ?? []) as LabPatientLinkRow[]).map((link) => ({
     lab_id: link.lab_id,
     lab_name: link.labs?.name || "Unknown Lab",
     reports_count: link.reports_count || 0,
@@ -454,6 +462,30 @@ export async function analyzeReportText(text: string): Promise<ReportAnalysis | 
     findings,
     actions: Array.isArray(data.actions) ? data.actions : [],
   };
+}
+
+/** Notify a patient device when a report is ready (best-effort; requires push token on patient's device). */
+export async function sendReportReadyPush(params: {
+  patientPhone: string;
+  testName: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const phone = params.patientPhone?.trim();
+  const testName = params.testName?.trim();
+  if (!phone || !testName) return { ok: false, error: "Missing phone or test name" };
+  const { data, error } = await supabase.functions.invoke("send-push", {
+    body: {
+      patient_phone: phone,
+      title: "Report Ready",
+      body: `Your ${testName} report is ready in CliniLocker.`,
+      data: {
+        route: "/patient/reports",
+        type: "report_ready",
+      },
+    },
+  });
+  if (error) return { ok: false, error: error.message };
+  if (data?.error) return { ok: false, error: String(data.error) };
+  return { ok: true };
 }
 
 /** Remote flag: show ads section (set to true in Supabase app_config after AdSense verification). */

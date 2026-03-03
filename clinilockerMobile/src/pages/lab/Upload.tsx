@@ -6,7 +6,7 @@ import { Upload as UploadIcon, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { uploadReportFile, insertReport } from "@/lib/api";
+import { uploadReportFile, insertReport, sendReportReadyPush } from "@/lib/api";
 
 const LabUpload = () => {
   const { labId } = useAuth();
@@ -42,6 +42,13 @@ const LabUpload = () => {
     if ("error" in ins) {
       toast.error(ins.error);
       return;
+    }
+    const push = await sendReportReadyPush({
+      patientPhone: phone,
+      testName: form.testName.trim(),
+    });
+    if (!push.ok) {
+      console.warn("Report uploaded but push notification failed:", push.error);
     }
     setSubmitted(true);
     toast.success("Report uploaded. Patient can access it via CliniLocker.");

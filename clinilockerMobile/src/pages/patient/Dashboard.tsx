@@ -5,9 +5,11 @@ import { Preloader } from "@/components/Preloader";
 import { PatientLayout } from "@/components/PatientLayout";
 import { AdSense } from "@/components/AdSense";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { getPatientReports, getFamilyMembers, getProfile, getMedicationReminders, getShowAds } from "@/lib/api";
 import { fetchHealthQuotes } from "@/lib/healthQuotes";
 import type { ReportWithLab } from "@/lib/api";
+import { toast } from "sonner";
 
 // Feature flags - set to true when labs are added
 const SHOW_LAB_OFFERS = false;
@@ -50,6 +52,7 @@ const TODAY_WELLNESS = "Today";
 
 const PatientDashboard = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [reports, setReports] = useState<ReportWithLab[]>([]);
   const [familyCount, setFamilyCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -76,6 +79,17 @@ const PatientDashboard = () => {
     });
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    if (loading || !user?.id) return;
+    const key = `welcome_dashboard_patient_${user.id}`;
+    if (sessionStorage.getItem(key) === "1") return;
+    const name = displayName(userName ?? user.user_metadata?.full_name);
+    toast.success(`Welcome ${name}!`, {
+      description: "Your health vault is ready. Stay healthy and keep going!",
+    });
+    sessionStorage.setItem(key, "1");
+  }, [loading, user?.id, userName]);
 
   useEffect(() => {
     let mounted = true;
