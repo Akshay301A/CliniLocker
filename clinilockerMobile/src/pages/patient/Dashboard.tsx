@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FileText, Users, TrendingUp, Calendar, Shield, Sparkles, Heart, Tag, Megaphone, Building2, Stethoscope, Pill, Bell } from "lucide-react";
+import { FileText, Users, TrendingUp, Calendar, Shield, Sparkles, Heart, Tag, Megaphone, Building2, Stethoscope, Pill, Bell, Clock } from "lucide-react";
 import { Preloader } from "@/components/Preloader";
 import { PatientLayout } from "@/components/PatientLayout";
 import { AdSense } from "@/components/AdSense";
+import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { getPatientReports, getFamilyMembers, getProfile, getMedicationReminders, getShowAds } from "@/lib/api";
@@ -47,8 +48,27 @@ const REAL_HEALTH_TIPS = [
   "Store and take medicines as prescribed; don’t share them.",
 ];
 
+const FALLBACK_HEALTH_QUOTES = [
+  "Small daily steps build strong long-term health.",
+  "Your future self will thank you for today's healthy choices.",
+  "Consistency in sleep, food, and movement is powerful medicine.",
+  "Track your health reports regularly to stay one step ahead.",
+  "A calm mind and active body are a strong combination.",
+  "Prevention is always better than emergency treatment.",
+];
+
 const TIP_ROTATE_MS = 30 * 1000;
 const TODAY_WELLNESS = "Today";
+
+type ReminderPreview = {
+  id: string;
+  medication_name: string;
+  dosage: string;
+  frequency: string;
+  notes?: string | null;
+  times?: string[] | null;
+  is_active?: boolean;
+};
 
 const PatientDashboard = () => {
   const { t } = useLanguage();
@@ -60,9 +80,11 @@ const PatientDashboard = () => {
   const [bloodPressure, setBloodPressure] = useState<string | null>(null);
   const [weight, setWeight] = useState<number | null>(null);
   const [healthQuotes, setHealthQuotes] = useState<string[]>([]);
+  const [healthQuoteIndex, setHealthQuoteIndex] = useState(0);
   const [healthTipIndex, setHealthTipIndex] = useState(0);
-  const [reminders, setReminders] = useState<any[]>([]);
+  const [reminders, setReminders] = useState<ReminderPreview[]>([]);
   const [showAds, setShowAds] = useState(false);
+  const metadataFullName = typeof user?.user_metadata?.full_name === "string" ? user.user_metadata.full_name : undefined;
 
   useEffect(() => {
     let mounted = true;
@@ -84,12 +106,12 @@ const PatientDashboard = () => {
     if (loading || !user?.id) return;
     const key = `welcome_dashboard_patient_${user.id}`;
     if (sessionStorage.getItem(key) === "1") return;
-    const name = displayName(userName ?? user.user_metadata?.full_name);
+    const name = displayName(userName ?? metadataFullName);
     toast.success(`Welcome ${name}!`, {
       description: "Your health vault is ready. Stay healthy and keep going!",
     });
     sessionStorage.setItem(key, "1");
-  }, [loading, user?.id, userName]);
+  }, [loading, metadataFullName, user?.id, userName]);
 
   useEffect(() => {
     let mounted = true;
@@ -101,10 +123,14 @@ const PatientDashboard = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
+      setHealthQuoteIndex((i) => {
+        const quoteCount = (healthQuotes.length > 0 ? healthQuotes : FALLBACK_HEALTH_QUOTES).length;
+        return (i + 1) % quoteCount;
+      });
       setHealthTipIndex((i) => (i + 1) % REAL_HEALTH_TIPS.length);
     }, TIP_ROTATE_MS);
     return () => clearInterval(interval);
-  }, []);
+  }, [healthQuotes]);
 
   useEffect(() => {
     let mounted = true;
@@ -117,6 +143,8 @@ const PatientDashboard = () => {
   const recentReports = reports.slice(0, 3);
   const lastReport = reports[0];
   const lastCheckup = lastReport?.uploaded_at ? formatDate(lastReport.uploaded_at) : "—";
+  const activeQuotes = healthQuotes.length > 0 ? healthQuotes : FALLBACK_HEALTH_QUOTES;
+  const activeQuote = activeQuotes[healthQuoteIndex % activeQuotes.length];
 
   return (
     <PatientLayout>
@@ -125,19 +153,17 @@ const PatientDashboard = () => {
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 p-5 md:p-6 shadow-lg">
           <div className="relative z-10">
             <h1 className="font-display text-2xl md:text-3xl font-bold text-white mb-2">
-              {t("Welcome back")}, {displayName(userName ?? undefined)}! 👋
+              {t("Welcome back")}, {displayName(userName ?? undefined)}!
             </h1>
             <p className="text-blue-50 text-sm md:text-base leading-relaxed">{t("Your health reports are safe and accessible anytime.")}</p>
-            {healthQuotes.length > 0 && (
-              <div className="mt-5 pt-5 border-t border-blue-400/40">
-                <p className="flex items-center gap-2 text-xs md:text-sm font-semibold uppercase tracking-wide text-blue-100 mb-3">
-                  <Sparkles className="h-4 w-4 md:h-5 md:w-5" /> {t(TODAY_WELLNESS)}
-                </p>
-                <p className="text-sm md:text-base text-white/95 pl-2 border-l-3 border-white/40 leading-relaxed">
-                  {healthQuotes[0]}
-                </p>
-              </div>
-            )}
+            <div className="mt-5 pt-5 border-t border-blue-400/40">
+              <p className="flex items-center gap-2 text-xs md:text-sm font-semibold uppercase tracking-wide text-blue-100 mb-3">
+                <Sparkles className="h-4 w-4 md:h-5 md:w-5" /> {t(TODAY_WELLNESS)}
+              </p>
+              <p className="text-sm md:text-base text-white/95 pl-2 border-l-3 border-white/40 leading-relaxed transition-all duration-500">
+                {activeQuote}
+              </p>
+            </div>
           </div>
           <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20 blur-xl"></div>
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16 blur-xl"></div>
@@ -261,57 +287,66 @@ const PatientDashboard = () => {
 
         {/* Medication Reminders Section */}
         <div className="rounded-2xl border border-border/60 bg-card p-4 md:p-5 shadow-md">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-lg md:text-xl font-bold text-foreground flex items-center gap-2">
-              <Pill className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 font-display text-lg font-bold text-foreground md:text-xl">
+              <Pill className="h-5 w-5 text-primary md:h-6 md:w-6" />
               {t("Medication Reminders")}
             </h2>
-            <Link to="/patient/reminders" className="text-xs md:text-sm text-primary hover:underline font-medium">
-              {t("Manage")}
+            <Link to="/patient/reminders">
+              <Button variant="outline" size="sm" className="rounded-lg border-primary/30 bg-primary/10 text-primary hover:bg-primary/20">
+                {t("Manage")}
+              </Button>
             </Link>
           </div>
           {reminders.length > 0 ? (
             <div className="space-y-3">
               {reminders.slice(0, 3).map((reminder) => {
-                const times = reminder.times || [];
+                const times: string[] = reminder.times || [];
                 const nextTime = times.length > 0 ? times[0] : null;
                 return (
-                  <div key={reminder.id} className="flex items-start gap-3 rounded-xl border border-border/60 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 p-3 md:p-4">
-                    <div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-md">
-                      <Bell className="h-5 w-5 md:h-6 md:w-6" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-base md:text-lg text-foreground">{reminder.medication_name}</p>
-                      <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
-                        {reminder.dosage} • {reminder.frequency}
-                      </p>
-                      {nextTime && (
-                        <p className="text-xs text-primary font-medium mt-1">
-                          {t("Next dose")}: {nextTime}
+                  <div
+                    key={reminder.id}
+                    className="rounded-xl border border-border/60 bg-gradient-to-br from-purple-50 to-pink-50 p-3 shadow-sm transition-shadow hover:shadow-md dark:from-purple-950/30 dark:to-pink-950/30 md:p-4"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-md md:h-12 md:w-12">
+                        <Bell className="h-5 w-5 md:h-6 md:w-6" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-base font-bold text-foreground md:text-lg">{reminder.medication_name}</p>
+                          <span className="rounded-md bg-white/80 px-2 py-1 text-[10px] font-semibold text-purple-700 dark:bg-black/20 dark:text-purple-300">
+                            {reminder.is_active === false ? t("Paused") : t("Active")}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-muted-foreground md:text-sm">
+                          {reminder.dosage} | {reminder.frequency}
                         </p>
-                      )}
-                      {reminder.notes && (
-                        <p className="text-xs text-muted-foreground mt-1 italic">{reminder.notes}</p>
-                      )}
+                        {nextTime && (
+                          <div className="mt-2 inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+                            <Clock className="mr-1 h-3.5 w-3.5" />
+                            {t("Next dose")}: {nextTime}
+                          </div>
+                        )}
+                        {reminder.notes && <p className="mt-2 text-xs italic text-muted-foreground">{reminder.notes}</p>}
+                      </div>
                     </div>
                   </div>
                 );
               })}
               {reminders.length > 3 && (
-                <Link to="/patient/reminders" className="block text-center text-sm text-primary hover:underline font-medium pt-2">
-                  {t("View all")} {reminders.length - 3} {t("more reminders")} →
+                <Link to="/patient/reminders" className="block pt-2 text-center text-sm font-medium text-primary hover:underline">
+                  {t("View all")} {reminders.length - 3} {t("more reminders")}
                 </Link>
               )}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Pill className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm md:text-base font-medium mb-2">{t("No active reminders")}</p>
-              <p className="text-xs text-muted-foreground mb-4">{t("Upload a prescription to create medication reminders")}</p>
+            <div className="py-8 text-center text-muted-foreground">
+              <Pill className="mx-auto mb-3 h-12 w-12 opacity-50" />
+              <p className="mb-2 text-sm font-medium md:text-base">{t("No active reminders")}</p>
+              <p className="mb-4 text-xs text-muted-foreground">{t("Upload a prescription to create medication reminders")}</p>
               <Link to="/patient/upload">
-                <button className="text-sm font-semibold text-primary hover:underline">
-                  {t("Upload Prescription")} →
-                </button>
+                <Button variant="link" className="h-auto p-0 text-sm font-semibold">{t("Upload Prescription")}</Button>
               </Link>
             </div>
           )}
@@ -399,3 +434,4 @@ const PatientDashboard = () => {
 };
 
 export default PatientDashboard;
+

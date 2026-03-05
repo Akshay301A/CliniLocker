@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Caller auth (must be signed-in lab user).
+  // Caller auth (signed-in user required).
   const authClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
   });
@@ -193,13 +193,7 @@ Deno.serve(async (req) => {
     .select("id")
     .eq("user_id", callerId)
     .limit(1);
-
-  if (callerLabErr || !callerLabRow || callerLabRow.length === 0) {
-    return new Response(JSON.stringify({ error: "Only lab users can send report-ready push notifications" }), {
-      status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  const callerIsLab = !callerLabErr && !!callerLabRow && callerLabRow.length > 0;
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
   let patientId = patientIdInput || "";
@@ -215,6 +209,64 @@ Deno.serve(async (req) => {
 
   if (!patientId) {
     return new Response(JSON.stringify({ ok: true, sent: 0, reason: "patient_not_found" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Caller authorization rules:
+  // - Lab: can notify patient.
+  // - Patient: can notify self or linked family account (for family report sharing).
+  if (!callerIsLab) {
+    let allowed = patientId === callerId;
+    if (!allowed) {
+      const { data: fm } = await adminClient
+        .from("family_members")
+        .select("id")
+        .eq("user_id", callerId)
+        .eq("linked_user_id", patientId)
+        .limit(1);
+      allowed = !!fm && fm.length > 0;
+    }
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Not allowed to notify this user" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
+
+  // Preference checks.
+  const { data: targetProfile } = await adminClient
+    .from("profiles")
+    .select("notify_sms, notify_report_ready, notify_health_tips, notify_promotional")
+    .eq("id", patientId)
+    .maybeSingle();
+
+  const masterPushEnabled = targetProfile?.notify_sms ?? true;
+  if (!masterPushEnabled) {
+    return new Response(JSON.stringify({ ok: true, sent: 0, reason: "disabled_by_user_master_push" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const eventType = customData?.type ?? "";
+  const reportTypes = new Set(["report_ready", "prescription_uploaded", "family_report_shared"]);
+  if (reportTypes.has(eventType) && (targetProfile?.notify_report_ready ?? true) === false) {
+    return new Response(JSON.stringify({ ok: true, sent: 0, reason: "disabled_report_alerts" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  if (eventType === "health_tip" && (targetProfile?.notify_health_tips ?? true) === false) {
+    return new Response(JSON.stringify({ ok: true, sent: 0, reason: "disabled_health_tips" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  if (eventType === "promotional" && (targetProfile?.notify_promotional ?? true) === false) {
+    return new Response(JSON.stringify({ ok: true, sent: 0, reason: "disabled_promotional" }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -283,7 +335,14 @@ Deno.serve(async (req) => {
           token,
           notification: { title, body: message },
           data: customData,
-          android: { priority: "high" },
+          android: {
+            priority: "high",
+            notification: {
+              channel_id: "clinilocker_alerts",
+              icon: "ic_notification",
+              sound: "default",
+            },
+          },
         },
       }),
     });

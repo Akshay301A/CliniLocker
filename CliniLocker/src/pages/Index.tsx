@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { PublicLayout } from "@/components/PublicLayout";
-import { Shield, Share2, Lock, Cloud, Smartphone, Upload, Link2, UserCheck, Check } from "lucide-react";
+import { Shield, Share2, Lock, Cloud, Smartphone, Upload, Link2, UserCheck, Check, Download, Sparkles } from "lucide-react";
 import heroImage from "@/assets/hero-image.jpg";
 
 const features = [
@@ -16,6 +16,8 @@ const steps = [
   { icon: Link2, num: "02", title: "Send Secure Link", desc: "A unique secure link is generated and sent to the patient." },
   { icon: UserCheck, num: "03", title: "Patient Accesses Anytime", desc: "Patients log in and access all reports from their portal." },
 ];
+
+const ANDROID_APK_PATH = "/downloads/CliniLocker-Android-v1.0-release.apk";
 
 const Index = () => {
   return (
@@ -79,6 +81,68 @@ const Index = () => {
                 <p className="mt-2 text-sm text-muted-foreground">{f.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Android App Download */}
+      <section className="py-12 sm:py-16 md:py-20">
+        <div className="container px-4">
+          <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 shadow-elevated sm:p-8 md:p-10">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-emerald-500/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 -left-20 h-52 w-52 rounded-full bg-cyan-500/20 blur-3xl" />
+
+            <div className="relative grid items-center gap-6 md:grid-cols-[1fr_auto]">
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-emerald-200">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  New: Android Mobile App
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <img
+                    src="/logo%20(2).png"
+                    alt="CliniLocker Android App"
+                    className="h-14 w-14 rounded-xl border border-white/20 bg-black/40 object-contain p-1"
+                  />
+                  <div>
+                    <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">
+                      Download CliniLocker for Android
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-200 sm:text-base">
+                      Get faster access to reports, reminders, and prescriptions on your phone.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-emerald-200">
+                    <Smartphone className="h-4 w-4" />
+                    Android only
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-cyan-200">
+                    <Shield className="h-4 w-4" />
+                    Secure health vault
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 md:items-end">
+                <Button
+                  asChild
+                  size="lg"
+                  className="min-h-[48px] w-full bg-emerald-500 text-slate-950 hover:bg-emerald-400 md:w-auto"
+                >
+                  <a href={ANDROID_APK_PATH} download>
+                    <Download className="mr-2 h-4 w-4" />
+                    Android App APK
+                  </a>
+                </Button>
+                <p className="text-[11px] text-slate-300">
+                  Supports Android. iOS app coming later.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>

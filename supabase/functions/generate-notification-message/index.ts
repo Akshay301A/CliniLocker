@@ -1,6 +1,5 @@
 /**
- * Generate fun, friendly notification messages for medication reminders
- * Similar to Zomato's flirty/meme-style notifications
+ * Generate friendly medication reminder message text.
  * Set secret: OPENAI_API_KEY
  * Body: { medication_name: string, dosage?: string, time_of_day?: string }
  */
@@ -17,28 +16,24 @@ const corsHeaders = {
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
-const SYSTEM_PROMPT = `You are a friendly, fun, and engaging health assistant that creates medication reminder messages. 
-Your messages should be:
-- Friendly and warm (like talking to a friend)
-- Fun and engaging (similar to Zomato's flirty/meme-style notifications)
-- Encouraging and supportive
-- Short (max 120 characters total)
-- Include emojis when appropriate (1-2 emojis max)
-- Make taking medicine feel less like a chore
-- Use casual, friendly language (like "Hey friend!", "Hey there!", "Quick reminder!")
-- Be playful but not unprofessional
+const SYSTEM_PROMPT = `You write medication reminder notifications.
+Rules:
+- Warm, clear, and supportive.
+- Professional but friendly.
+- 60 to 120 characters.
+- Plain text only.
+- No medical diagnosis.
+- No markdown, no quotes, no hashtags.
+- Mention medicine name and dose naturally.`;
 
-Examples of good messages:
-- "Hey friend! 💊 Time for your [medication] - let's keep you healthy!"
-- "Your [medication] is calling! 📞 Don't keep it waiting 😉"
-- "Quick reminder: [medication] time! You've got this! 💪"
-- "Hey there! 🌟 Your [medication] ([dosage]) is ready for you!"
-- "Medicine o'clock! ⏰ Time for [medication] - stay strong! 💊"
-- "Hey! Your [medication] ([dosage]) is waiting! Don't forget 😊"
-- "Quick check: [medication] time! You're doing great! 💪"
-- "Hey friend! 🌟 Time to take [medication] ([dosage]) - stay healthy! 💊"
-
-Generate ONLY the notification message text. Do not include quotes, markdown, or extra formatting. Just the plain message text.`;
+function fallbackMessage(medicationName: string, dosage?: string, timeOfDay?: string): string {
+  const dose = dosage?.trim() ? ` (${dosage.trim()})` : "";
+  if (timeOfDay === "morning") return `Good morning. Please take ${medicationName}${dose} now.`;
+  if (timeOfDay === "afternoon") return `Friendly reminder: please take ${medicationName}${dose}.`;
+  if (timeOfDay === "evening") return `Good evening. It is time for ${medicationName}${dose}.`;
+  if (timeOfDay === "night") return `Before rest, please take ${medicationName}${dose}.`;
+  return `Reminder: please take ${medicationName}${dose}.`;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -53,9 +48,9 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const medication_name = body?.medication_name;
-    const dosage = body?.dosage;
-    const time_of_day = body?.time_of_day;
+    const medication_name = typeof body?.medication_name === "string" ? body.medication_name.trim() : "";
+    const dosage = typeof body?.dosage === "string" ? body.dosage.trim() : "";
+    const time_of_day = typeof body?.time_of_day === "string" ? body.time_of_day.trim().toLowerCase() : "";
 
     if (!medication_name) {
       return new Response(JSON.stringify({ error: "medication_name is required" }), {
@@ -65,33 +60,21 @@ serve(async (req) => {
     }
 
     if (!OPENAI_API_KEY) {
-      return new Response(JSON.stringify({ error: "OPENAI_API_KEY not configured" }), {
-        status: 500,
+      return new Response(JSON.stringify({ message: fallbackMessage(medication_name, dosage, time_of_day) }), {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    // Use request time_of_day if provided, else derive from server hour
-    let timeGreeting = time_of_day || "";
-    if (!timeGreeting) {
-      const hour = new Date().getHours();
-      if (hour >= 5 && hour < 12) timeGreeting = "morning";
-      else if (hour >= 12 && hour < 17) timeGreeting = "afternoon";
-      else if (hour >= 17 && hour < 21) timeGreeting = "evening";
-      else timeGreeting = "night";
-    }
+    const userPrompt = `Medication: ${medication_name}
+Dosage: ${dosage || "as prescribed"}
+Time: ${time_of_day || "now"}
 
-    const userPrompt = `Generate a fun, friendly notification message for:
-- Medication: ${medication_name}
-- Dosage: ${dosage || "as prescribed"}
-- Time: ${timeGreeting}
-
-Make it engaging and fun, like Zomato's style. Keep it short and friendly.`;
+Create one reminder notification text.`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -100,38 +83,30 @@ Make it engaging and fun, like Zomato's style. Keep it short and friendly.`;
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.8,
-        max_tokens: 100,
+        temperature: 0.7,
+        max_tokens: 80,
       }),
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error("OpenAI API error:", error);
-      return new Response(JSON.stringify({ error: "Failed to generate message" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      return new Response(
+        JSON.stringify({ message: fallbackMessage(medication_name, dosage, time_of_day) }),
+        { headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     const data = await response.json();
-    let message = data.choices?.[0]?.message?.content?.trim() || "";
-    
-    // Clean up message (remove quotes, markdown, etc.)
+    let message = String(data?.choices?.[0]?.message?.content ?? "").trim();
     message = message.replace(/^["']|["']$/g, "").replace(/```[\w]*\n?/g, "").trim();
-    
-    // Fallback to default if message is empty or too long
-    if (!message || message.length > 150) {
-      message = `💊 Time to take ${medication_name}${dosage ? ` (${dosage})` : ""}!`;
+    if (!message || message.length < 20 || message.length > 150) {
+      message = fallbackMessage(medication_name, dosage, time_of_day);
     }
 
     return new Response(JSON.stringify({ message }), {
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-  } catch (err) {
-    console.error("Error:", err);
-    const message = err instanceof Error ? err.message : String(err);
-    return new Response(JSON.stringify({ error: message }), {
+  } catch {
+    return new Response(JSON.stringify({ error: "Failed to generate message" }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });

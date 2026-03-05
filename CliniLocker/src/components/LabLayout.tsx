@@ -26,9 +26,9 @@ export function LabLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform md:relative md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar transition-transform md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-6">
           <img
             src="/logo%20(2).png"
@@ -39,7 +39,7 @@ export function LabLayout({ children }: { children: ReactNode }) {
             <X className="h-5 w-5 text-sidebar-foreground" />
           </button>
         </div>
-        <nav className="flex-1 space-y-1 p-3">
+        <nav className="flex-1 overflow-y-auto space-y-1 p-3">
           {navItems.map((item) => {
             const active = location.pathname === item.to;
             return (
@@ -61,17 +61,6 @@ export function LabLayout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="border-t border-sidebar-border p-3">
-          <button
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-destructive/90"
-          >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/80">
-              <LogOut className="h-4 w-4 text-destructive" />
-            </span>
-            Logout
-          </button>
-        </div>
       </aside>
 
       {/* Overlay */}
@@ -80,7 +69,7 @@ export function LabLayout({ children }: { children: ReactNode }) {
       )}
 
       {/* Main */}
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex min-h-screen flex-col min-w-0 md:pl-64">
         <header className="flex h-14 min-h-[3.5rem] sm:h-16 items-center border-b border-border bg-card px-3 sm:px-4 md:px-6 gap-2">
           <button
             type="button"
@@ -93,6 +82,19 @@ export function LabLayout({ children }: { children: ReactNode }) {
           <h2 className="font-display text-base sm:text-lg font-semibold text-foreground truncate">
             {navItems.find((i) => i.to === location.pathname)?.label || "Dashboard"}
           </h2>
+          <button
+            type="button"
+            onClick={handleLogout}
+            aria-label="Logout"
+            className="group ml-auto flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-end overflow-hidden rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-all duration-300 hover:w-24 sm:hover:w-28 hover:bg-destructive/10 hover:text-destructive focus-visible:w-24 sm:focus-visible:w-28 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <span className="absolute mr-10 sm:mr-11 whitespace-nowrap text-xs sm:text-sm font-medium opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0">
+              Logout
+            </span>
+            <span className="mr-[9px] sm:mr-[10px]">
+              <LogOut className="h-4 w-4" />
+            </span>
+          </button>
         </header>
         <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden">{children}</main>
       </div>

@@ -1,8 +1,11 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
+import { HeartPulse } from "lucide-react";
 
 type PreloaderProps = {
   /** When true, covers the full viewport (e.g. auth loading). When false, fits in flow (e.g. page data loading). */
   fullScreen?: boolean;
+  /** Show branded video only for app cold-start splash. Keep false for route/page loading states. */
+  showSplashVideo?: boolean;
   /** Optional className for the wrapper. */
   className?: string;
   /** When true, animates preloader shrinking and fading out in place (center), then calls onExitComplete. */
@@ -20,18 +23,22 @@ const EXIT_DURATION_MS = 600;
  */
 export function Preloader({
   fullScreen = false,
+  showSplashVideo = false,
   className = "",
   exiting = false,
   onExitComplete,
 }: PreloaderProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
+  const [videoReady, setVideoReady] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
 
   useEffect(() => {
+    if (!showSplashVideo) return;
     const video = videoRef.current;
     if (!video) return;
     video.play().catch(() => {});
-  }, []);
+  }, [showSplashVideo]);
 
   useEffect(() => {
     if (!fullScreen || !exiting || !onExitComplete) return;
@@ -63,9 +70,12 @@ export function Preloader({
 
   return (
     <div className={`${wrapperClass} ${className}`} aria-hidden="true">
+      {fullScreen && (
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-sky-50/30 to-white" />
+      )}
       <div
         ref={innerRef}
-        className="flex items-center justify-center w-full h-full max-w-[min(85vw,280px)] max-h-[min(85vw,280px)] sm:max-w-[min(80vw,320px)] sm:max-h-[min(80vw,320px)] md:max-w-[min(70vw,360px)] md:max-h-[min(70vw,360px)]"
+        className="relative flex items-center justify-center w-full h-full max-w-[min(85vw,280px)] max-h-[min(85vw,280px)] sm:max-w-[min(80vw,320px)] sm:max-h-[min(80vw,320px)] md:max-w-[min(70vw,360px)] md:max-h-[min(70vw,360px)]"
         style={{
           aspectRatio: "1",
           ...(fullScreen
@@ -82,16 +92,50 @@ export function Preloader({
             : {}),
         }}
       >
-        <video
-          ref={videoRef}
-          src="/preloaderr.mp4"
-          className="w-full h-full object-contain"
-          autoPlay
-          loop
-          muted
-          playsInline
-          aria-label="Loading"
-        />
+        {showSplashVideo && !videoFailed ? (
+          <video
+            ref={videoRef}
+            src="/preloaderr.mp4"
+            className={`w-full h-full object-contain pointer-events-none ${videoReady ? "opacity-100" : "opacity-0"}`}
+            autoPlay
+            loop
+            muted
+            playsInline
+            controls={false}
+            disablePictureInPicture
+            controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+            preload="auto"
+            onLoadedData={() => setVideoReady(true)}
+            onCanPlay={() => setVideoReady(true)}
+            onError={() => setVideoFailed(true)}
+            aria-label="Loading"
+          />
+        ) : (
+          <div className="h-full w-full rounded-3xl border border-slate-200 bg-white/90 shadow-sm flex items-center justify-center p-4">
+            <img
+              src="/logo%20(2).png"
+              alt="CliniLocker"
+              className="h-[68%] w-[68%] object-contain animate-pulse"
+              loading="eager"
+            />
+          </div>
+        )}
+        {showSplashVideo && !videoReady && !videoFailed && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-3xl border border-slate-200 bg-white/90">
+            <img
+              src="/logo%20(2).png"
+              alt="CliniLocker"
+              className="h-[68%] w-[68%] object-contain animate-pulse"
+              loading="eager"
+            />
+          </div>
+        )}
+        {fullScreen && (
+          <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 rounded-full border border-slate-200 bg-white/90 px-4 py-1.5 text-xs text-slate-600 shadow-sm flex items-center gap-1.5">
+            <HeartPulse className="h-3.5 w-3.5 text-rose-500" />
+            Preparing your health dashboard
+          </div>
+        )}
       </div>
     </div>
   );

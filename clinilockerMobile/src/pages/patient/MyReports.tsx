@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { FileText, Download, Eye, Search, ArrowUpDown } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { PatientLayout } from "@/components/PatientLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,10 +14,12 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getPatientReports } from "@/lib/api";
+import { getPatientReports, getSignedUrl } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Preloader } from "@/components/Preloader";
 import type { ReportWithLab } from "@/lib/api";
+import { toast } from "sonner";
+import { downloadPdfInApp } from "@/lib/nativeDownload";
 
 const CATEGORY_KEYS = ["All", "Blood", "Hormone", "Imaging", "Cardiac", "Urine"] as const;
 
@@ -86,8 +89,39 @@ const PatientMyReports = () => {
 
   const sorted = useMemo(() => sortReports(filtered, sortOption), [filtered, sortOption]);
 
-  const handleDownload = (r: ReportWithLab) => {
-    if (r.file_url) window.open(r.file_url, "_blank");
+  const getReportPath = (fileUrl?: string | null): string => {
+    if (!fileUrl) return "";
+    if (fileUrl.startsWith("http")) {
+      const match = fileUrl.match(/\/reports\/(.+)$/);
+      return match ? match[1] : "";
+    }
+    return fileUrl;
+  };
+
+  const handleDownload = async (r: ReportWithLab) => {
+    const path = getReportPath(r.file_url);
+    if (!path) {
+      toast.error(t("Report file not available."));
+      return;
+    }
+    const signedUrl = await getSignedUrl(path);
+    if (!signedUrl) {
+      toast.error(t("Could not open report file."));
+      return;
+    }
+
+    if (Capacitor.isNativePlatform()) {
+      const fileName = `${(r.test_name || r.id).replace(/[^a-zA-Z0-9._-]/g, "_")}.pdf`;
+      const result = await downloadPdfInApp(signedUrl, fileName);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(t("Report saved to your device."));
+      return;
+    }
+
+    window.open(signedUrl, "_blank");
   };
 
   return (

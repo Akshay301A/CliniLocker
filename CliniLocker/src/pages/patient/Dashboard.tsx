@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FileText, Upload, Users, Share2, TrendingUp, Calendar, Shield, Sparkles, Heart } from "lucide-react";
 import { Preloader } from "@/components/Preloader";
@@ -12,7 +12,7 @@ import type { ReportWithLab } from "@/lib/api";
 import { toast } from "sonner";
 
 function formatDate(s: string | undefined) {
-  if (!s) return "—";
+  if (!s) return "â€”";
   return new Date(s).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
 }
 
@@ -23,23 +23,32 @@ function displayName(fullName: string | null | undefined): string {
   return parts[0] ?? "there";
 }
 
-/** Real health tips everyone should follow – shown in rotation at bottom of dashboard. */
+/** Real health tips everyone should follow â€“ shown in rotation at bottom of dashboard. */
 const REAL_HEALTH_TIPS = [
-  "Get 7–8 hours of sleep each night for better focus and immunity.",
+  "Get 7â€“8 hours of sleep each night for better focus and immunity.",
   "Drink at least 8 glasses of water daily to stay hydrated.",
   "Wash your hands before meals and after using the restroom.",
   "Get an annual health check-up and keep your vaccination records up to date.",
   "Eat a balanced diet with plenty of fruits and vegetables.",
   "Aim for at least 30 minutes of physical activity most days.",
   "Limit screen time before bed for better sleep quality.",
-  "Don’t skip breakfast – it helps energy and concentration.",
-  "Use sunscreen with SPF 30+ when you’re outdoors.",
+  "Donâ€™t skip breakfast â€“ it helps energy and concentration.",
+  "Use sunscreen with SPF 30+ when youâ€™re outdoors.",
   "Brush your teeth twice daily and floss once a day.",
   "Take short breaks from sitting every hour if you work at a desk.",
   "Manage stress with relaxation, exercise, or talking to someone.",
   "Avoid smoking and limit alcohol for long-term health.",
   "Know your numbers: blood pressure, weight, and blood sugar when advised.",
-  "Store and take medicines as prescribed; don’t share them.",
+  "Store and take medicines as prescribed; donâ€™t share them.",
+];
+
+const FALLBACK_HEALTH_QUOTES = [
+  "Small daily steps build strong long-term health.",
+  "Your future self will thank you for today's healthy choices.",
+  "Consistency in sleep, food, and movement is powerful medicine.",
+  "Track your health reports regularly to stay one step ahead.",
+  "A calm mind and active body are a strong combination.",
+  "Prevention is always better than emergency treatment.",
 ];
 
 const TIP_ROTATE_MS = 30 * 1000;
@@ -56,6 +65,7 @@ const PatientDashboard = () => {
   const [bloodPressure, setBloodPressure] = useState<string | null>(null);
   const [weight, setWeight] = useState<number | null>(null);
   const [healthQuotes, setHealthQuotes] = useState<string[]>([]);
+  const [healthQuoteIndex, setHealthQuoteIndex] = useState(0);
   const [healthTipIndex, setHealthTipIndex] = useState(0);
 
   useEffect(() => {
@@ -94,10 +104,14 @@ const PatientDashboard = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
+      setHealthQuoteIndex((i) => {
+        const quoteCount = (healthQuotes.length > 0 ? healthQuotes : FALLBACK_HEALTH_QUOTES).length;
+        return (i + 1) % quoteCount;
+      });
       setHealthTipIndex((i) => (i + 1) % REAL_HEALTH_TIPS.length);
     }, TIP_ROTATE_MS);
     return () => clearInterval(interval);
-  }, []);
+  }, [healthQuotes]);
 
   useEffect(() => {
     let mounted = true;
@@ -109,26 +123,26 @@ const PatientDashboard = () => {
 
   const recentReports = reports.slice(0, 3);
   const lastReport = reports[0];
-  const lastCheckup = lastReport?.uploaded_at ? formatDate(lastReport.uploaded_at) : "—";
+  const lastCheckup = lastReport?.uploaded_at ? formatDate(lastReport.uploaded_at) : "â€”";
+  const activeQuotes = healthQuotes.length > 0 ? healthQuotes : FALLBACK_HEALTH_QUOTES;
+  const activeQuote = activeQuotes[healthQuoteIndex % activeQuotes.length];
 
   return (
     <PatientLayout>
       <div className="animate-fade-in space-y-4 sm:space-y-6">
         <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card">
           <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground">
-            {t("Welcome back")}, {displayName(userName ?? undefined)}! 👋
+            {t("Welcome back")}, {displayName(userName ?? undefined)}! ðŸ‘‹
           </h1>
           <p className="mt-1 text-sm sm:text-base text-muted-foreground">{t("Your health reports are safe and accessible anytime.")}</p>
-          {healthQuotes.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-border">
-              <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-primary mb-2">
-                <Sparkles className="h-3.5 w-3.5" /> {t(TODAY_WELLNESS)}
-              </p>
-              <p className="text-sm text-muted-foreground pl-1 border-l-2 border-primary/30">
-                {healthQuotes[0]}
-              </p>
-            </div>
-          )}
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-primary mb-2">
+              <Sparkles className="h-3.5 w-3.5" /> {t(TODAY_WELLNESS)}
+            </p>
+            <p className="text-sm text-muted-foreground pl-1 border-l-2 border-primary/30 transition-all duration-500">
+              {activeQuote}
+            </p>
+          </div>
         </div>
 
         {/* Ad Space - shown only when show_ads is true in app_config (after AdSense verification) */}
@@ -181,11 +195,11 @@ const PatientDashboard = () => {
               <div className="min-w-0 flex-1 grid grid-cols-2 gap-x-3 gap-y-0.5">
                 <div>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">{t("BP")}</p>
-                  <p className="text-base font-bold text-foreground leading-tight">{bloodPressure ?? "—"}</p>
+                  <p className="text-base font-bold text-foreground leading-tight">{bloodPressure ?? "â€”"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">{t("Weight")}</p>
-                  <p className="text-base font-bold text-foreground leading-tight">{weight != null ? `${weight} kg` : "—"}</p>
+                  <p className="text-base font-bold text-foreground leading-tight">{weight != null ? `${weight} kg` : "â€”"}</p>
                 </div>
               </div>
             </div>
@@ -226,7 +240,7 @@ const PatientDashboard = () => {
                   </div>
                   <div>
                     <p className="font-medium text-foreground">{r.test_name}</p>
-                    <p className="text-xs text-muted-foreground">{r.labs?.name ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">{r.labs?.name ?? "â€”"}</p>
                   </div>
                 </div>
                 <span className="text-xs text-muted-foreground">{formatDate(r.uploaded_at)}</span>
@@ -234,7 +248,7 @@ const PatientDashboard = () => {
             ))}
           </div>
             <Link to="/patient/reports" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
-              {t("View all reports")} →
+              {t("View all reports")} â†’
             </Link>
         </div>
 
@@ -295,7 +309,7 @@ const PatientDashboard = () => {
           </Link>
         </div>
 
-        {/* Health inspiration – real tips, rotate every 30s */}
+        {/* Health inspiration â€“ real tips, rotate every 30s */}
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card">
           <div className="flex items-center gap-2 mb-3 sm:mb-4">
             <TrendingUp className="h-5 w-5 text-primary shrink-0" />
@@ -316,3 +330,4 @@ const PatientDashboard = () => {
 };
 
 export default PatientDashboard;
+

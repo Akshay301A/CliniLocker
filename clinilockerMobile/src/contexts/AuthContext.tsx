@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { NATIVE_REDIRECT_SCHEME } from "@/lib/supabase";
 import { registerPushAndSaveToken } from "@/lib/pushRegistration";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
+import { getProfile } from "@/lib/api";
+import { cancelAllNotifications, cancelHealthTipNotification, ensureNotificationChannel, scheduleHealthTipNotification } from "@/lib/notifications";
 
 type Role = "lab" | "patient" | null;
 
@@ -52,6 +58,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const listener = CapacitorApp.addListener("appUrlOpen", async ({ url }) => {
+      if (!url?.startsWith(`${NATIVE_REDIRECT_SCHEME}://auth/callback`)) return;
+      localStorage.setItem("oauth_callback_in_progress", "1");
+      try {
+        const parsed = new URL(url);
+        const code = parsed.searchParams.get("code");
+        const hash = parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash;
+        const hashParams = new URLSearchParams(hash);
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+
+        if (code) {
+          await supabase.auth.exchangeCodeForSession(code);
+        } else if (accessToken && refreshToken) {
+          await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        }
+        // Ensure session is actually available before marking callback complete.
+        const deadline = Date.now() + 5000;
+        while (Date.now() < deadline) {
+          const { data: { session: s } } = await supabase.auth.getSession();
+          if (s?.user) break;
+          await new Promise((resolve) => setTimeout(resolve, 150));
+        }
+      } catch (e) {
+        console.warn("OAuth callback handling failed:", e);
+      } finally {
+        // Avoid forcing browser close; Android custom tabs and some OEMs can behave inconsistently.
+        if (Capacitor.getPlatform() === "ios") {
+          try { await Browser.close(); } catch { /* ignore */ }
+        }
+        localStorage.setItem("oauth_callback_done", "1");
+      }
+    });
+    return () => {
+      listener.then((l) => l.remove());
+    };
+  }, []);
+
+  useEffect(() => {
     let mounted = true;
 
     function applySession(currentSession: Session | null) {
@@ -77,6 +123,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function onAuthChange() {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       if (!mounted) return;
+      if (localStorage.getItem("oauth_callback_in_progress") === "1") {
+        return;
+      }
       // If URL has OAuth hash but no session yet, Supabase may still be parsing it.
       // Don't set loading=false yet so we don't redirect to login; onAuthStateChange will fire.
       const hasOAuthHash =
@@ -105,6 +154,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setRole(r);
             setLabId(lid);
             setRoleLoading(false);
+            // Navigate only after auth state and role are stable.
+            if (localStorage.getItem("oauth_callback_done") === "1") {
+              localStorage.removeItem("oauth_callback_done");
+              localStorage.removeItem("oauth_callback_in_progress");
+            }
           }
         });
       } else {
@@ -138,6 +192,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (user && role !== "lab") {
       registerPushAndSaveToken();
+      getProfile().then((profile) => {
+        if (profile?.notify_sms === false) {
+          cancelAllNotifications();
+          return;
+        }
+        ensureNotificationChannel().then(() => {
+          if (profile?.notify_health_tips ?? true) {
+            scheduleHealthTipNotification(profile?.preferred_language ?? "en");
+          } else {
+            cancelHealthTipNotification();
+          }
+        });
+      });
     }
   }, [user?.id, role]);
 

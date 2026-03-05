@@ -40,8 +40,7 @@ import {
   createReportShareToken,
   getFamilyMembers,
   grantReportAccessToUser,
-  extractTextFromPdfUrl,
-  analyzeReportText,
+  analyzeReportFromPdfUrl,
   type ReportAnalysis,
 } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -63,7 +62,7 @@ function pathFromFileUrl(fileUrl: string): string {
   return fileUrl;
 }
 
-/** Real AI analysis: extract PDF text, call Edge Function (OpenAI). No report data is stored anywhere. */
+/** Real AI analysis with OCR fallback for image-based PDFs. */
 function useReportAnalysis(pdfUrl: string | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,14 +76,7 @@ function useReportAnalysis(pdfUrl: string | null) {
     setAnalysis(null);
     (async () => {
       try {
-        const text = await extractTextFromPdfUrl(pdfUrl);
-        if (cancelled) return;
-        if (!text.trim()) {
-          setError("No text could be extracted from the PDF.");
-          setLoading(false);
-          return;
-        }
-        const result = await analyzeReportText(text);
+        const result = await analyzeReportFromPdfUrl(pdfUrl);
         if (cancelled) return;
         if ("error" in result) {
           setError(result.error);

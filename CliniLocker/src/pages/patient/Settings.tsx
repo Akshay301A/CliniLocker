@@ -30,7 +30,7 @@ const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
 
 /** WhatsApp and Email toggles hidden until integration is ready; state still saved. */
 const NOTIFICATION_KEYS_VISIBLE: (keyof NotificationPrefs)[] = ["sms", "reportReady", "healthTips", "promotional"];
-/** First toggle ("sms" key) is shown as "Push Notifications": controls app push only. OTP is always sent via Twilio; do not gate OTP on this. */
+/** First toggle ("sms" key) is shown as "Push Notifications": controls app push only. */
 
 function prefsFromProfile(p: { notify_sms?: boolean; notify_whatsapp?: boolean; notify_email?: boolean; notify_report_ready?: boolean; notify_health_tips?: boolean; notify_promotional?: boolean } | null): NotificationPrefs {
   if (!p) return DEFAULT_NOTIFICATIONS;
@@ -223,7 +223,7 @@ const PatientSettings = () => {
           </div>
           <div className="space-y-4">
             {[
-              { key: "sms" as const, label: t("Push Notifications"), desc: t("Receive notifications from the app. If enabled, you get push from the app; if disabled, you don't. Does not affect OTP delivery.") },
+              { key: "sms" as const, label: t("Push Notifications"), desc: t("Receive notifications from the app. If enabled, you get push from the app; if disabled, you don't. Does not affect sign-in method.") },
               { key: "reportReady" as const, label: t("Report Ready Alerts"), desc: t("Get notified when a new report is available (from app)") },
               { key: "healthTips" as const, label: t("Health Tips"), desc: t("Receive weekly health tips from the app") },
               { key: "promotional" as const, label: t("Promotional Updates"), desc: t("Lab offers and discounts") },
@@ -255,7 +255,7 @@ const PatientSettings = () => {
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div>
                 <p className="text-sm font-medium text-foreground">{t("Two-Factor Authentication (2FA)")}</p>
-                <p className="text-xs text-muted-foreground">{t("When ON: we use OTP (code on your phone) for login when possible, so only you can access your account.")}</p>
+                <p className="text-xs text-muted-foreground">{t("When ON: we prefer stronger account security for your sign-in experience.")}</p>
               </div>
               <Switch
                 checked={privacy.twoFactorEnabled}
@@ -366,3 +366,4 @@ const PatientSettings = () => {
 };
 
 export default PatientSettings;
+

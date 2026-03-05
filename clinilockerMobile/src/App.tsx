@@ -10,7 +10,9 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PatientProfileGuard } from "@/components/PatientProfileGuard";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { Preloader } from "@/components/Preloader";
-import { setupNotificationHandlers } from "@/lib/notifications";
+import { ensureNotificationChannel, setupNotificationHandlers } from "@/lib/notifications";
+import { setupPushNotificationTapHandler } from "@/lib/pushRegistration";
+import { requestEssentialPermissionsOnce } from "@/lib/nativePermissions";
 import Index from "./pages/Index";
 import Features from "./pages/Features";
 import Pricing from "./pages/Pricing";
@@ -46,11 +48,23 @@ const PRELOADER_MIN_MS = 3000;
 function AppRoutes() {
   // Setup notification handlers when app loads
   useEffect(() => {
+    ensureNotificationChannel().catch(() => {});
+    requestEssentialPermissionsOnce().catch(() => {});
+
     const cleanup = setupNotificationHandlers((data) => {
       // When user taps notification, navigate to reminders page
       window.location.href = "/patient/reminders";
     });
-    return cleanup;
+    let cleanupPush: (() => void) | null = null;
+    setupPushNotificationTapHandler(({ route }) => {
+      window.location.href = route || "/patient/reports";
+    }).then((fn) => {
+      cleanupPush = fn;
+    });
+    return () => {
+      cleanup();
+      cleanupPush?.();
+    };
   }, []);
 
   return (
@@ -116,6 +130,7 @@ function AppContent() {
   return (
     <Preloader
       fullScreen
+      showSplashVideo
       exiting={exiting}
       onExitComplete={() => setShowPreloader(false)}
     />

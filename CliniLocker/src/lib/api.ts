@@ -1,5 +1,26 @@
-import { supabase } from "./supabase";
+﻿import { supabase } from "./supabase";
 import type { Profile, Report, FamilyMember, Lab } from "./supabase";
+
+async function getFunctionInvokeErrorMessage(error: unknown): Promise<string> {
+  const e = error as { message?: string; context?: { json?: () => Promise<unknown>; text?: () => Promise<string> } };
+  let msg = e?.message || "Edge Function request failed";
+  try {
+    const json = await e?.context?.json?.();
+    const parsed = json as { error?: unknown; status?: unknown } | null;
+    if (parsed?.error) msg = `${msg}: ${String(parsed.error)}`;
+    if (parsed?.status) msg = `${msg} (status ${String(parsed.status)})`;
+    return msg;
+  } catch {
+    // ignore JSON parsing fallback
+  }
+  try {
+    const text = await e?.context?.text?.();
+    if (text) msg = `${msg}: ${text.slice(0, 300)}`;
+  } catch {
+    // ignore text parsing fallback
+  }
+  return msg;
+}
 
 export async function getProfile(): Promise<Profile | null> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -38,7 +59,7 @@ export async function updateProfile(updates: Partial<Profile>): Promise<Profile 
 /**
  * Change or set password.
  * - Email/password users: pass currentPassword to re-authenticate, then new password is set.
- * - Google or phone (OTP) users: pass currentPassword as null/empty; we set the new password on their account
+ * - Google OAuth users: pass currentPassword as null/empty; we set the new password on their account
  *   so they can also sign in with email+password later.
  */
 export async function updatePassword(
@@ -419,22 +440,8 @@ export async function getLabStats(labId: string): Promise<{
 
 /** Extract plain text from a PDF URL for AI analysis. Fetches PDF in memory only; nothing stored. */
 export async function extractTextFromPdfUrl(pdfUrl: string): Promise<string> {
-  const res = await fetch(pdfUrl);
-  if (!res.ok) throw new Error("Failed to fetch PDF");
-  const arrayBuffer = await res.arrayBuffer();
-  const pdfjsLib = await import("pdfjs-dist");
-  const { PDF_WORKER_SRC } = await import("./pdfWorker");
-  pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_SRC;
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const numPages = pdf.numPages;
-  let text = "";
-  for (let i = 1; i <= numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const strings = content.items.map((item: { str?: string }) => item.str ?? "").filter(Boolean);
-    text += strings.join(" ") + "\n";
-  }
-  return text.trim();
+  const pdf = await loadPdfFromUrl(pdfUrl);
+  return extractTextFromPdfDoc(pdf);
 }
 
 export type ReportAnalysis = {
@@ -443,25 +450,122 @@ export type ReportAnalysis = {
   actions: string[];
 };
 
+function hasAnalysisContent(analysis: ReportAnalysis): boolean {
+  return (
+    analysis.summary.trim().length > 0 ||
+    analysis.findings.some((f) => f.text.trim().length > 0) ||
+    analysis.actions.some((a) => a.trim().length > 0)
+  );
+}
+
+function normalizeReportAnalysis(data: unknown): ReportAnalysis | { error: string } {
+  const parsed = data as { error?: unknown; summary?: unknown; findings?: unknown; actions?: unknown } | null;
+  if (parsed?.error) return { error: String(parsed.error) };
+  if (!parsed || typeof parsed.summary !== "string") return { error: "Invalid response" };
+  const findings = Array.isArray(parsed.findings)
+    ? parsed.findings.map((f: { text?: string; type?: string }) => ({
+        text: typeof f.text === "string" ? f.text : "",
+        type: (f.type === "attention" ? "attention" : "normal") as "normal" | "attention",
+      }))
+    : [];
+  const analysis = {
+    summary: parsed.summary,
+    findings,
+    actions: Array.isArray(parsed.actions) ? (parsed.actions as string[]) : [],
+  };
+  if (!hasAnalysisContent(analysis)) {
+    return { error: "Could not extract enough readable content from this report." };
+  }
+  return analysis;
+}
+
+async function loadPdfFromUrl(pdfUrl: string) {
+  const res = await fetch(pdfUrl);
+  if (!res.ok) throw new Error("Failed to fetch PDF");
+  const arrayBuffer = await res.arrayBuffer();
+  const pdfjsLib = await import("pdfjs-dist");
+  const { PDF_WORKER_SRC } = await import("./pdfWorker");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_SRC;
+  return pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+}
+
+async function extractTextFromPdfDoc(pdf: { numPages: number; getPage: (n: number) => Promise<{ getTextContent: () => Promise<{ items: { str?: string }[] }> }> }): Promise<string> {
+  let text = "";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const strings = content.items.map((item: { str?: string }) => item.str ?? "").filter(Boolean);
+    text += strings.join(" ") + "\n";
+  }
+  return text.trim();
+}
+
+async function renderPdfAsImages(
+  pdf: { numPages: number; getPage: (n: number) => Promise<{ getViewport: (p: { scale: number }) => { width: number; height: number }; render: (p: { canvasContext: CanvasRenderingContext2D; viewport: { width: number; height: number } }) => { promise: Promise<void> } }> },
+  maxPages = 3
+): Promise<string[]> {
+  if (typeof document === "undefined") return [];
+  const images: string[] = [];
+  const pageCount = Math.min(pdf.numPages, maxPages);
+  for (let i = 1; i <= pageCount; i++) {
+    const page = await pdf.getPage(i);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const targetWidth = 800;
+    const scale = Math.min(1.3, Math.max(0.9, targetWidth / Math.max(baseViewport.width, 1)));
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.floor(viewport.width));
+    canvas.height = Math.max(1, Math.floor(viewport.height));
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) continue;
+    await page.render({ canvasContext: context, viewport }).promise;
+    images.push(canvas.toDataURL("image/jpeg", 0.45));
+  }
+  return images;
+}
+
 /** Call Edge Function to analyze report text with OpenAI. No report data is stored anywhere. */
 export async function analyzeReportText(text: string): Promise<ReportAnalysis | { error: string }> {
   const { data, error } = await supabase.functions.invoke("analyze-report", {
     body: { text: text.slice(0, 12000) },
   });
-  if (error) return { error: error.message };
-  if (data?.error) return { error: String(data.error) };
-  if (!data || typeof data.summary !== "string") return { error: "Invalid response" };
-  const findings = Array.isArray(data.findings)
-    ? data.findings.map((f: { text?: string; type?: string }) => ({
-        text: typeof f.text === "string" ? f.text : "",
-        type: (f.type === "attention" ? "attention" : "normal") as "normal" | "attention",
-      }))
-    : [];
-  return {
-    summary: data.summary,
-    findings,
-    actions: Array.isArray(data.actions) ? data.actions : [],
-  };
+  if (error) return { error: await getFunctionInvokeErrorMessage(error) };
+  return normalizeReportAnalysis(data);
+}
+
+/** Analyze PDF directly; falls back to vision for image-only PDFs (e.g. camera images converted to PDF). */
+export async function analyzeReportFromPdfUrl(pdfUrl: string): Promise<ReportAnalysis | { error: string }> {
+  try {
+    const pdf = await loadPdfFromUrl(pdfUrl);
+    const extractedText = await extractTextFromPdfDoc(pdf);
+    if (extractedText.length >= 40) {
+      return await analyzeReportText(extractedText);
+    }
+    const images = await renderPdfAsImages(pdf, 2);
+    const trimmedImages: string[] = [];
+    let totalChars = 0;
+    for (const img of images) {
+      totalChars += img.length;
+      if (totalChars > 3_000_000) break;
+      trimmedImages.push(img);
+    }
+    if (!images.length) {
+      return extractedText ? await analyzeReportText(extractedText) : { error: "No readable content found in this PDF." };
+    }
+    const { data, error } = await supabase.functions.invoke("analyze-report", {
+      body: {
+        text: extractedText.slice(0, 4000),
+        images: trimmedImages,
+      },
+    });
+    if (error) {
+      if (extractedText.trim()) return await analyzeReportText(extractedText);
+      return { error: await getFunctionInvokeErrorMessage(error) };
+    }
+    return normalizeReportAnalysis(data);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to analyze report." };
+  }
 }
 
 /** Notify a patient device when a report is ready (best-effort; requires push token on patient's device). */
@@ -475,8 +579,8 @@ export async function sendReportReadyPush(params: {
   const { data, error } = await supabase.functions.invoke("send-push", {
     body: {
       patient_phone: phone,
-      title: "Report Ready",
-      body: `Your ${testName} report is ready in CliniLocker.`,
+      title: "Your Report Is Ready",
+      body: `Good news. Your ${testName} report is now available in CliniLocker. Tap to view it.`,
       data: {
         route: "/patient/reports",
         type: "report_ready",
@@ -486,6 +590,205 @@ export async function sendReportReadyPush(params: {
   if (error) return { ok: false, error: error.message };
   if (data?.error) return { ok: false, error: String(data.error) };
   return { ok: true };
+}
+
+// --- Prescription Analysis & Upload ---
+
+export type MedicationReminder = {
+  medication_name: string;
+  dosage: string;
+  frequency: string;
+  duration_days?: number;
+  start_date?: string;
+  times?: string[];
+  notes?: string;
+};
+
+export type PrescriptionAnalysis = {
+  summary: string;
+  medications: MedicationReminder[];
+  doctor_name?: string;
+  prescription_date?: string;
+};
+
+type PrescriptionMedicationRow = {
+  medication_name?: string | null;
+  dosage?: string | null;
+  frequency?: string | null;
+  duration_days?: number | null;
+  start_date?: string | null;
+  times?: string[] | null;
+  notes?: string | null;
+};
+
+function normalizePrescriptionMedication(row: PrescriptionMedicationRow): MedicationReminder | null {
+  const medication_name = (row.medication_name ?? "").trim();
+  const dosage = (row.dosage ?? "").trim();
+  const frequency = (row.frequency ?? "").trim();
+  if (!medication_name || !dosage || !frequency) return null;
+  return {
+    medication_name,
+    dosage,
+    frequency,
+    duration_days: row.duration_days || undefined,
+    start_date: row.start_date || undefined,
+    times: Array.isArray(row.times) ? row.times.filter(Boolean) : undefined,
+    notes: row.notes?.trim() || undefined,
+  };
+}
+
+async function invokeAnalyzePrescription(text: string, images?: string[]): Promise<{ data?: unknown; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("analyze-prescription", {
+    body: {
+      text: text.slice(0, 12000),
+      images: Array.isArray(images) ? images.slice(0, 3) : undefined,
+    },
+  });
+  if (error) return { error: error.message };
+  if ((data as { error?: unknown } | null)?.error) return { error: String((data as { error?: unknown }).error) };
+  return { data };
+}
+
+/** Call Edge Function to analyze prescription text with OpenAI. */
+export async function analyzePrescriptionText(text: string): Promise<PrescriptionAnalysis | { error: string }> {
+  const safeText = text.slice(0, 12000);
+  let lastError = "Invalid response";
+  let best: PrescriptionAnalysis | null = null;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data, error } = await invokeAnalyzePrescription(safeText);
+    if (error) {
+      lastError = error;
+      continue;
+    }
+    if (!data || !Array.isArray(data.medications)) {
+      lastError = "Invalid response";
+      continue;
+    }
+
+    const medications = (data.medications as PrescriptionMedicationRow[])
+      .map(normalizePrescriptionMedication)
+      .filter((m): m is MedicationReminder => m !== null);
+
+    const candidate: PrescriptionAnalysis = {
+      summary: typeof data.summary === "string" ? data.summary : "",
+      medications,
+      doctor_name: data.doctor_name || undefined,
+      prescription_date: data.prescription_date || undefined,
+    };
+
+    if (!best || candidate.medications.length > best.medications.length) {
+      best = candidate;
+    }
+    if (candidate.medications.length > 0) break;
+  }
+
+  if (best) return best;
+  return { error: lastError };
+}
+
+/** Analyze prescription PDF with text-first + image fallback for scanned/photo PDFs. */
+export async function analyzePrescriptionFromPdfUrl(pdfUrl: string): Promise<PrescriptionAnalysis | { error: string }> {
+  try {
+    const pdf = await loadPdfFromUrl(pdfUrl);
+    const extractedText = await extractTextFromPdfDoc(pdf);
+
+    if (extractedText.length >= 40) {
+      const primary = await analyzePrescriptionText(extractedText);
+      if (!("error" in primary) && primary.medications.length > 0) return primary;
+    }
+
+    const images = await renderPdfAsImages(pdf, 3);
+    if (!images.length) {
+      return extractedText ? await analyzePrescriptionText(extractedText) : { error: "No readable content found in prescription PDF." };
+    }
+
+    const { data, error } = await invokeAnalyzePrescription(extractedText.slice(0, 4000), images);
+    if (error) {
+      if (extractedText.trim()) return analyzePrescriptionText(extractedText);
+      return { error };
+    }
+    if (!data || !Array.isArray((data as { medications?: unknown }).medications)) {
+      return extractedText ? await analyzePrescriptionText(extractedText) : { error: "Invalid response" };
+    }
+
+    const medications = ((data as { medications: PrescriptionMedicationRow[] }).medications ?? [])
+      .map(normalizePrescriptionMedication)
+      .filter((m): m is MedicationReminder => m !== null);
+    return {
+      summary: typeof (data as { summary?: unknown }).summary === "string" ? ((data as { summary: string }).summary) : "",
+      medications,
+      doctor_name: ((data as { doctor_name?: string }).doctor_name) || undefined,
+      prescription_date: ((data as { prescription_date?: string }).prescription_date) || undefined,
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to analyze prescription." };
+  }
+}
+
+/** Upload prescription file to storage */
+export async function uploadPrescriptionFile(path: string, file: File): Promise<{ error?: string }> {
+  const { error } = await supabase.storage.from("prescriptions").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+  if (error) return { error: error.message };
+  return {};
+}
+
+/** Insert prescription with reminders */
+export async function insertPrescription(prescription: {
+  patient_id: string;
+  patient_name: string;
+  file_url: string;
+  doctor_name?: string | null;
+  prescription_date?: string | null;
+  reminders: MedicationReminder[];
+}): Promise<{ id: string } | { error: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const { data: presc, error: prescError } = await supabase
+    .from("prescriptions")
+    .insert({
+      patient_id: user.id,
+      patient_name: prescription.patient_name,
+      file_url: prescription.file_url,
+      doctor_name: prescription.doctor_name,
+      prescription_date: prescription.prescription_date,
+    })
+    .select()
+    .single();
+
+  if (prescError || !presc) return { error: prescError?.message || "Failed to create prescription" };
+
+  if (prescription.reminders.length > 0) {
+    const remindersToInsert = prescription.reminders
+      .filter((r) => r.medication_name?.trim() && r.dosage?.trim() && r.frequency?.trim())
+      .map((r) => ({
+      prescription_id: presc.id,
+      patient_id: user.id,
+      medication_name: r.medication_name,
+      dosage: r.dosage,
+      frequency: r.frequency,
+      duration_days: r.duration_days || null,
+      start_date: r.start_date || new Date().toISOString().split("T")[0],
+      times: r.times || null,
+      notes: r.notes || null,
+      is_active: true,
+    }));
+
+    if (remindersToInsert.length > 0) {
+      const { error: remError } = await supabase
+        .from("medication_reminders")
+        .insert(remindersToInsert);
+      if (remError) {
+        console.error("Failed to create reminders:", remError);
+      }
+    }
+  }
+
+  return { id: presc.id };
 }
 
 /** Remote flag: show ads section (set to true in Supabase app_config after AdSense verification). */
@@ -508,7 +811,7 @@ export async function checkPatientPhoneExists(phone: string): Promise<boolean> {
   return data === true;
 }
 
-/** Check if phone is linked to any account. Returns: 'auth' = log in with OTP, 'profile_only' = use Google, 'none' = create account. */
+/** Check if phone is linked to any account. Returns: 'auth' = account exists in auth, 'profile_only' = only profile record exists, 'none' = create account. */
 export async function getPatientPhoneStatus(phone: string): Promise<"auth" | "profile_only" | "none"> {
   const normalized = phone.replace(/\s/g, "").replace(/^0/, "");
   const fullPhone = normalized.startsWith("+") ? normalized : `+91${normalized}`;
@@ -518,7 +821,7 @@ export async function getPatientPhoneStatus(phone: string): Promise<"auth" | "pr
   return "none";
 }
 
-/** Check if email is linked to any account. Returns: 'auth' = log in with magic link, 'profile_only' = use phone/Google, 'none' = create account. */
+/** Check if email is linked to any account. Returns: 'auth' = account exists in auth, 'profile_only' = only profile record exists, 'none' = create account. */
 export async function getPatientEmailStatus(email: string): Promise<"auth" | "profile_only" | "none"> {
   const trimmed = email.trim().toLowerCase();
   if (!trimmed || !trimmed.includes("@")) return "none";
@@ -538,3 +841,4 @@ export async function checkPatientEmailOwnedByOtherUser(email: string, currentUs
   });
   return !error && data === true;
 }
+

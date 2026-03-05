@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Phone, Pencil, Camera, Trash2, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { getProfile, updateProfile, uploadAvatar } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { Profile } from "@/lib/supabase";
 
@@ -58,13 +59,16 @@ const PatientMyProfile = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadProfile = () => {
-    getProfile().then((p) => {
+    Promise.all([getProfile(), supabase.auth.getUser()]).then(async ([p, authRes]) => {
+      const authEmail = authRes.data.user?.email?.trim() ?? "";
+      const mergedEmail = p?.email?.trim() || authEmail;
+
       if (p) {
-        setProfile(p);
+        setProfile({ ...p, email: mergedEmail || p.email || "" });
         setPersonalForm({
           full_name: p.full_name ?? "",
           phone: p.phone ?? "",
-          email: p.email ?? "",
+          email: mergedEmail,
           date_of_birth: p.date_of_birth ?? "",
           gender: p.gender ?? "",
           blood_group: p.blood_group ?? "",
@@ -79,6 +83,14 @@ const PatientMyProfile = () => {
           emergency_contact_relation: p.emergency_contact_relation ?? "",
           emergency_contact_phone: p.emergency_contact_phone ?? "",
         });
+
+        // Keep profile email in sync with Google auth email when missing in DB.
+        if (!p.email && authEmail) {
+          const synced = await updateProfile({ email: authEmail });
+          if (synced && !("error" in synced)) {
+            setProfile((prev) => (prev ? { ...prev, email: authEmail } : prev));
+          }
+        }
       }
       setLoading(false);
     });
@@ -90,8 +102,14 @@ const PatientMyProfile = () => {
 
   const handleSavePersonal = async (e: React.FormEvent) => {
     e.preventDefault();
+    const email = (personalForm.email ?? "").trim();
+    if (!email) {
+      toast.error(t("Email is required."));
+      return;
+    }
+
     setSavingPersonal(true);
-    const result = await updateProfile(personalForm);
+    const result = await updateProfile({ ...personalForm, email });
     setSavingPersonal(false);
     if (result && "error" in result) {
       toast.error(result.error || t("Failed to update profile."));
@@ -313,8 +331,8 @@ const PatientMyProfile = () => {
                   <Input id="phone" value={personalForm.phone ?? ""} onChange={(e) => setPersonalForm((p) => ({ ...p, phone: e.target.value }))} placeholder="+91 ..." />
                 </div>
                 <div>
-                  <Label htmlFor="email">{t("Email (optional)")}</Label>
-                  <Input id="email" type="email" value={personalForm.email ?? ""} onChange={(e) => setPersonalForm((p) => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
+                  <Label htmlFor="email">{t("Email")} *</Label>
+                  <Input id="email" type="email" required value={personalForm.email ?? ""} onChange={(e) => setPersonalForm((p) => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
                 </div>
               </div>
               <div>

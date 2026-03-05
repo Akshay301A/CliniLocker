@@ -11,15 +11,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+export const NATIVE_REDIRECT_SCHEME = "clinilocker";
+
 // Get redirect URL based on platform
-const getRedirectUrl = () => {
+export const getRedirectUrl = (nextPath?: string) => {
+  const safeNext = nextPath?.startsWith("/") ? nextPath : undefined;
   if (Capacitor.isNativePlatform()) {
-    // Mobile app: use custom URL scheme
-    return 'clinilocker://auth/callback';
-  } else {
-    // Browser: use current origin (localhost in dev, or production URL)
-    return `${window.location.origin}/auth/callback`;
+    return `${NATIVE_REDIRECT_SCHEME}://auth/callback`;
   }
+  return safeNext ? `${window.location.origin}${safeNext}` : `${window.location.origin}/auth/callback`;
 };
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {

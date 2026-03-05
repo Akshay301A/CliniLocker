@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import {
   getReportById,
   getReportByIdWithShareToken,
@@ -40,13 +41,14 @@ import {
   createReportShareToken,
   getFamilyMembers,
   grantReportAccessToUser,
-  extractTextFromPdfUrl,
-  analyzeReportText,
+  analyzeReportFromPdfUrl,
   type ReportAnalysis,
 } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PatientLayout } from "@/components/PatientLayout";
 import { Preloader } from "@/components/Preloader";
+import { PdfBottomSheet } from "@/components/PdfBottomSheet";
+import { downloadPdfInApp } from "@/lib/nativeDownload";
 
 function formatDate(s: string | undefined) {
   if (!s) return "â€”";
@@ -63,7 +65,7 @@ function pathFromFileUrl(fileUrl: string): string {
   return fileUrl;
 }
 
-/** Real AI analysis: extract PDF text, call Edge Function (OpenAI). No report data is stored anywhere. */
+/** Real AI analysis with OCR fallback for image-based PDFs. */
 function useReportAnalysis(pdfUrl: string | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,14 +79,7 @@ function useReportAnalysis(pdfUrl: string | null) {
     setAnalysis(null);
     (async () => {
       try {
-        const text = await extractTextFromPdfUrl(pdfUrl);
-        if (cancelled) return;
-        if (!text.trim()) {
-          setError("No text could be extracted from the PDF.");
-          setLoading(false);
-          return;
-        }
-        const result = await analyzeReportText(text);
+        const result = await analyzeReportFromPdfUrl(pdfUrl);
         if (cancelled) return;
         if ("error" in result) {
           setError(result.error);
@@ -113,6 +108,7 @@ const ReportViewer = () => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [fullScreen, setFullScreen] = useState(false);
+  const [pdfSheetOpen, setPdfSheetOpen] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<Awaited<ReturnType<typeof getFamilyMembers>>>([]);
   const { analysis, loading: analysisLoading, error: analysisError } = useReportAnalysis(pdfUrl);
 
@@ -172,13 +168,13 @@ const ReportViewer = () => {
     window.open(url, "_blank");
   };
 
-  /** Opens the actual PDF file in a new tab (for mobile "Open PDF" button). */
-  const handleOpenPdfInNewTab = () => {
+  /** Opens the PDF inside app bottom sheet (mobile). */
+  const handleOpenPdfInApp = () => {
     if (!pdfUrl) {
       toast.error(t("Report file not available."));
       return;
     }
-    window.open(pdfUrl, "_blank");
+    setPdfSheetOpen(true);
   };
 
   const handleShareWhatsApp = async () => {
@@ -234,6 +230,17 @@ const ReportViewer = () => {
     }
     setDownloading(true);
     try {
+      if (Capacitor.isNativePlatform()) {
+        const fileName = `${(report?.test_name ?? "Report").replace(/[<>:"/\\|?*]/g, "_").trim() || "Report"}.pdf`;
+        const result = await downloadPdfInApp(pdfUrl, fileName);
+        if (!result.ok) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success(t("Report saved to your device."));
+        return;
+      }
+
       const res = await fetch(pdfUrl, { mode: "cors" });
       if (!res.ok) throw new Error("Download failed");
       const blob = await res.blob();
@@ -247,8 +254,12 @@ const ReportViewer = () => {
       URL.revokeObjectURL(url);
       toast.success(t("Report downloaded."));
     } catch {
-      window.open(pdfUrl, "_blank");
-      toast.info(t("Opening report in a new tab. Use the browser save option to download."));
+      if (Capacitor.isNativePlatform()) {
+        toast.error(t("Failed to download report."));
+      } else {
+        window.open(pdfUrl, "_blank");
+        toast.info(t("Opening report in a new tab. Use the browser save option to download."));
+      }
     } finally {
       setDownloading(false);
     }
@@ -391,10 +402,10 @@ const ReportViewer = () => {
                             <FileText className="h-7 w-7 text-primary" />
                           </div>
                           <p className="font-semibold text-foreground">{report?.test_name ?? t("Report PDF")}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">{t("Open the report in a new tab to view or download.")}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">{t("Open the report inside the app to view it.")}</p>
                           <div className="mt-6 flex flex-col sm:flex-row gap-3 w-full max-w-xs">
-                            <Button className="gap-2 min-h-[44px]" onClick={handleOpenPdfInNewTab}>
-                              <ExternalLink className="h-4 w-4" /> {t("Open PDF")}
+                            <Button className="gap-2 min-h-[44px]" onClick={handleOpenPdfInApp}>
+                              <FileText className="h-4 w-4" /> {t("Open PDF")}
                             </Button>
                             <Button variant="outline" className="gap-2 min-h-[44px]" onClick={handleDownload} disabled={downloading}>
                               {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} {t("Download PDF")}
@@ -520,6 +531,13 @@ const ReportViewer = () => {
           </div>
         </div>
       )}
+
+      <PdfBottomSheet
+        open={pdfSheetOpen}
+        onOpenChange={setPdfSheetOpen}
+        url={pdfUrl}
+        title={report?.test_name ? `${report.test_name} PDF` : t("Report PDF")}
+      />
     </>
   );
 };

@@ -11,6 +11,9 @@ import { Bell, Shield, Globe, Download, Building2, LogOut } from "lucide-react";
 import { getProfile, updateProfile, getLinkedLabs, getPatientReports, getFamilyMembers, getSignedUrl, type LinkedLab, type ReportWithLab } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { cancelAllNotifications, cancelHealthTipNotification, ensureNotificationChannel, scheduleHealthTipNotification } from "@/lib/notifications";
+import { downloadPdfInApp } from "@/lib/nativeDownload";
+import { Capacitor } from "@capacitor/core";
 
 export type NotificationPrefs = {
   sms: boolean;
@@ -26,13 +29,13 @@ const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
   whatsapp: true,
   email: false,
   reportReady: true,
-  healthTips: false,
+  healthTips: true,
   promotional: true, // enabled by default
 };
 
 /** WhatsApp and Email toggles hidden until integration is ready; state still saved. */
 const NOTIFICATION_KEYS_VISIBLE: (keyof NotificationPrefs)[] = ["sms", "reportReady", "healthTips", "promotional"];
-/** First toggle ("sms" key) is shown as "Push Notifications": controls app push only. OTP is always sent via Twilio; do not gate OTP on this. */
+/** First toggle ("sms" key) is shown as "Push Notifications": controls app push only. */
 
 function prefsFromProfile(p: { notify_sms?: boolean; notify_whatsapp?: boolean; notify_email?: boolean; notify_report_ready?: boolean; notify_health_tips?: boolean; notify_promotional?: boolean } | null): NotificationPrefs {
   if (!p) return DEFAULT_NOTIFICATIONS;
@@ -73,7 +76,8 @@ const PatientSettings = () => {
     let mounted = true;
     getProfile().then((p) => {
       if (mounted) {
-        setNotifications(prefsFromProfile(p));
+        const prefs = prefsFromProfile(p);
+        setNotifications(prefs);
         setNotificationsLoaded(true);
         if (p) {
           setPrivacy({
@@ -82,6 +86,11 @@ const PatientSettings = () => {
             profileVisibleToLabs: p.profile_visible_to_labs ?? DEFAULT_PRIVACY.profileVisibleToLabs,
           });
           setPreferredLanguage(p.preferred_language ?? "en");
+        }
+        if (prefs.sms && prefs.healthTips) {
+          ensureNotificationChannel().then(() => scheduleHealthTipNotification(p?.preferred_language ?? "en"));
+        } else if (!prefs.healthTips) {
+          cancelHealthTipNotification();
         }
       }
     });
@@ -108,6 +117,16 @@ const PatientSettings = () => {
     if (result && "error" in result) {
       toast.error(result.error);
       return;
+    }
+    if (!notifications.sms) {
+      await cancelAllNotifications();
+    } else {
+      await ensureNotificationChannel();
+      if (notifications.healthTips) {
+        await scheduleHealthTipNotification(preferredLanguage);
+      } else {
+        await cancelHealthTipNotification();
+      }
     }
     toast.success(t("Notification preferences saved."));
   };
@@ -191,14 +210,18 @@ const PatientSettings = () => {
         const signedUrl = r.file_url ? await getSignedUrl(r.file_url) : null;
         if (signedUrl) {
           const name = (r.test_name || r.id).replace(/[^a-zA-Z0-9._-]/g, "_") + ".pdf";
-          const a = document.createElement("a");
-          a.href = signedUrl;
-          a.download = name;
-          a.rel = "noopener noreferrer";
-          a.target = "_blank";
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
+          if (Capacitor.isNativePlatform()) {
+            await downloadPdfInApp(signedUrl, name);
+          } else {
+            const a = document.createElement("a");
+            a.href = signedUrl;
+            a.download = name;
+            a.rel = "noopener noreferrer";
+            a.target = "_blank";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          }
         }
         if (i < reports.length - 1) await new Promise((r) => setTimeout(r, 400));
       }
@@ -237,9 +260,9 @@ const PatientSettings = () => {
               <div className="px-4 md:px-5 pb-4 md:pb-5 space-y-3">
           <div className="space-y-4">
             {[
-              { key: "sms" as const, label: t("Push Notifications"), desc: t("Receive notifications from the app. If enabled, you get push from the app; if disabled, you don't. Does not affect OTP delivery.") },
+              { key: "sms" as const, label: t("Push Notifications"), desc: t("Receive notifications from the app. If enabled, you get push from the app; if disabled, you don't. Does not affect sign-in method.") },
               { key: "reportReady" as const, label: t("Report Ready Alerts"), desc: t("Get notified when a new report is available (from app)") },
-              { key: "healthTips" as const, label: t("Health Tips"), desc: t("Receive weekly health tips from the app") },
+              { key: "healthTips" as const, label: t("Health Tips"), desc: t("Receive daily AI health-tip notifications from CliniLocker") },
               { key: "promotional" as const, label: t("Promotional Updates"), desc: t("Lab offers and discounts") },
             ].filter((item) => NOTIFICATION_KEYS_VISIBLE.includes(item.key)).map((item) => (
                   <div key={item.key} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
@@ -277,7 +300,7 @@ const PatientSettings = () => {
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div>
                 <p className="text-sm font-medium text-foreground">{t("Two-Factor Authentication (2FA)")}</p>
-                <p className="text-xs text-muted-foreground">{t("When ON: we use OTP (code on your phone) for login when possible, so only you can access your account.")}</p>
+                <p className="text-xs text-muted-foreground">{t("When ON: we prefer stronger account security for your sign-in experience.")}</p>
               </div>
               <Switch
                 checked={privacy.twoFactorEnabled}
@@ -420,3 +443,4 @@ const PatientSettings = () => {
 };
 
 export default PatientSettings;
+

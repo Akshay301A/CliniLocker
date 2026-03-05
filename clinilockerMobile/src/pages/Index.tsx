@@ -2,198 +2,176 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BellRing, FileText, HeartPulse, ShieldCheck, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { UseEmblaCarouselType } from "embla-carousel-react";
 import { AppFooter } from "@/components/AppFooter";
 
 type CarouselApi = UseEmblaCarouselType[1];
 
-const onboardingSlides = [
+type Slide = {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  accent: "sky" | "emerald" | "rose" | "violet";
+};
+
+const onboardingSlides: Slide[] = [
   {
-    title: "Secure Health Records",
-    description: "Your medical reports are encrypted and stored safely. Access them anytime, anywhere.",
-    buttonColor: "bg-blue-500 hover:bg-blue-600",
-    dotColor: "bg-blue-500",
-    icon: "🛡️",
-    bgGradient: "from-blue-100 to-cyan-50",
-    iconBg: "bg-blue-100"
+    title: "Secure Health Vault",
+    description: "Your reports stay encrypted and protected. Access them anytime with confidence.",
+    icon: ShieldCheck,
+    accent: "sky",
   },
   {
-    title: "Share with Family",
-    description: "Easily share your health reports with family members. Keep everyone informed.",
-    buttonColor: "bg-orange-400 hover:bg-orange-500",
-    dotColor: "bg-orange-400",
-    icon: "👨‍👩‍👧‍👦",
-    bgGradient: "from-orange-100 to-pink-50",
-    iconBg: "bg-orange-100"
+    title: "Family Care Sharing",
+    description: "Share selected reports with family members so everyone stays informed and supported.",
+    icon: Users,
+    accent: "emerald",
   },
   {
-    title: "All Reports in One Place",
-    description: "View all your lab reports, test results, and medical documents in one secure app.",
-    buttonColor: "bg-purple-500 hover:bg-purple-600",
-    dotColor: "bg-purple-500",
-    icon: "📄",
-    bgGradient: "from-purple-100 to-pink-50",
-    iconBg: "bg-purple-100"
+    title: "All Reports Together",
+    description: "Keep lab reports, prescriptions, and follow-up files organized in one place.",
+    icon: FileText,
+    accent: "violet",
   },
   {
-    title: "Lab Integration",
-    description: "Get reports directly from your lab. Instant notifications when new reports are ready.",
-    buttonColor: "bg-green-500 hover:bg-green-600",
-    dotColor: "bg-green-500",
-    icon: "🏥",
-    bgGradient: "from-green-100 to-emerald-50",
-    iconBg: "bg-green-100"
-  }
+    title: "Smart Health Alerts",
+    description: "Get timely reminders and updates when new reports are ready for review.",
+    icon: BellRing,
+    accent: "rose",
+  },
 ];
+
+const accentMap = {
+  sky: {
+    icon: "bg-sky-100 text-sky-700",
+    button: "from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700",
+    dot: "bg-sky-500",
+  },
+  emerald: {
+    icon: "bg-emerald-100 text-emerald-700",
+    button: "from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700",
+    dot: "bg-emerald-500",
+  },
+  violet: {
+    icon: "bg-violet-100 text-violet-700",
+    button: "from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700",
+    dot: "bg-violet-500",
+  },
+  rose: {
+    icon: "bg-rose-100 text-rose-700",
+    button: "from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600",
+    dot: "bg-rose-500",
+  },
+};
 
 const Index = () => {
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [api, setApi] = useState<CarouselApi | undefined>();
 
-  const handleSkip = () => {
-    navigate("/patient-login");
-  };
-
-  const handleGetStarted = () => {
-    navigate("/patient-login");
-  };
+  const handleSkip = () => navigate("/patient-login");
+  const handleGetStarted = () => navigate("/patient-login");
 
   const handleNext = () => {
     if (currentSlide < onboardingSlides.length - 1) {
       api?.scrollNext();
-    } else {
-      handleGetStarted();
+      return;
     }
+    handleGetStarted();
   };
 
-  const handleDotClick = (index: number) => {
-    api?.scrollTo(index);
-  };
-
-  const currentSlideData = onboardingSlides[currentSlide];
+  const current = onboardingSlides[currentSlide];
+  const tone = accentMap[current.accent];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#fef9f5] via-[#faf9f7] to-[#f5f7fa] flex flex-col relative overflow-hidden">
-      {/* Decorative Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-32 h-32 bg-blue-200/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-40 right-10 w-40 h-40 bg-purple-200/20 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-orange-200/20 rounded-full blur-2xl"></div>
-      </div>
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 via-sky-50/20 to-white relative overflow-hidden">
+      <div className="absolute -top-24 -left-16 h-52 w-52 rounded-full bg-sky-300/12" />
+      <div className="absolute top-1/2 -right-20 h-56 w-56 rounded-full bg-emerald-300/12" />
+      <div className="absolute bottom-20 left-10 h-36 w-36 rounded-full bg-violet-300/12" />
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-2 relative z-10">
-        {/* Back Arrow */}
+      <div className="px-4 pt-4 pb-2 relative z-10 flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
-          className="text-gray-500 hover:text-gray-700 transition-colors p-2 -ml-2"
+          className="p-2 -ml-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-background/60 transition-colors"
           aria-label="Go back"
         >
-          <ArrowLeft className="h-6 w-6" />
+          <ArrowLeft className="h-5 w-5" />
         </button>
-
-        {/* Logo Only - Bigger */}
-        <div className="flex items-center justify-center flex-1">
-          <img
-            src="/logo%20(2).png"
-            alt="CliniLocker"
-            className="h-60 w-auto object-contain max-h-[120px]"
-            style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
-          />
-        </div>
-
-        {/* Skip Button */}
+        <img src="/logo%20(2).png" alt="CliniLocker" className="h-16 w-auto object-contain" />
         <button
           onClick={handleSkip}
-          className="text-gray-500 hover:text-gray-700 transition-colors text-sm font-medium px-2 py-1 rounded-lg hover:bg-gray-100/50"
+          className="text-sm font-medium text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-background/60 transition-colors"
         >
           Skip
         </button>
       </div>
 
-      {/* Carousel */}
-      <div className="flex-1 flex items-center justify-center px-4 py-8 relative z-10">
+      <div className="flex-1 px-4 py-4 relative z-10 flex items-center">
         <Carousel
-          className="w-full max-w-sm"
-          opts={{
-            align: "start",
-            loop: false,
-          }}
+          className="w-full max-w-md mx-auto"
+          opts={{ align: "start", loop: false }}
           setApi={(carouselApi) => {
             setApi(carouselApi);
-            if (carouselApi) {
-              carouselApi.on("select", () => {
-                setCurrentSlide(carouselApi.selectedScrollSnap());
-              });
-            }
+            if (!carouselApi) return;
+            carouselApi.on("select", () => setCurrentSlide(carouselApi.selectedScrollSnap()));
           }}
         >
           <CarouselContent>
-            {onboardingSlides.map((slide, index) => (
-              <CarouselItem key={index} className="basis-full">
-                <div className="flex flex-col items-center justify-center px-4">
-                  {/* Main Card Container - Cartoon Style */}
-                  <div className={`w-full bg-white rounded-[2.5rem] shadow-2xl p-8 md:p-10 flex flex-col items-center relative overflow-hidden border-2 border-white/50`}>
-                    {/* Decorative gradient background */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${slide.bgGradient} opacity-30`}></div>
-                    
-                    {/* Icon/Illustration - Large and Cartoon Style */}
-                    <div className="mb-8 flex items-center justify-center relative z-10">
-                      <div className={`${slide.iconBg} p-8 rounded-3xl shadow-lg transform hover:scale-105 transition-transform duration-300`}>
-                        <div className="text-7xl md:text-8xl" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))' }}>
-                          {slide.icon}
-                        </div>
-                      </div>
+            {onboardingSlides.map((slide, idx) => {
+              const t = accentMap[slide.accent];
+              const Icon = slide.icon;
+              return (
+                <CarouselItem key={idx} className="basis-full">
+                  <div className="rounded-3xl border border-slate-200/70 bg-white/95 shadow-sm p-6 min-h-[390px] flex flex-col">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">CliniLocker Care</span>
+                      <HeartPulse className="h-4 w-4 text-rose-500" />
                     </div>
 
-                    {/* Title - Bold and Playful */}
-                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-4 leading-tight relative z-10">
-                      {slide.title}
-                    </h2>
+                    <div className={`mt-8 h-20 w-20 rounded-2xl ${t.icon} flex items-center justify-center`}>
+                      <Icon className="h-10 w-10" />
+                    </div>
 
-                    {/* Description - Friendly Typography */}
-                    <p className="text-base md:text-lg text-gray-600 text-center leading-relaxed max-w-sm relative z-10">
-                      {slide.description}
-                    </p>
+                    <h2 className="mt-8 text-2xl font-bold text-slate-900 leading-tight">{slide.title}</h2>
+                    <p className="mt-3 text-base text-slate-600 leading-relaxed">{slide.description}</p>
 
-                    {/* Decorative corner elements */}
-                    <div className="absolute top-4 right-4 w-16 h-16 bg-gradient-to-br from-white/40 to-transparent rounded-full blur-xl"></div>
-                    <div className="absolute bottom-4 left-4 w-12 h-12 bg-gradient-to-tr from-white/40 to-transparent rounded-full blur-lg"></div>
+                    <div className="mt-auto pt-8">
+                      <div className="rounded-2xl bg-slate-50 border border-slate-200/70 p-4 text-sm text-slate-600">
+                        Built for patients and families who want health records to be easy, safe, and always available.
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </CarouselItem>
-            ))}
+                </CarouselItem>
+              );
+            })}
           </CarouselContent>
         </Carousel>
       </div>
 
-      {/* Pagination Dots - Cartoon Style */}
-      <div className="flex justify-center gap-3 mb-6 relative z-10">
+      <div className="flex justify-center gap-2.5 mb-5 relative z-10">
         {onboardingSlides.map((slide, index) => (
           <button
-            key={index}
-            onClick={() => handleDotClick(index)}
-            className={`h-3 rounded-full transition-all duration-300 shadow-md ${
-              index === currentSlide
-                ? `${slide.dotColor} w-10 shadow-lg scale-110`
-                : "w-3 bg-gray-300 hover:bg-gray-400"
+            key={slide.title}
+            onClick={() => api?.scrollTo(index)}
+            className={`h-2.5 rounded-full transition-all duration-300 ${
+              index === currentSlide ? `${accentMap[slide.accent].dot} w-8` : "w-2.5 bg-slate-300"
             }`}
             aria-label={`Go to slide ${index + 1}`}
           />
         ))}
       </div>
 
-      {/* Action Button - Cartoon Style */}
-      <div className="px-6 pb-8 relative z-10">
+      <div className="px-6 pb-7 relative z-10">
         <Button
-          onClick={currentSlide === onboardingSlides.length - 1 ? handleGetStarted : handleNext}
-          className={`w-full h-16 text-lg font-bold rounded-3xl text-white shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300 ${currentSlideData.buttonColor}`}
+          onClick={handleNext}
+          className={`w-full h-13 text-base font-semibold rounded-2xl text-white bg-gradient-to-r ${tone.button} shadow-lg`}
         >
-          {currentSlide === onboardingSlides.length - 1 ? "Get Started 🚀" : "Continue →"}
+          {currentSlide === onboardingSlides.length - 1 ? "Get Started" : "Continue"}
         </Button>
       </div>
+
       <AppFooter />
     </div>
   );
