@@ -101,9 +101,9 @@ const Index = () => {
 
                 <div className="flex items-center gap-3">
                   <img
-                    src="/logo%20(2).png"
+                    src="/favicon.png"
                     alt="CliniLocker Android App"
-                    className="h-14 w-14 rounded-xl border border-white/20 bg-black/40 object-contain p-1"
+                    className="h-14 w-14 rounded-xl border border-white/20 bg-white/90 object-contain p-1"
                   />
                   <div>
                     <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">
