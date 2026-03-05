@@ -36,3 +36,6 @@ pnpm-debug.log*
 
 # Optional
 *.local
+
+# Firebase Android config
+**/google-services.json
