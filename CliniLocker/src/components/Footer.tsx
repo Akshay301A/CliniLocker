@@ -38,7 +38,7 @@ export function Footer() {
             <h4 className="mb-3 text-sm font-semibold text-foreground">Contact</h4>
             <ul className="space-y-1 text-sm text-muted-foreground break-words">
               <li>support@clinilocker.com</li>
-              <li>+91 98765 43210</li>
+              <li>+91 7075492416</li>
             </ul>
           </div>
         </div>
