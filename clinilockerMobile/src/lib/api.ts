@@ -9,15 +9,6 @@ const PUBLIC_APP_URL =
   "https://www.clinilocker.com";
 
 function getPublicAppBaseUrl(): string {
-  if (typeof window !== "undefined") {
-    const origin = window.location.origin;
-    if (
-      /^https?:\/\//i.test(origin) &&
-      !/localhost|127\.0\.0\.1/i.test(origin)
-    ) {
-      return origin.replace(/\/+$/, "");
-    }
-  }
   return PUBLIC_APP_URL;
 }
 
