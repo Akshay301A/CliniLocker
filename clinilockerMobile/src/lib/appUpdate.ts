@@ -37,7 +37,7 @@ function getDefaultMessage(currentVersion: string, latestVersion: string): strin
   return `A newer version is available. Current: v${currentVersion}. Latest: v${latestVersion}. Please update for the best experience.`;
 }
 
-const DEFAULT_APK_URL = "https://clinilocker.vercel.app/downloads/CliniLocker-Android-v1.0.3-release.apk";
+const DEFAULT_APK_URL = "https://raw.githubusercontent.com/Akshay301A/CliniLocker/master/CliniLocker/public/downloads/CliniLocker-Android-v1.0.3-release.apk";
 const ALLOWED_APK_HOSTS = new Set([
   "www.clinilocker.com",
   "clinilocker.com",

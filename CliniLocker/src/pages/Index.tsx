@@ -54,6 +54,7 @@ const steps = [
 ];
 
 const ANDROID_APK_PATH = "/downloads/CliniLocker-Android-v1.0.3-release.apk";
+const ANDROID_APP_VERSION = "1.0.3";
 
 const Index = () => {
   return (
@@ -196,7 +197,7 @@ const Index = () => {
                 <Button asChild size="lg" className="min-h-[48px] w-full bg-cyan-300 text-blue-900 hover:bg-cyan-200 md:w-auto">
                   <a href={ANDROID_APK_PATH} download>
                     <Download className="mr-2 h-4 w-4" />
-                    Android App APK
+                    Android App APK v{ANDROID_APP_VERSION}
                   </a>
                 </Button>
                 <p className="text-[11px] text-slate-300">Supports Android. iOS app coming later.</p>
