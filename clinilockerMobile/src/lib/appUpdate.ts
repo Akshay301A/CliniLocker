@@ -38,6 +38,11 @@ function getDefaultMessage(currentVersion: string, latestVersion: string): strin
 }
 
 const DEFAULT_APK_URL = "https://clinilocker.vercel.app/downloads/CliniLocker-Android-v1.0-release.apk";
+const ALLOWED_APK_HOSTS = new Set([
+  "clinilocker.vercel.app",
+  "www.clinilocker.com",
+  "clinilocker.com",
+]);
 
 function resolveApkUrl(rawUrl?: string): string {
   const trimmed = (rawUrl ?? "").trim();
@@ -52,15 +57,21 @@ function resolveApkUrl(rawUrl?: string): string {
 
   try {
     const url = new URL(normalized);
+    const protocol = url.protocol.toLowerCase();
     const host = url.hostname.toLowerCase();
     const path = (url.pathname || "").toLowerCase();
+    const isAllowedHost = ALLOWED_APK_HOSTS.has(host);
+    const isHttps = protocol === "https:";
+    const isApkPath = path.endsWith(".apk");
     const isPlaceholderHost =
       host.includes("your-domain.com") ||
       host.includes("example.com") ||
       host.includes("localhost") ||
       host === "127.0.0.1";
     const isEmptyPath = !path || path === "/" || path === "/index.html";
-    if (isPlaceholderHost || isEmptyPath) return DEFAULT_APK_URL;
+    if (isPlaceholderHost || isEmptyPath || !isHttps || !isAllowedHost || !isApkPath) {
+      return DEFAULT_APK_URL;
+    }
     return url.toString();
   } catch {
     return DEFAULT_APK_URL;
