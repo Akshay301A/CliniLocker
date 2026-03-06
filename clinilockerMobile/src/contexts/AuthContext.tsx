@@ -208,6 +208,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user?.id, role]);
 
+  // Once a user signs in at least once, skip onboarding on future launches.
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("clinilocker_onboarding_seen", "1");
+    }
+  }, [user?.id]);
+
   async function signOut() {
     await supabase.auth.signOut();
     setUser(null);

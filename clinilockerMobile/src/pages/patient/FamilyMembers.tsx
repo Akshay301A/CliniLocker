@@ -12,6 +12,7 @@ import {
   insertFamilyMember,
   deleteFamilyMember,
   createFamilyInvite,
+  sendFamilyInviteEmail,
   getPendingInvitesReceived,
   acceptFamilyInvite,
 } from "@/lib/api";
@@ -29,6 +30,7 @@ const PatientFamilyMembers = () => {
   const [name, setName] = useState("");
   const [relation, setRelation] = useState("Father");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [dob, setDob] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [acceptingToken, setAcceptingToken] = useState<string | null>(null);
@@ -67,6 +69,7 @@ const PatientFamilyMembers = () => {
       name: name.trim(),
       relation,
       phone: phoneTrim,
+      email: email.trim() || null,
       date_of_birth: dob || null,
     });
     if ("error" in result) {
@@ -85,8 +88,23 @@ const PatientFamilyMembers = () => {
     setShowForm(false);
     setName("");
     setPhone("");
+    setEmail("");
     setDob("");
-    toast.success(t("Invite created. Send the link to ") + name.trim() + t(" so they can create an account."));
+    const emailTrim = email.trim();
+    if (emailTrim) {
+      const emailResult = await sendFamilyInviteEmail({
+        email: emailTrim,
+        inviteLink: inviteResult.link,
+        memberName: name.trim(),
+      });
+      if (emailResult.error) {
+        toast.error(emailResult.error);
+      } else {
+        toast.success(t("Invite email prepared for ") + emailTrim);
+      }
+    } else {
+      toast.success(t("Invite created. Send the link to ") + name.trim() + t(" so they can create an account."));
+    }
     getFamilyMembers().then(setMembers);
   };
 
@@ -294,12 +312,16 @@ const PatientFamilyMembers = () => {
                 <Input id="memberPhone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 ..." required />
               </div>
               <div>
+                <Label htmlFor="memberEmail">{t("Email (for invite)")}</Label>
+                <Input id="memberEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
+              </div>
+              <div>
                 <Label htmlFor="memberDob">{t("Date of Birth")}</Label>
                 <Input id="memberDob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
               </div>
             </div>
             <div className="flex gap-2">
-              <Button type="submit" className="flex-1 min-h-[44px] rounded-lg text-sm" disabled={submitting}>{submitting ? t("Creating invite…") : t("Create invite")}</Button>
+              <Button type="submit" className="flex-1 min-h-[44px] rounded-lg text-sm" disabled={submitting}>{submitting ? t("Creating invite…") : t("Send invite")}</Button>
               <Button type="button" variant="outline" className="flex-1 min-h-[44px] rounded-lg text-sm" onClick={() => setShowForm(false)}>{t("Cancel")}</Button>
             </div>
           </form>

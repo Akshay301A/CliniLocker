@@ -1,11 +1,13 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { ArrowLeft, BellRing, FileText, HeartPulse, ShieldCheck, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { UseEmblaCarouselType } from "embla-carousel-react";
 import { AppFooter } from "@/components/AppFooter";
+import { useAuth } from "@/contexts/AuthContext";
+import { Preloader } from "@/components/Preloader";
 
 type CarouselApi = UseEmblaCarouselType[1];
 
@@ -67,12 +69,36 @@ const accentMap = {
 };
 
 const Index = () => {
+  const { user, role, loading, roleLoading } = useAuth();
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [api, setApi] = useState<CarouselApi | undefined>();
+  const hasSeenOnboarding = useMemo(
+    () => localStorage.getItem("clinilocker_onboarding_seen") === "1",
+    []
+  );
 
-  const handleSkip = () => navigate("/patient-login");
-  const handleGetStarted = () => navigate("/patient-login");
+  const handleSkip = () => {
+    localStorage.setItem("clinilocker_onboarding_seen", "1");
+    navigate("/patient-login");
+  };
+
+  const handleGetStarted = () => {
+    localStorage.setItem("clinilocker_onboarding_seen", "1");
+    navigate("/patient-login");
+  };
+
+  if (loading || (user && roleLoading)) {
+    return <Preloader fullScreen />;
+  }
+
+  if (user) {
+    return <Navigate to={role === "lab" ? "/lab/dashboard" : "/patient/dashboard"} replace />;
+  }
+
+  if (hasSeenOnboarding) {
+    return <Navigate to="/patient-login" replace />;
+  }
 
   const handleNext = () => {
     if (currentSlide < onboardingSlides.length - 1) {
