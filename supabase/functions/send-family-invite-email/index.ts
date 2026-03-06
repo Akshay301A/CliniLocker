@@ -106,9 +106,15 @@ Deno.serve(async (req) => {
     });
   }
 
-  const adminClient = createClient(supabaseUrl, serviceRoleKey);
   const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization") ?? "";
   const accessToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+  const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    global: {
+      headers: {
+        Authorization: authHeader,
+      },
+    },
+  });
   let userId = "";
 
   if (accessToken) {
