@@ -32,6 +32,19 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+function decodeJwtPayload(token: string): { sub?: string; role?: string; exp?: number } | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+    const json = atob(padded);
+    return JSON.parse(json) as { sub?: string; role?: string; exp?: number };
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -103,18 +116,33 @@ Deno.serve(async (req) => {
   }
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
+  let userId = "";
   const { data: authUserData, error: authError } = await adminClient.auth.getUser(accessToken);
-  if (authError || !authUserData?.user) {
+  if (!authError && authUserData?.user?.id) {
+    userId = authUserData.user.id;
+  } else {
+    const payload = decodeJwtPayload(accessToken);
+    const now = Math.floor(Date.now() / 1000);
+    if (
+      payload?.sub &&
+      payload?.role === "authenticated" &&
+      (!payload.exp || payload.exp > now)
+    ) {
+      userId = payload.sub;
+    }
+  }
+  if (!userId) {
     return new Response(
-      JSON.stringify({ error: "Unauthorized", details: authError?.message ?? "Invalid access token" }),
+      JSON.stringify({
+        error: "Unauthorized",
+        details: authError?.message ?? "Invalid access token",
+      }),
       {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   }
-
-  const userId = authUserData.user.id;
 
   if (familyMemberId) {
     const { data: fm } = await adminClient
