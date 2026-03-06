@@ -25,8 +25,14 @@ async function getFunctionInvokeErrorMessage(error: unknown): Promise<string> {
 export async function getProfile(): Promise<Profile | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (error) return null;
   return data as Profile | null;
+}
+
+/** Ensure a profile row exists for the current user (e.g. trigger missed). Uses RPC to avoid conflicts. */
+export async function ensureProfileExists(): Promise<void> {
+  await supabase.rpc("ensure_profile_exists");
 }
 
 /** Coerce empty strings to null for optional profile fields to avoid DB/trigger issues. */
@@ -840,5 +846,13 @@ export async function checkPatientEmailOwnedByOtherUser(email: string, currentUs
     current_uid: currentUserId,
   });
   return !error && data === true;
+}
+
+/** Whether profile has required fields filled (full_name + phone). Used to gate dashboard until user completes profile. */
+export function isProfileComplete(profile: { full_name?: string | null; phone?: string | null } | null): boolean {
+  if (!profile) return false;
+  const name = (profile.full_name ?? "").trim();
+  const ph = (profile.phone ?? "").trim();
+  return name.length > 0 && ph.length > 0;
 }
 

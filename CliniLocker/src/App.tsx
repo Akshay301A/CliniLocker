@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { PatientProfileGuard } from "@/components/PatientProfileGuard";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { Preloader } from "@/components/Preloader";
 import Index from "./pages/Index";
@@ -30,6 +31,7 @@ import PatientFamilyReports from "./pages/patient/FamilyReports";
 import AcceptInvite from "./pages/patient/AcceptInvite";
 import PatientSettings from "./pages/patient/Settings";
 import PatientMyProfile from "./pages/patient/MyProfile";
+import PatientCompleteProfile from "./pages/patient/CompleteProfile";
 import ReportViewer from "./pages/patient/ReportViewer";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -63,14 +65,15 @@ function AppRoutes() {
           <Route path="/lab/patients" element={<ProtectedRoute requiredRole="lab"><LabPatients /></ProtectedRoute>} />
           <Route path="/lab/reports" element={<ProtectedRoute requiredRole="lab"><LabReports /></ProtectedRoute>} />
           <Route path="/lab/settings" element={<ProtectedRoute requiredRole="lab"><LabSettings /></ProtectedRoute>} />
-          <Route path="/patient/dashboard" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientDashboard /></LanguageProvider></ProtectedRoute>} />
-          <Route path="/patient/reports" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientMyReports /></LanguageProvider></ProtectedRoute>} />
-          <Route path="/patient/upload" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientUploadReports /></LanguageProvider></ProtectedRoute>} />
-          <Route path="/patient/family-reports" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientFamilyReports /></LanguageProvider></ProtectedRoute>} />
-          <Route path="/patient/family" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientFamilyMembers /></LanguageProvider></ProtectedRoute>} />
-          <Route path="/patient/profile" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientMyProfile /></LanguageProvider></ProtectedRoute>} />
-          <Route path="/patient/settings" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientSettings /></LanguageProvider></ProtectedRoute>} />
-          <Route path="/patient/report/:id" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><ReportViewer /></LanguageProvider></ProtectedRoute>} />
+          <Route path="/patient/complete-profile" element={<ProtectedRoute requiredRole="patient"><LanguageProvider><PatientCompleteProfile /></LanguageProvider></ProtectedRoute>} />
+          <Route path="/patient/dashboard" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientDashboard /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
+          <Route path="/patient/reports" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientMyReports /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
+          <Route path="/patient/upload" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientUploadReports /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
+          <Route path="/patient/family-reports" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientFamilyReports /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
+          <Route path="/patient/family" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientFamilyMembers /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
+          <Route path="/patient/profile" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientMyProfile /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
+          <Route path="/patient/settings" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientSettings /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
+          <Route path="/patient/report/:id" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><ReportViewer /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
