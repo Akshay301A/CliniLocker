@@ -331,6 +331,9 @@ export async function sendFamilyInviteEmail(params: {
   const logoUrl =
     params.logoUrl ||
     (typeof window !== "undefined" ? `${window.location.origin}/logo%20(2).png` : undefined);
+  const { data: authData } = await supabase.auth.getSession();
+  const accessToken = authData?.session?.access_token;
+  if (!accessToken) return { error: "Not authenticated. Please sign in again." };
   const { data, error } = await supabase.functions.invoke("send-family-invite-email", {
     body: {
       email,
@@ -338,6 +341,9 @@ export async function sendFamilyInviteEmail(params: {
       memberName: params.memberName,
       familyMemberId: params.familyMemberId,
       logoUrl,
+    },
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
     },
   });
   if (error) return { error: await getFunctionInvokeErrorMessage(error) };
