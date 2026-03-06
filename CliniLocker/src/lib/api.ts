@@ -1,6 +1,9 @@
 ﻿import { supabase } from "./supabase";
 import type { Profile, Report, FamilyMember, Lab } from "./supabase";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
 async function getFunctionInvokeErrorMessage(error: unknown): Promise<string> {
   const e = error as { message?: string; context?: { json?: () => Promise<unknown>; text?: () => Promise<string> } };
   let msg = e?.message || "Edge Function request failed";
@@ -334,20 +337,49 @@ export async function sendFamilyInviteEmail(params: {
   const { data: authData } = await supabase.auth.getSession();
   const accessToken = authData?.session?.access_token;
   if (!accessToken) return { error: "Not authenticated. Please sign in again." };
+
+  const body = {
+    email,
+    inviteLink: params.inviteLink,
+    memberName: params.memberName,
+    familyMemberId: params.familyMemberId,
+    logoUrl,
+  };
+
   const { data, error } = await supabase.functions.invoke("send-family-invite-email", {
-    body: {
-      email,
-      inviteLink: params.inviteLink,
-      memberName: params.memberName,
-      familyMemberId: params.familyMemberId,
-      logoUrl,
-    },
+    body,
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
   });
-  if (error) return { error: await getFunctionInvokeErrorMessage(error) };
-  if ((data as { error?: string } | null)?.error) return { error: String((data as { error: string }).error) };
+
+  if (!error && !(data as { error?: string } | null)?.error) {
+    return {};
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    if (error) return { error: await getFunctionInvokeErrorMessage(error) };
+    if ((data as { error?: string } | null)?.error) return { error: String((data as { error: string }).error) };
+    return {};
+  }
+
+  const directRes = await fetch(`${SUPABASE_URL}/functions/v1/send-family-invite-email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const directJson = await directRes.json().catch(() => ({}));
+
+  if (!directRes.ok) {
+    return { error: String((directJson as { error?: string }).error || `Invite email failed (${directRes.status})`) };
+  }
+  if ((directJson as { error?: string })?.error) {
+    return { error: String((directJson as { error: string }).error) };
+  }
   return {};
 }
 
@@ -395,13 +427,22 @@ export async function grantReportAccessToUser(
 }
 
 /** Create invite for a family member; returns invite link. Family member must create account via this link. */
-export async function createFamilyInvite(familyMemberId: string): Promise<{ link: string } | { error: string }> {
+export async function createFamilyInvite(
+  familyMemberId: string,
+  inviteEmail?: string
+): Promise<{ link: string } | { error: string }> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
   const token = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const normalizedInviteEmail = inviteEmail?.trim().toLowerCase() || null;
   const { data: invite, error: insertError } = await supabase
     .from("family_invites")
-    .insert({ family_member_id: familyMemberId, token, expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() })
+    .insert({
+      family_member_id: familyMemberId,
+      token,
+      invite_email: normalizedInviteEmail,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    })
     .select("id")
     .single();
   if (insertError) return { error: insertError.message };

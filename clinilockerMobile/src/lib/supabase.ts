@@ -101,6 +101,7 @@ export type Report = {
 
 export type FamilyMember = {
   id: string;
+  family_id?: string | null;
   user_id: string;
   linked_user_id?: string | null;
   name: string;
@@ -110,3 +111,4 @@ export type FamilyMember = {
   email?: string | null;
   created_at?: string;
 };
+

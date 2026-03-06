@@ -60,6 +60,7 @@ const PatientFamilyMembers = () => {
       return;
     }
     const phoneTrim = phone.trim();
+    const emailTrim = email.trim();
     if (!phoneTrim) {
       toast.error(t("Phone number is required. Family members must create an account."));
       return;
@@ -77,7 +78,7 @@ const PatientFamilyMembers = () => {
       toast.error(result.error);
       return;
     }
-    const inviteResult = await createFamilyInvite(result.id);
+    const inviteResult = await createFamilyInvite(result.id, emailTrim || undefined);
     setSubmitting(false);
     if ("error" in inviteResult) {
       toast.error(inviteResult.error);
@@ -90,7 +91,6 @@ const PatientFamilyMembers = () => {
     setPhone("");
     setEmail("");
     setDob("");
-    const emailTrim = email.trim();
     if (emailTrim) {
       const emailResult = await sendFamilyInviteEmail({
         email: emailTrim,
