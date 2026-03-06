@@ -1,6 +1,15 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
@@ -13,6 +22,7 @@ import { Preloader } from "@/components/Preloader";
 import { ensureNotificationChannel, setupNotificationHandlers } from "@/lib/notifications";
 import { setupPushNotificationTapHandler } from "@/lib/pushRegistration";
 import { requestEssentialPermissionsOnce } from "@/lib/nativePermissions";
+import { checkForAppUpdate, openAppUpdateUrl, type AppUpdateCheckResult } from "@/lib/appUpdate";
 import Index from "./pages/Index";
 import Features from "./pages/Features";
 import Pricing from "./pages/Pricing";
@@ -44,6 +54,73 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const PRELOADER_MIN_MS = 3000;
+const UPDATE_DISMISS_KEY = "app_update_dismissed_for_version";
+
+function AppUpdatePrompt() {
+  const [updateInfo, setUpdateInfo] = useState<AppUpdateCheckResult | null>(null);
+  const [opening, setOpening] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    checkForAppUpdate()
+      .then((result) => {
+        if (!mounted || !result) return;
+        if (!result.forceUpdate) {
+          const dismissedForVersion = localStorage.getItem(UPDATE_DISMISS_KEY);
+          if (dismissedForVersion === result.latestVersion) return;
+        }
+        setUpdateInfo(result);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleLater = () => {
+    if (!updateInfo || updateInfo.forceUpdate) return;
+    localStorage.setItem(UPDATE_DISMISS_KEY, updateInfo.latestVersion);
+    setUpdateInfo(null);
+  };
+
+  const handleUpdateNow = async () => {
+    if (!updateInfo) return;
+    setOpening(true);
+    try {
+      await openAppUpdateUrl(updateInfo.apkUrl);
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!updateInfo}>
+      <DialogContent className="max-w-sm sm:max-w-md [&>button]:hidden">
+        <DialogHeader>
+          <DialogTitle>{updateInfo?.title || "Update Available"}</DialogTitle>
+          <DialogDescription>
+            {updateInfo?.message}
+          </DialogDescription>
+        </DialogHeader>
+        {updateInfo && (
+          <p className="text-xs text-muted-foreground">
+            Installed: v{updateInfo.currentVersion} | Latest: v{updateInfo.latestVersion}
+          </p>
+        )}
+        <DialogFooter className="gap-2">
+          {!updateInfo?.forceUpdate && (
+            <Button variant="outline" onClick={handleLater} disabled={opening}>
+              Later
+            </Button>
+          )}
+          <Button onClick={handleUpdateNow} disabled={opening}>
+            {opening ? "Opening..." : "Update Now"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function AppRoutes() {
   // Setup notification handlers when app loads
@@ -71,6 +148,7 @@ function AppRoutes() {
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <AppUpdatePrompt />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
         <Routes>

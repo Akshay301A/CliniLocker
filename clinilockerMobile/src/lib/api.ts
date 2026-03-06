@@ -1020,6 +1020,48 @@ export async function getShowAds(): Promise<boolean> {
   return data.value === true || data.value === "true";
 }
 
+export type MobileAppUpdateConfig = {
+  latest_version: string;
+  min_supported_version?: string;
+  force_update?: boolean;
+  apk_url?: string;
+  title?: string;
+  message?: string;
+};
+
+/** Remote config for Android app updates. Store JSON in app_config key `mobile_app_update`. */
+export async function getMobileAppUpdateConfig(): Promise<MobileAppUpdateConfig | null> {
+  const { data, error } = await supabase
+    .from("app_config")
+    .select("value")
+    .eq("key", "mobile_app_update")
+    .maybeSingle();
+  if (error || !data?.value) return null;
+
+  const raw = data.value;
+  let parsed: unknown = raw;
+  if (typeof raw === "string") {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!parsed || typeof parsed !== "object") return null;
+  const cfg = parsed as Record<string, unknown>;
+  if (typeof cfg.latest_version !== "string" || !cfg.latest_version.trim()) return null;
+
+  return {
+    latest_version: cfg.latest_version.trim(),
+    min_supported_version: typeof cfg.min_supported_version === "string" ? cfg.min_supported_version.trim() : undefined,
+    force_update: cfg.force_update === true,
+    apk_url: typeof cfg.apk_url === "string" ? cfg.apk_url.trim() : undefined,
+    title: typeof cfg.title === "string" ? cfg.title.trim() : undefined,
+    message: typeof cfg.message === "string" ? cfg.message.trim() : undefined,
+  };
+}
+
 /** Check if a phone number already has a patient account (profile). Used to show Login vs Create account. */
 export async function checkPatientPhoneExists(phone: string): Promise<boolean> {
   const normalized = phone.replace(/\s/g, "").replace(/^0/, "");
