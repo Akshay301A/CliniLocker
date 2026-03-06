@@ -28,6 +28,7 @@ create index if not exists family_invites_expires_at_idx on public.family_invite
 alter table public.family_invites enable row level security;
 
 -- Only the patient who owns the family_member can read/insert invites for that member
+drop policy if exists "Patients can manage invites for own family members" on public.family_invites;
 create policy "Patients can manage invites for own family members"
   on public.family_invites for all
   using (

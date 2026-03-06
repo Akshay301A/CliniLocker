@@ -35,18 +35,22 @@ ON CONFLICT (id) DO NOTHING;
 -- RLS Policies for prescriptions
 ALTER TABLE prescriptions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own prescriptions" ON prescriptions;
 CREATE POLICY "Users can view their own prescriptions"
   ON prescriptions FOR SELECT
   USING (auth.uid() = patient_id);
 
+DROP POLICY IF EXISTS "Users can insert their own prescriptions" ON prescriptions;
 CREATE POLICY "Users can insert their own prescriptions"
   ON prescriptions FOR INSERT
   WITH CHECK (auth.uid() = patient_id);
 
+DROP POLICY IF EXISTS "Users can update their own prescriptions" ON prescriptions;
 CREATE POLICY "Users can update their own prescriptions"
   ON prescriptions FOR UPDATE
   USING (auth.uid() = patient_id);
 
+DROP POLICY IF EXISTS "Users can delete their own prescriptions" ON prescriptions;
 CREATE POLICY "Users can delete their own prescriptions"
   ON prescriptions FOR DELETE
   USING (auth.uid() = patient_id);
@@ -54,23 +58,28 @@ CREATE POLICY "Users can delete their own prescriptions"
 -- RLS Policies for medication_reminders
 ALTER TABLE medication_reminders ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own reminders" ON medication_reminders;
 CREATE POLICY "Users can view their own reminders"
   ON medication_reminders FOR SELECT
   USING (auth.uid() = patient_id);
 
+DROP POLICY IF EXISTS "Users can insert their own reminders" ON medication_reminders;
 CREATE POLICY "Users can insert their own reminders"
   ON medication_reminders FOR INSERT
   WITH CHECK (auth.uid() = patient_id);
 
+DROP POLICY IF EXISTS "Users can update their own reminders" ON medication_reminders;
 CREATE POLICY "Users can update their own reminders"
   ON medication_reminders FOR UPDATE
   USING (auth.uid() = patient_id);
 
+DROP POLICY IF EXISTS "Users can delete their own reminders" ON medication_reminders;
 CREATE POLICY "Users can delete their own reminders"
   ON medication_reminders FOR DELETE
   USING (auth.uid() = patient_id);
 
 -- Storage policies for prescriptions bucket
+DROP POLICY IF EXISTS "Users can upload their own prescriptions" ON storage.objects;
 CREATE POLICY "Users can upload their own prescriptions"
   ON storage.objects FOR INSERT
   WITH CHECK (
@@ -78,6 +87,7 @@ CREATE POLICY "Users can upload their own prescriptions"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Users can view their own prescriptions" ON storage.objects;
 CREATE POLICY "Users can view their own prescriptions"
   ON storage.objects FOR SELECT
   USING (
@@ -85,6 +95,7 @@ CREATE POLICY "Users can view their own prescriptions"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Users can delete their own prescriptions" ON storage.objects;
 CREATE POLICY "Users can delete their own prescriptions"
   ON storage.objects FOR DELETE
   USING (

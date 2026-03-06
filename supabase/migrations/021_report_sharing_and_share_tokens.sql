@@ -7,6 +7,7 @@
 -- ============================================================================
 -- 009 already has "Lab users can read" and 005 has "Patients can read own reports".
 -- Add policy so users who have been granted access via report_access can read.
+drop policy if exists "Users with report_access can read report" on public.reports;
 create policy "Users with report_access can read report"
   on public.reports for select
   using (
@@ -35,6 +36,7 @@ create index if not exists report_share_tokens_expires_at_idx on public.report_s
 alter table public.report_share_tokens enable row level security;
 
 -- Report owner can insert tokens for their reports
+drop policy if exists "Report owner can insert share tokens" on public.report_share_tokens;
 create policy "Report owner can insert share tokens"
   on public.report_share_tokens for insert
   with check (
@@ -45,6 +47,7 @@ create policy "Report owner can insert share tokens"
   );
 
 -- Report owner can read their tokens
+drop policy if exists "Report owner can read own share tokens" on public.report_share_tokens;
 create policy "Report owner can read own share tokens"
   on public.report_share_tokens for select
   using (

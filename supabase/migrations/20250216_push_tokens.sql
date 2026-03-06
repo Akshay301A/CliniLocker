@@ -15,6 +15,7 @@ create index if not exists push_tokens_token_idx on public.push_tokens(token);
 alter table public.push_tokens enable row level security;
 
 -- Users can manage only their own tokens
+drop policy if exists "Users can manage own push tokens" on public.push_tokens;
 create policy "Users can manage own push tokens"
   on public.push_tokens
   for all

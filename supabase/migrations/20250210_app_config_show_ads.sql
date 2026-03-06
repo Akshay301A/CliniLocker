@@ -10,6 +10,7 @@ create table if not exists public.app_config (
 -- Allow anyone to read (anon + authenticated) so dashboards can show/hide ads without auth.
 alter table public.app_config enable row level security;
 
+drop policy if exists "Allow read app_config" on public.app_config;
 create policy "Allow read app_config"
   on public.app_config for select
   using (true);
