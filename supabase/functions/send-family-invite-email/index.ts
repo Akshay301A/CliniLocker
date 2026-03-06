@@ -45,12 +45,11 @@ Deno.serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   const inviteFromEmail = Deno.env.get("INVITE_FROM_EMAIL");
 
-  if (!supabaseUrl || !anonKey || !serviceRoleKey || !resendApiKey || !inviteFromEmail) {
+  if (!supabaseUrl || !serviceRoleKey || !resendApiKey || !inviteFromEmail) {
     return new Response(JSON.stringify({ error: "Missing required secrets" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -94,19 +93,28 @@ Deno.serve(async (req) => {
     });
   }
 
-  const authClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
-  });
-  const { data: authUserData, error: authError } = await authClient.auth.getUser();
-  if (authError || !authUserData?.user) {
+  const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization") ?? "";
+  const accessToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!accessToken) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  const userId = authUserData.user.id;
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
+  const { data: authUserData, error: authError } = await adminClient.auth.getUser(accessToken);
+  if (authError || !authUserData?.user) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized", details: authError?.message ?? "Invalid access token" }),
+      {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  const userId = authUserData.user.id;
 
   if (familyMemberId) {
     const { data: fm } = await adminClient
@@ -202,4 +210,3 @@ Deno.serve(async (req) => {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
-

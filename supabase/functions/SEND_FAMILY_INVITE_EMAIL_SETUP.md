@@ -18,7 +18,6 @@ Set these in Supabase project secrets:
 Already present in your project for other functions:
 
 - `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
 Example:
@@ -37,4 +36,3 @@ If not verified, function returns provider error and email will not send.
 
 The client passes logo URL to the function (`/logo (2).png` from your site origin).
 If unavailable, fallback text branding is used.
-
