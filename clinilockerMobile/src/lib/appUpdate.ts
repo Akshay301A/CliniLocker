@@ -39,7 +39,6 @@ function getDefaultMessage(currentVersion: string, latestVersion: string): strin
 
 const DEFAULT_APK_URL = "https://raw.githubusercontent.com/Akshay301A/CliniLocker/master/CliniLocker/public/downloads/CliniLocker-Android-v1.0-release.apk";
 const ALLOWED_APK_HOSTS = new Set([
-  "clinilocker.vercel.app",
   "www.clinilocker.com",
   "clinilocker.com",
   "raw.githubusercontent.com",
