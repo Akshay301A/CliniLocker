@@ -37,13 +37,41 @@ function getDefaultMessage(currentVersion: string, latestVersion: string): strin
   return `A newer version is available. Current: v${currentVersion}. Latest: v${latestVersion}. Please update for the best experience.`;
 }
 
+const DEFAULT_APK_URL = "https://clinilocker.vercel.app/downloads/CliniLocker-Android-v1.0-release.apk";
+
+function resolveApkUrl(rawUrl?: string): string {
+  const trimmed = (rawUrl ?? "").trim();
+  if (!trimmed) return DEFAULT_APK_URL;
+
+  const normalized = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : trimmed.startsWith("www.")
+      ? `https://${trimmed}`
+      : "";
+  if (!normalized) return DEFAULT_APK_URL;
+
+  try {
+    const url = new URL(normalized);
+    const host = url.hostname.toLowerCase();
+    const path = (url.pathname || "").toLowerCase();
+    const isPlaceholderHost =
+      host.includes("your-domain.com") ||
+      host.includes("example.com") ||
+      host.includes("localhost") ||
+      host === "127.0.0.1";
+    const isEmptyPath = !path || path === "/" || path === "/index.html";
+    if (isPlaceholderHost || isEmptyPath) return DEFAULT_APK_URL;
+    return url.toString();
+  } catch {
+    return DEFAULT_APK_URL;
+  }
+}
+
 function buildResult(config: MobileAppUpdateConfig, currentVersion: string): AppUpdateCheckResult | null {
   const latestVersion = config.latest_version.trim();
   if (!latestVersion) return null;
 
-  const apkUrl =
-    config.apk_url?.trim() ||
-    "https://clinilocker.vercel.app/downloads/CliniLocker-Android-v1.0-release.apk";
+  const apkUrl = resolveApkUrl(config.apk_url);
 
   const cmpLatest = compareVersions(currentVersion, latestVersion);
   const minSupported = config.min_supported_version?.trim();
@@ -76,6 +104,5 @@ export async function checkForAppUpdate(): Promise<AppUpdateCheckResult | null> 
 }
 
 export async function openAppUpdateUrl(apkUrl: string): Promise<void> {
-  await Browser.open({ url: apkUrl });
+  await Browser.open({ url: resolveApkUrl(apkUrl) });
 }
-
