@@ -322,26 +322,27 @@ export async function sendFamilyInviteEmail(params: {
   email: string;
   inviteLink: string;
   memberName: string;
+  familyMemberId?: string;
+  logoUrl?: string;
 }): Promise<{ error?: string }> {
   const email = params.email.trim().toLowerCase();
   if (!email || !isValidEmail(email)) return { error: "Invalid email address" };
   if (!params.inviteLink) return { error: "Missing invite link" };
-
-  const subject = encodeURIComponent("Your CliniLocker Family Invite");
-  const body = encodeURIComponent(
-    `Hi ${params.memberName || "there"},\n\n` +
-    `You have been invited to join a family in CliniLocker.\n\n` +
-    `Open this link to accept the invite and create/login to your account:\n` +
-    `${params.inviteLink}\n\n` +
-    `This link expires in 7 days.\n\n` +
-    `- CliniLocker`
-  );
-
-  if (typeof window !== "undefined") {
-    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
-    return {};
-  }
-  return { error: "Email app not available on this device." };
+  const logoUrl =
+    params.logoUrl ||
+    (typeof window !== "undefined" ? `${window.location.origin}/logo%20(2).png` : undefined);
+  const { data, error } = await supabase.functions.invoke("send-family-invite-email", {
+    body: {
+      email,
+      inviteLink: params.inviteLink,
+      memberName: params.memberName,
+      familyMemberId: params.familyMemberId,
+      logoUrl,
+    },
+  });
+  if (error) return { error: error.message };
+  if ((data as { error?: string } | null)?.error) return { error: String((data as { error: string }).error) };
+  return {};
 }
 
 export async function deleteFamilyMember(id: string): Promise<{ error?: string }> {

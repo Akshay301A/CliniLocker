@@ -96,6 +96,7 @@ const PatientFamilyMembers = () => {
         email: emailTrim,
         inviteLink: inviteResult.link,
         memberName: name.trim(),
+        familyMemberId: result.id,
       });
       if (emailResult.error) {
         toast.error(emailResult.error);
