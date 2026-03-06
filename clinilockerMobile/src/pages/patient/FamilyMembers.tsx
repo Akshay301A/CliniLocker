@@ -12,7 +12,6 @@ import {
   insertFamilyMember,
   deleteFamilyMember,
   createFamilyInvite,
-  sendFamilyInviteEmail,
   getPendingInvitesReceived,
   acceptFamilyInvite,
 } from "@/lib/api";
@@ -30,7 +29,6 @@ const PatientFamilyMembers = () => {
   const [name, setName] = useState("");
   const [relation, setRelation] = useState("Father");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
   const [dob, setDob] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [acceptingToken, setAcceptingToken] = useState<string | null>(null);
@@ -60,7 +58,6 @@ const PatientFamilyMembers = () => {
       return;
     }
     const phoneTrim = phone.trim();
-    const emailTrim = email.trim();
     if (!phoneTrim) {
       toast.error(t("Phone number is required. Family members must create an account."));
       return;
@@ -70,7 +67,7 @@ const PatientFamilyMembers = () => {
       name: name.trim(),
       relation,
       phone: phoneTrim,
-      email: email.trim() || null,
+      email: null,
       date_of_birth: dob || null,
     });
     if ("error" in result) {
@@ -78,7 +75,7 @@ const PatientFamilyMembers = () => {
       toast.error(result.error);
       return;
     }
-    const inviteResult = await createFamilyInvite(result.id, emailTrim || undefined);
+    const inviteResult = await createFamilyInvite(result.id);
     setSubmitting(false);
     if ("error" in inviteResult) {
       toast.error(inviteResult.error);
@@ -89,23 +86,8 @@ const PatientFamilyMembers = () => {
     setShowForm(false);
     setName("");
     setPhone("");
-    setEmail("");
     setDob("");
-    if (emailTrim) {
-      const emailResult = await sendFamilyInviteEmail({
-        email: emailTrim,
-        inviteLink: inviteResult.link,
-        memberName: name.trim(),
-        familyMemberId: result.id,
-      });
-      if (emailResult.error) {
-        toast.error(emailResult.error);
-      } else {
-        toast.success(t("Invite email prepared for ") + emailTrim);
-      }
-    } else {
-      toast.success(t("Invite created. Send the link to ") + name.trim() + t(" so they can create an account."));
-    }
+    toast.success(t("Invite created. Send the link to ") + name.trim() + t(" so they can create an account."));
     getFamilyMembers().then(setMembers);
   };
 
@@ -311,10 +293,6 @@ const PatientFamilyMembers = () => {
               <div>
                 <Label htmlFor="memberPhone">{t("Phone Number")} *</Label>
                 <Input id="memberPhone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 ..." required />
-              </div>
-              <div>
-                <Label htmlFor="memberEmail">{t("Email (for invite)")}</Label>
-                <Input id="memberEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
               </div>
               <div>
                 <Label htmlFor="memberDob">{t("Date of Birth")}</Label>

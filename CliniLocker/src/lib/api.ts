@@ -3,6 +3,7 @@ import type { Profile, Report, FamilyMember, Lab } from "./supabase";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const EMAIL_INVITES_ENABLED = false;
 
 async function getFunctionInvokeErrorMessage(error: unknown): Promise<string> {
   const e = error as { message?: string; context?: { json?: () => Promise<unknown>; text?: () => Promise<string> } };
@@ -328,6 +329,9 @@ export async function sendFamilyInviteEmail(params: {
   familyMemberId?: string;
   logoUrl?: string;
 }): Promise<{ error?: string }> {
+  if (!EMAIL_INVITES_ENABLED) {
+    return { error: "Email invites are currently disabled. Please use copy invite link." };
+  }
   const email = params.email.trim().toLowerCase();
   if (!email || !isValidEmail(email)) return { error: "Invalid email address" };
   if (!params.inviteLink) return { error: "Missing invite link" };
@@ -434,7 +438,7 @@ export async function createFamilyInvite(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
   const token = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const normalizedInviteEmail = inviteEmail?.trim().toLowerCase() || null;
+  const normalizedInviteEmail = EMAIL_INVITES_ENABLED ? inviteEmail?.trim().toLowerCase() || null : null;
   const { data: invite, error: insertError } = await supabase
     .from("family_invites")
     .insert({
