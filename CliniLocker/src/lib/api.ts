@@ -340,7 +340,7 @@ export async function sendFamilyInviteEmail(params: {
       logoUrl,
     },
   });
-  if (error) return { error: error.message };
+  if (error) return { error: await getFunctionInvokeErrorMessage(error) };
   if ((data as { error?: string } | null)?.error) return { error: String((data as { error: string }).error) };
   return {};
 }
@@ -399,8 +399,13 @@ export async function createFamilyInvite(familyMemberId: string): Promise<{ link
     .select("id")
     .single();
   if (insertError) return { error: insertError.message };
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return { link: `${origin}/patient/accept-invite?token=${encodeURIComponent(token)}` };
+  const publicAppBase =
+    typeof window !== "undefined" &&
+    /^https?:\/\//i.test(window.location.origin) &&
+    !/localhost|127\.0\.0\.1/i.test(window.location.origin)
+      ? window.location.origin
+      : "https://clinilocker.vercel.app";
+  return { link: `${publicAppBase}/patient/accept-invite?token=${encodeURIComponent(token)}` };
 }
 
 /** Accept family invite (call after signup). Links current user to the family_member. */
