@@ -13,6 +13,7 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
+import { Download, Smartphone } from "lucide-react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -95,28 +96,56 @@ function AppUpdatePrompt() {
 
   return (
     <Dialog open={!!updateInfo}>
-      <DialogContent className="max-w-sm sm:max-w-md [&>button]:hidden">
-        <DialogHeader>
-          <DialogTitle>{updateInfo?.title || "Update Available"}</DialogTitle>
-          <DialogDescription>
-            {updateInfo?.message}
-          </DialogDescription>
-        </DialogHeader>
-        {updateInfo && (
-          <p className="text-xs text-muted-foreground">
-            Installed: v{updateInfo.currentVersion} | Latest: v{updateInfo.latestVersion}
-          </p>
-        )}
-        <DialogFooter className="gap-2">
-          {!updateInfo?.forceUpdate && (
-            <Button variant="outline" onClick={handleLater} disabled={opening}>
-              Later
-            </Button>
-          )}
-          <Button onClick={handleUpdateNow} disabled={opening}>
-            {opening ? "Opening..." : "Update Now"}
-          </Button>
-        </DialogFooter>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md overflow-hidden rounded-3xl border-0 bg-transparent p-0 shadow-2xl [&>button]:hidden">
+        <div className="bg-gradient-to-br from-cyan-500 via-sky-500 to-indigo-600 p-[1px]">
+          <div className="rounded-[calc(theme(borderRadius.3xl)-1px)] bg-white p-5 sm:p-6">
+            <DialogHeader className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-100 to-sky-100 text-sky-600">
+                  <Smartphone className="h-5 w-5" />
+                </div>
+                {updateInfo && (
+                  <div className="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-semibold text-sky-700">
+                    v{updateInfo.latestVersion}
+                  </div>
+                )}
+              </div>
+              <DialogTitle className="text-left text-xl font-semibold text-slate-900">
+                {updateInfo?.title || "Update Available"}
+              </DialogTitle>
+              <DialogDescription className="text-left text-sm leading-relaxed text-slate-600">
+                {updateInfo?.message}
+              </DialogDescription>
+            </DialogHeader>
+            {updateInfo && (
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                Installed: <span className="font-medium text-slate-800">v{updateInfo.currentVersion}</span>
+                <span className="mx-2 text-slate-300">|</span>
+                Latest: <span className="font-medium text-slate-800">v{updateInfo.latestVersion}</span>
+              </div>
+            )}
+            <DialogFooter className="mt-5 gap-2 sm:gap-3">
+              {!updateInfo?.forceUpdate && (
+                <Button
+                  variant="outline"
+                  onClick={handleLater}
+                  disabled={opening}
+                  className="h-11 rounded-xl border-slate-300 px-5 text-slate-700"
+                >
+                  Later
+                </Button>
+              )}
+              <Button
+                onClick={handleUpdateNow}
+                disabled={opening}
+                className="h-11 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-600 px-6 text-white hover:from-cyan-600 hover:to-sky-700"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {opening ? "Opening..." : "Update Now"}
+              </Button>
+            </DialogFooter>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
