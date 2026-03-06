@@ -4,6 +4,22 @@ import type { Profile, Report, FamilyMember, Lab } from "./supabase";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 const EMAIL_INVITES_ENABLED = false;
+const PUBLIC_APP_URL =
+  (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.trim().replace(/\/+$/, "") ||
+  "https://www.clinilocker.com";
+
+function getPublicAppBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    const origin = window.location.origin;
+    if (
+      /^https?:\/\//i.test(origin) &&
+      !/localhost|127\.0\.0\.1/i.test(origin)
+    ) {
+      return origin.replace(/\/+$/, "");
+    }
+  }
+  return PUBLIC_APP_URL;
+}
 
 async function getFunctionInvokeErrorMessage(error: unknown): Promise<string> {
   const e = error as { message?: string; context?: { json?: () => Promise<unknown>; text?: () => Promise<string> } };
@@ -450,12 +466,7 @@ export async function createFamilyInvite(
     .select("id")
     .single();
   if (insertError) return { error: insertError.message };
-  const publicAppBase =
-    typeof window !== "undefined" &&
-    /^https?:\/\//i.test(window.location.origin) &&
-    !/localhost|127\.0\.0\.1/i.test(window.location.origin)
-      ? window.location.origin
-      : "https://clinilocker.vercel.app";
+  const publicAppBase = getPublicAppBaseUrl();
   return { link: `${publicAppBase}/patient/accept-invite?token=${encodeURIComponent(token)}` };
 }
 
