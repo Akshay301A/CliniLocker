@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://clinilocker.com/sitemap.xml
+Sitemap: https://www.clinilocker.com/sitemap.xml

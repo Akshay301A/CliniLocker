@@ -1,52 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://clinilocker.com/</loc>
+    <loc>https://www.clinilocker.com/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.00</priority>
   </url>
   <url>
-    <loc>https://clinilocker.com/features</loc>
+    <loc>https://www.clinilocker.com/features</loc>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://clinilocker.com/pricing</loc>
+    <loc>https://www.clinilocker.com/pricing</loc>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://clinilocker.com/about</loc>
+    <loc>https://www.clinilocker.com/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.64</priority>
   </url>
   <url>
-    <loc>https://clinilocker.com/login</loc>
+    <loc>https://www.clinilocker.com/login</loc>
     <changefreq>monthly</changefreq>
     <priority>0.64</priority>
   </url>
   <url>
-    <loc>https://clinilocker.com/signup</loc>
+    <loc>https://www.clinilocker.com/signup</loc>
     <changefreq>monthly</changefreq>
     <priority>0.64</priority>
   </url>
   <url>
-    <loc>https://clinilocker.com/patient-login</loc>
+    <loc>https://www.clinilocker.com/patient-login</loc>
     <changefreq>monthly</changefreq>
     <priority>0.50</priority>
   </url>
   <url>
-    <loc>https://clinilocker.com/lab/complete-signup</loc>
+    <loc>https://www.clinilocker.com/lab/complete-signup</loc>
     <changefreq>monthly</changefreq>
     <priority>0.50</priority>
   </url>
   <url>
-    <loc>https://clinilocker.com/terms</loc>
+    <loc>https://www.clinilocker.com/terms</loc>
     <changefreq>yearly</changefreq>
     <priority>0.30</priority>
   </url>
   <url>
-    <loc>https://clinilocker.com/privacy</loc>
+    <loc>https://www.clinilocker.com/privacy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.30</priority>
   </url>
