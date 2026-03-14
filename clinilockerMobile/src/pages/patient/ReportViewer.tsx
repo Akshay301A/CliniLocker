@@ -17,7 +17,6 @@ import {
   Loader2,
   Copy,
   Users,
-  ExternalLink,
   Mail,
   MessageCircle,
   Smartphone,
@@ -42,6 +41,7 @@ import {
   getFamilyMembers,
   grantReportAccessToUser,
   analyzeReportFromPdfUrl,
+  getPublicAppBaseUrlForShare,
   type ReportAnalysis,
 } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -150,10 +150,10 @@ const ReportViewer = () => {
   }, []);
 
   const getShareableUrl = async (): Promise<string> => {
-    if (!id) return window.location.href;
+    if (!id) return getPublicAppBaseUrlForShare();
     const token = await createReportShareToken(id);
-    if (!token) return window.location.href;
-    const base = window.location.origin + window.location.pathname;
+    if (!token) return getPublicAppBaseUrlForShare();
+    const base = `${getPublicAppBaseUrlForShare()}/patient/report/${id}`;
     return `${base}?share=${encodeURIComponent(token)}`;
   };
 
@@ -163,10 +163,6 @@ const ReportViewer = () => {
     toast.success(t("Link copied! Anyone with this link can view the report when logged in."));
   };
 
-  const handleOpenInNewTab = async () => {
-    const url = await getShareableUrl();
-    window.open(url, "_blank");
-  };
 
   /** Opens the PDF inside app bottom sheet (mobile). */
   const handleOpenPdfInApp = () => {
@@ -335,9 +331,6 @@ const ReportViewer = () => {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleCopyLink} className="gap-2 cursor-pointer">
                       <Copy className="h-4 w-4" /> {t("Copy link")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleOpenInNewTab} className="gap-2 cursor-pointer">
-                      <ExternalLink className="h-4 w-4" /> {t("Open in new tab")}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel className="text-muted-foreground font-normal">

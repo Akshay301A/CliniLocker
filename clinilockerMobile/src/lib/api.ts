@@ -12,6 +12,10 @@ function getPublicAppBaseUrl(): string {
   return PUBLIC_APP_URL;
 }
 
+export function getPublicAppBaseUrlForShare(): string {
+  return getPublicAppBaseUrl();
+}
+
 async function getFunctionInvokeErrorMessage(error: unknown): Promise<string> {
   const e = error as { message?: string; context?: { json?: () => Promise<unknown>; text?: () => Promise<string> } };
   let msg = e?.message || "Edge Function request failed";
