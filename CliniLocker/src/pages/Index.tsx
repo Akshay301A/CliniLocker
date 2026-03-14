@@ -53,8 +53,8 @@ const steps = [
   { icon: UserCheck, num: "03", title: "Access", desc: "Patient views reports and reminders anytime." },
 ];
 
-const ANDROID_APK_PATH = "/downloads/CliniLocker-Android-v1.0.3-release.apk";
-const ANDROID_APP_VERSION = "1.0.3";
+const ANDROID_APK_PATH = "/downloads/CliniLocker-Android-v1.0.0-release.apk";
+const ANDROID_APP_VERSION = "1.0.0";
 
 const Index = () => {
   return (
