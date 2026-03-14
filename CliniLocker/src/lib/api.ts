@@ -252,7 +252,7 @@ export async function createReportShareToken(reportId: string): Promise<string |
 
 /** Get a signed URL for viewing a report file. Pass the path segment (e.g. from file_url). */
 export async function getSignedUrl(path: string): Promise<string | null> {
-  const { data, error } = await supabase.storage.from("reports").createSignedUrl(path, 3600);
+  const { data, error } = await supabase.storage.from("reports").createSignedUrl(path, 604800);
   if (error || !data?.signedUrl) return null;
   return data.signedUrl;
 }

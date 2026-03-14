@@ -37,7 +37,6 @@ import {
   getReportById,
   getReportByIdWithShareToken,
   getSignedUrl,
-  createReportShareToken,
   getFamilyMembers,
   grantReportAccessToUser,
   analyzeReportFromPdfUrl,
@@ -147,17 +146,21 @@ const ReportViewer = () => {
   }, []);
 
   const getShareableUrl = async (): Promise<string> => {
-    if (!id) return getPublicAppBaseUrlForShare();
-    const token = await createReportShareToken(id);
-    if (!token) return getPublicAppBaseUrlForShare();
-    const base = `${getPublicAppBaseUrlForShare()}/patient/report/${id}`;
-    return `${base}?share=${encodeURIComponent(token)}`;
+    if (pdfUrl) return pdfUrl;
+    if (report?.file_url) {
+      const path = pathFromFileUrl(report.file_url);
+      if (path) {
+        const url = await getSignedUrl(path);
+        if (url) return url;
+      }
+    }
+    return getPublicAppBaseUrlForShare();
   };
 
   const handleCopyLink = async () => {
     const url = await getShareableUrl();
     await navigator.clipboard.writeText(url);
-    toast.success(t("Link copied! Anyone with this link can view the report when logged in."));
+    toast.success(t("Report PDF link copied."));
   };
 
   const handleOpenInNewTab = async () => {
@@ -177,10 +180,10 @@ const ReportViewer = () => {
   const handleShareWhatsApp = async () => {
     const url = await getShareableUrl();
     const text = encodeURIComponent(
-      t("View my health report") + ": " + url
+      t("Health report PDF") + ": " + url
     );
     window.open(`https://wa.me/?text=${text}`, "_blank");
-    toast.success(t("Opening WhatsApp…"));
+    toast.success(t("Opening WhatsApp..."));
   };
 
   const handleShareEmail = async () => {
@@ -189,7 +192,7 @@ const ReportViewer = () => {
       report?.test_name ? `${t("Health report")}: ${report.test_name}` : t("Health report")
     );
     const body = encodeURIComponent(
-      t("View my health report at this link (you must be logged in to CliniLocker):") + "\n\n" + url
+      t("Health report PDF link:") + "\n\n" + url
     );
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
@@ -197,7 +200,7 @@ const ReportViewer = () => {
   const handleShareSms = async () => {
     const url = await getShareableUrl();
     const body = encodeURIComponent(
-      t("View my health report") + ": " + url
+      t("Health report PDF") + ": " + url
     );
     window.location.href = `sms:?body=${body}`;
   };
@@ -214,7 +217,7 @@ const ReportViewer = () => {
     } else {
       const url = await getShareableUrl();
       await navigator.clipboard.writeText(url);
-      toast.success(t("Invite link copied. Send it to") + ` ${member.name} ` + t("so they can sign up and view the report."));
+      toast.success(t("Report PDF link copied. Send it to") + ` ${member.name}.`);
     }
   };
 
