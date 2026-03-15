@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Component, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import {
   getReportById,
@@ -61,6 +61,19 @@ function formatDate(s: string | undefined) {
   if (!s) return "â€”";
   return new Date(s).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
 }
+class ChartErrorBoundary extends Component<{ fallback: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
+}
+
 
 /** Extract storage path from file_url (path or URL). */
 function pathFromFileUrl(fileUrl: string): string {
@@ -632,6 +645,13 @@ const ReportViewer = () => {
                     </div>
                   </div>
 
+                  <ChartErrorBoundary
+                    fallback={(
+                      <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                        {t("We had trouble rendering the charts. Please try again.")}
+                      </div>
+                    )}
+                  >
                   {chartTabs.length > 0 ? (
                     <div className="space-y-4">
                       <div className="flex flex-wrap gap-2">
@@ -809,6 +829,7 @@ const ReportViewer = () => {
                       {t("No structured chart data could be extracted from this report.")}
                     </div>
                   )}
+                  </ChartErrorBoundary>
                   <div className="flex gap-3 rounded-lg bg-muted/40 border border-border p-4">
                     <Info className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
                     <p className="text-xs text-muted-foreground leading-relaxed">
