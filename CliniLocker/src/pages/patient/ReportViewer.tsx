@@ -29,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Component, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getReportById,
   getReportByIdWithShareToken,
@@ -42,34 +42,10 @@ import {
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PatientLayout } from "@/components/PatientLayout";
 import { Preloader } from "@/components/Preloader";
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from "recharts";
 
 function formatDate(s: string | undefined) {
   if (!s) return "â€”";
   return new Date(s).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
-}
-class ChartErrorBoundary extends Component<{ fallback: ReactNode }, { hasError: boolean }> {
-  state = { hasError: false };
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  render() {
-    if (this.state.hasError) return this.props.fallback;
-    return this.props.children;
-  }
 }
 /** Extract storage path from file_url (path or URL). */
 function pathFromFileUrl(fileUrl: string): string {
@@ -126,133 +102,9 @@ const ReportViewer = () => {
   const [fullScreen, setFullScreen] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<Awaited<ReturnType<typeof getFamilyMembers>>>([]);
   const { analysis, loading: analysisLoading, error: analysisError } = useReportAnalysis(pdfUrl);
-  const [activeChartTab, setActiveChartTab] = useState<"status" | "observations" | "advice">("status");
-  const [detail, setDetail] = useState<{ title: string; body: string } | null>(null);
-  const touchStartX = useRef(0);
-
-  const derivedFindings = useMemo(() => {
-    if (!analysis) return [];
-    const cleaned = derivedFindings.filter((f) => f.text.trim().length > 0);
-    if (cleaned.length > 0) return cleaned;
-
-    const summary = analysis.summary?.trim() || "";
-    const sentences = summary
-      .split(/[\.\!\?]\s+/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .slice(0, 6);
-
-    const attentionKeywords = ["high", "low", "elevated", "abnormal", "critical", "outside", "positive", "detected", "deficient", "insufficient", "risk", "needs attention", "borderline"];
-    const normalKeywords = ["normal", "within", "stable", "healthy", "no evidence", "negative", "acceptable"];
-
-    return sentences.map((text) => {
-      const lower = text.toLowerCase();
-      const isAttention = attentionKeywords.some((k) => lower.includes(k));
-      const isNormal = normalKeywords.some((k) => lower.includes(k));
-      return {
-        text,
-        type: (isAttention && !isNormal ? "attention" : "normal") as "normal" | "attention",
-      };
-    });
-  }, [analysis]);
-
-  const derivedActions = useMemo(() => {
-    if (!analysis) return [];
-    const cleaned = derivedActions.filter((a) => a.trim().length > 0);
-    if (cleaned.length > 0) return cleaned;
-
-    const summary = analysis.summary?.trim() || "";
-    const sentences = summary
-      .split(/[\.\!\?]\s+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const actionKeywords = ["recommend", "advise", "consult", "follow", "monitor", "repeat", "review", "consider"];
-    return sentences.filter((s) => actionKeywords.some((k) => s.toLowerCase().includes(k))).slice(0, 4);
-  }, [analysis]);
-
-  const statusData = useMemo(() => {
-    if (!analysis) return [];
-    const attentionCount = derivedFindings.filter((f) => f.type === "attention").length;
-    const normalCount = derivedFindings.length - attentionCount;
-    return [
-      { name: t("Normal"), value: normalCount, key: "normal", color: "#22c55e" },
-      { name: t("Needs Attention"), value: attentionCount, key: "attention", color: "#f97316" },
-    ].filter((d) => d.value > 0);
-  }, [analysis, derivedFindings, t]);
-
-  const observationData = useMemo(() => {
-    if (!analysis) return [];
-    return derivedFindings.map((f, idx) => ({
-      name: `${t("Obs")} ${idx + 1}`,
-      value: 1,
-      type: f.type,
-      text: f.text,
-      color: f.type === "attention" ? "#f97316" : "#22c55e",
-    }));
-  }, [analysis, derivedFindings, t]);
-
-  const adviceData = useMemo(() => {
-    if (!analysis) return [];
-    return derivedActions.map((text, idx) => ({
-      name: `${t("Tip")} ${idx + 1}`,
-      value: 1,
-      text,
-      color: "#3b82f6",
-    }));
-  }, [analysis, derivedActions, t]);
-
-  const chartTabs = useMemo(() => {
-    const tabs: { id: "status" | "observations" | "advice"; label: string }[] = [];
-    if (statusData.length > 0) tabs.push({ id: "status", label: t("Status") });
-    if (observationData.length > 0) tabs.push({ id: "observations", label: t("Observations") });
-    if (adviceData.length > 0) tabs.push({ id: "advice", label: t("Advice") });
-    return tabs;
-  }, [statusData.length, observationData.length, adviceData.length, t]);
-
-  useEffect(() => {
-    if (chartTabs.length > 0) {
-      setActiveChartTab(chartTabs[0].id);
-      setDetail(null);
-    }
-  }, [chartTabs]);
-
-  const normalFindings = derivedFindings.filter((f) => f.type === "normal").map((f) => f.text);
-  const attentionFindings = derivedFindings.filter((f) => f.type === "attention").map((f) => f.text);
-  const healthScore = useMemo(() => {
-    const total = derivedFindings.length;
-    if (total === 0) return 100;
-    const attentionCount = derivedFindings.filter((f) => f.type === "attention").length;
-    const score = Math.round(((total - attentionCount) / total) * 100);
-    return Math.max(0, Math.min(100, score));
-  }, [derivedFindings]);
-
-  const defaultDetail = useMemo(() => {
-    if (!analysis) return null;
-    if (activeChartTab === "status") {
-      return {
-        title: t("Overall Status"),
-        body: attentionFindings.length > 0
-          ? `${t("Needs attention:")} ${attentionFindings.join(" • ")}`
-          : t("No concerning values detected in the extracted report."),
-      };
-    }
-    if (activeChartTab === "observations") {
-      return {
-        title: t("Observation details"),
-        body: derivedFindings.length > 0
-          ? derivedFindings.map((f) => f.text).join(" • ")
-          : t("No observations extracted from this report."),
-      };
-    }
-    return {
-      title: t("Advice"),
-      body: derivedActions.length > 0
-        ? derivedActions.join(" • ")
-        : t("No advice suggestions were generated for this report."),
-    };
-  }, [activeChartTab, attentionFindings, derivedActions, derivedFindings, t]);
-
-  const activeDetail = detail ?? defaultDetail;
+  const attentionFindings = analysis?.findings.filter((f) => f.type === "attention") ?? [];
+  const normalFindings = analysis?.findings.filter((f) => f.type === "normal") ?? [];
+  const actions = analysis?.actions ?? [];
 
   useEffect(() => {
     if (!id) return;
@@ -621,193 +473,50 @@ const ReportViewer = () => {
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Test Date")}</p>
                       <p className="font-semibold text-foreground">{formatDate(report?.test_date ?? report?.uploaded_at)}</p>
                     </div>
-                  </div>
-
-                  <ChartErrorBoundary
-                    fallback={(
-                      <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-                        {t("We had trouble rendering the charts. Please try again.")}
-                      </div>
-                    )}
-                  >
-                  {chartTabs.length > 0 ? (
-                    <div className="space-y-4">
-                      <div className="flex flex-wrap gap-2">
-                        {chartTabs.map((tab) => (
-                          <button
-                            key={tab.id}
-                            type="button"
-                            onClick={() => {
-                              setActiveChartTab(tab.id);
-                              setDetail(null);
-                            }}
-                            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                              activeChartTab === tab.id
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted text-muted-foreground hover:text-foreground"
-                            }`}
-                          >
-                            {tab.label}
-                          </button>
-                        ))}
-                      </div>
-                      <div
-                        className="rounded-xl border border-border bg-background p-4"
-                        onTouchStart={(e) => {
-                          touchStartX.current = e.touches[0]?.clientX ?? 0;
-                        }}
-                        onTouchEnd={(e) => {
-                          const endX = e.changedTouches[0]?.clientX ?? 0;
-                          const delta = endX - touchStartX.current;
-                          if (Math.abs(delta) < 40 || chartTabs.length < 2) return;
-                          const currentIndex = chartTabs.findIndex((tab) => tab.id === activeChartTab);
-                          const nextIndex = delta < 0 ? currentIndex + 1 : currentIndex - 1;
-                          if (nextIndex >= 0 && nextIndex < chartTabs.length) {
-                            setActiveChartTab(chartTabs[nextIndex].id);
-                            setDetail(null);
-                          }
-                        }}
-                      >
-                        {activeChartTab === "status" && (
-                          <div className="h-48 sm:h-56">
-                            <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/20 px-4 py-3 shadow-sm">
-                              <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("Health Score")}</p>
-                                <p className="text-lg font-semibold text-foreground">{healthScore}%</p>
-                                <p className="text-xs text-muted-foreground">{t("Based on current report findings")}</p>
-                              </div>
-                              <div
-                                className="relative h-14 w-14 rounded-full"
-                                style={{
-                                  background: `conic-gradient(#22c55e ${healthScore * 3.6}deg, #f97316 ${healthScore * 3.6}deg 360deg)`,
-                                  boxShadow: "0 10px 24px rgba(34,197,94,0.18), 0 4px 10px rgba(249,115,22,0.12)",
-                                }}
-                              >
-                                <div
-                                  className="absolute inset-1 rounded-full"
-                                  style={{
-                                    background: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.6))",
-                                  }}
-                                />
-                                <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-foreground">
-                                  {healthScore}
-                                </div>
-                              </div>
-                            </div>
-                            <ResponsiveContainer width="100%" height="100%">
-                              <PieChart>
-                                <Pie
-                                  data={statusData}
-                                  dataKey="value"
-                                  nameKey="name"
-                                  innerRadius={40}
-                                  outerRadius={72}
-                                  paddingAngle={4}
-                                  onClick={(entry) => {
-                                    if (!entry?.payload) return;
-                                    const key = entry.payload.key as "normal" | "attention";
-                                    if (key === "attention") {
-                                      setDetail({
-                                        title: t("Needs Attention"),
-                                        body: attentionFindings.length > 0
-                                          ? attentionFindings.join(" • ")
-                                          : t("No concerning values detected."),
-                                      });
-                                    } else {
-                                      setDetail({
-                                        title: t("Normal"),
-                                        body: normalFindings.length > 0
-                                          ? normalFindings.join(" • ")
-                                          : t("No normal findings were extracted."),
-                                      });
-                                    }
-                                  }}
-                                >
-                                  {statusData.map((entry, idx) => (
-                                    <Cell key={idx} fill={entry.color} />
-                                  ))}
-                                </Pie>
-                                <Tooltip />
-                              </PieChart>
-                            </ResponsiveContainer>
-                            <div className="mt-3 flex flex-wrap justify-center gap-2">
-                              {statusData.map((entry) => (
-                                <div
-                                  key={entry.key}
-                                  className="flex items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1 text-xs font-semibold text-foreground shadow-sm"
-                                >
-                                  <span className="h-2.5 w-2.5 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
-                                  <span>{entry.name}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
+                  </div>                  <div className="space-y-4">
+                    <div className="rounded-lg border border-border bg-muted/30 p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Summary")}</p>
+                      <p className="mt-2 text-sm text-foreground leading-relaxed">{analysis.summary || t("No summary was generated for this report.")}</p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-lg border border-border bg-background p-4">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Needs Attention")}</p>
+                        {attentionFindings.length > 0 ? (
+                          <ul className="mt-2 space-y-1 text-sm text-foreground list-disc list-inside">
+                            {attentionFindings.map((item, idx) => (
+                              <li key={idx}>{item.text}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="mt-2 text-sm text-muted-foreground">{t("No critical concerns detected.")}</p>
                         )}
-                        {activeChartTab === "observations" && (
-                          <div className="h-48 sm:h-56">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={observationData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                <YAxis hide />
-                                <Tooltip />
-                                <Bar
-                                  dataKey="value"
-                                  onClick={(data) => {
-                                    if (data?.payload?.text) {
-                                      setDetail({ title: t("Observation detail"), body: data.payload.text });
-                                    }
-                                  }}
-                                  radius={[6, 6, 0, 0]}
-                                >
-                                  {observationData.map((entry, index) => (
-                                    <Cell key={index} fill={entry.color} />
-                                  ))}
-                                </Bar>
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        )}
-                        {activeChartTab === "advice" && (
-                          <div className="h-48 sm:h-56">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={adviceData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                                <YAxis hide />
-                                <Tooltip />
-                                <Bar
-                                  dataKey="value"
-                                  fill="#3b82f6"
-                                  onClick={(data) => {
-                                    if (data?.payload?.text) {
-                                      setDetail({ title: t("Advice detail"), body: data.payload.text });
-                                    }
-                                  }}
-                                  radius={[6, 6, 0, 0]}
-                                />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        )}
-                        <p className="mt-3 text-xs text-muted-foreground">
-                          {t("Tap a section to see the explanation. Swipe left or right to switch charts.")}
-                        </p>
                       </div>
-
-                      {activeDetail && (
-                        <div className="rounded-lg border border-border bg-muted/40 p-4">
-                          <p className="text-sm font-semibold text-foreground">{activeDetail.title}</p>
-                          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{activeDetail.body}</p>
-                        </div>
+                      <div className="rounded-lg border border-border bg-background p-4">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Normal Findings")}</p>
+                        {normalFindings.length > 0 ? (
+                          <ul className="mt-2 space-y-1 text-sm text-foreground list-disc list-inside">
+                            {normalFindings.map((item, idx) => (
+                              <li key={idx}>{item.text}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="mt-2 text-sm text-muted-foreground">{t("No normal findings extracted.")}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-background p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Recommended Actions")}</p>
+                      {actions.length > 0 ? (
+                        <ul className="mt-2 space-y-1 text-sm text-foreground list-disc list-inside">
+                          {actions.map((item, idx) => (
+                            <li key={idx}>{item}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-sm text-muted-foreground">{t("No recommended actions provided.")}</p>
                       )}
                     </div>
-                  ) : (
-                    <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-                      {t("No structured chart data could be extracted from this report.")}
-                    </div>
-                  )}
-                  </ChartErrorBoundary>
+                  </div>
                   <div className="flex gap-3 rounded-lg bg-muted/40 border border-border p-4">
                     <Info className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
                     <p className="text-xs text-muted-foreground leading-relaxed">
