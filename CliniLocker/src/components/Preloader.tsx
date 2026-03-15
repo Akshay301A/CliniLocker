@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 
 type PreloaderProps = {
   /** When true, covers the full viewport (e.g. auth loading). When false, fits in flow (e.g. page data loading). */
@@ -26,6 +26,7 @@ export function Preloader({
 }: PreloaderProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
+  const [videoReady, setVideoReady] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -85,11 +86,20 @@ export function Preloader({
         <video
           ref={videoRef}
           src="/preloaderr.mp4"
-          className="w-full h-full object-contain"
+          poster="/logo%20(2).png"
+          className={`w-full h-full object-contain ${videoReady ? "opacity-100" : "opacity-0"}`}
+          style={{ visibility: videoReady ? "visible" : "hidden" }}
           autoPlay
           loop
           muted
           playsInline
+          controls={false}
+          disablePictureInPicture
+          disableRemotePlayback
+          controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+          preload="auto"
+          onLoadedData={() => setVideoReady(true)}
+          onCanPlay={() => setVideoReady(true)}
           aria-label="Loading"
         />
       </div>

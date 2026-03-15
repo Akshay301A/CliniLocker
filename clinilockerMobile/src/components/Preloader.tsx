@@ -96,13 +96,16 @@ export function Preloader({
           <video
             ref={videoRef}
             src="/preloaderr.mp4"
+            poster="/logo%20(2).png"
             className={`w-full h-full object-contain pointer-events-none ${videoReady ? "opacity-100" : "opacity-0"}`}
+            style={{ visibility: videoReady ? "visible" : "hidden" }}
             autoPlay
             loop
             muted
             playsInline
             controls={false}
             disablePictureInPicture
+            disableRemotePlayback
             controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
             preload="auto"
             onLoadedData={() => setVideoReady(true)}
