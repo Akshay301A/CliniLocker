@@ -4,6 +4,13 @@ import { PatientLayout } from "@/components/PatientLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +32,22 @@ type PageOption = "1" | "2" | "3" | "4+";
 
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
 const PAGE_OPTIONS: PageOption[] = ["1", "2", "3", "4+"];
+const REPORT_CATEGORIES = [
+  "Blood",
+  "Hormone",
+  "Imaging",
+  "Cardiac",
+  "Urine",
+  "Liver",
+  "Kidney",
+  "Thyroid",
+  "Diabetes",
+  "CBC",
+  "Lipid",
+  "Vitamin",
+  "Allergy",
+  "Other",
+] as const;
 
 const PatientUploadReports = () => {
   const { user } = useAuth();
@@ -34,6 +57,7 @@ const PatientUploadReports = () => {
 
   const [file, setFile] = useState<File | null>(null);
   const [testName, setTestName] = useState("");
+  const [customCategory, setCustomCategory] = useState("");
   const [labName, setLabName] = useState("");
   const [testDate, setTestDate] = useState("");
 
@@ -192,8 +216,17 @@ const PatientUploadReports = () => {
     }
 
     if (uploadType === "report") {
-      if (!testName.trim()) {
-        toast.error(t("Please enter test name."));
+      const category = testName === "Other" ? customCategory.trim() : testName.trim();
+      if (!category) {
+        toast.error(t("Please select a report category."));
+        return;
+      }
+      if (!labName.trim()) {
+        toast.error(t("Please enter lab name."));
+        return;
+      }
+      if (!testDate) {
+        toast.error(t("Please select test date."));
         return;
       }
 
@@ -250,7 +283,7 @@ const PatientUploadReports = () => {
         patient_id: user.id,
         patient_name: profile?.full_name ?? "Self",
         patient_phone: profile?.phone ?? "",
-        test_name: testName.trim(),
+        test_name: category,
         file_url: path,
         test_date: testDate || null,
       });
@@ -431,16 +464,39 @@ const PatientUploadReports = () => {
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="testName">{t("Test Name")}</Label>
-                  <Input id="testName" placeholder={t("e.g., CBC, Lipid Profile")} value={testName} onChange={(e) => setTestName(e.target.value)} required />
+                  <Label className="mb-2 block">{t("Report Category")}</Label>
+                  <Select value={testName} onValueChange={setTestName}>
+                    <SelectTrigger className="min-h-[44px]">
+                      <SelectValue placeholder={t("Select category")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {REPORT_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {t(cat)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {testName === "Other" && (
+                  <div>
+                    <Label htmlFor="customCategory">{t("Other Category")}</Label>
+                    <Input
+                      id="customCategory"
+                      placeholder={t("Enter category")}
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
+                <div>
+                  <Label htmlFor="labName">{t("Lab / Clinic Name")}</Label>
+                  <Input id="labName" placeholder={t("e.g., City Diagnostics")} value={labName} onChange={(e) => setLabName(e.target.value)} required />
                 </div>
                 <div>
-                  <Label htmlFor="labName">{t("Lab / Clinic Name (optional)")}</Label>
-                  <Input id="labName" placeholder={t("e.g., City Diagnostics")} value={labName} onChange={(e) => setLabName(e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="testDate">{t("Test Date (optional)")}</Label>
-                  <Input id="testDate" type="date" className="min-h-[44px]" value={testDate} onChange={(e) => setTestDate(e.target.value)} />
+                  <Label htmlFor="testDate">{t("Test Date")}</Label>
+                  <Input id="testDate" type="date" className="min-h-[44px]" value={testDate} onChange={(e) => setTestDate(e.target.value)} required />
                 </div>
               </>
             ) : (

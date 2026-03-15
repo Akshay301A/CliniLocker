@@ -39,3 +39,7 @@ pnpm-debug.log*
 
 # Firebase Android config
 **/google-services.json
+.gradle/
+invite-error-log.txt
+oauth-crash.txt
+update-debug-log.txt

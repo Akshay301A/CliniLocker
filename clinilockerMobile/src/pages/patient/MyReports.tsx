@@ -21,7 +21,21 @@ import type { ReportWithLab } from "@/lib/api";
 import { toast } from "sonner";
 import { downloadPdfInApp } from "@/lib/nativeDownload";
 
-const CATEGORY_KEYS = ["All", "Blood", "Hormone", "Imaging", "Cardiac", "Urine"] as const;
+const COMMON_CATEGORIES = [
+  "Blood",
+  "Hormone",
+  "Imaging",
+  "Cardiac",
+  "Urine",
+  "Liver",
+  "Kidney",
+  "Thyroid",
+  "Diabetes",
+  "CBC",
+  "Lipid",
+  "Vitamin",
+  "Allergy",
+] as const;
 
 type SortOption = "date-desc" | "date-asc" | "name-asc" | "name-desc" | "lab-asc" | "lab-desc";
 
@@ -68,6 +82,8 @@ const PatientMyReports = () => {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortOption, setSortOption] = useState<SortOption>("date-desc");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -78,13 +94,36 @@ const PatientMyReports = () => {
     return () => { mounted = false; };
   }, []);
 
+  const categoryOptions = useMemo(() => {
+    const extras = new Set<string>();
+    for (const r of reports) {
+      if (!r.test_name) continue;
+      const trimmed = r.test_name.trim();
+      if (!trimmed) continue;
+      if (!COMMON_CATEGORIES.some((c) => c.toLowerCase() === trimmed.toLowerCase())) {
+        extras.add(trimmed);
+      }
+    }
+    return ["All", ...COMMON_CATEGORIES, ...Array.from(extras).sort((a, b) => a.localeCompare(b))];
+  }, [reports]);
+
   const filtered = reports.filter((r) => {
     const matchSearch =
       r.test_name?.toLowerCase().includes(search.toLowerCase()) ||
       r.patient_name?.toLowerCase().includes(search.toLowerCase()) ||
       r.labs?.name?.toLowerCase().includes(search.toLowerCase());
-    const matchCategory = selectedCategory === "All" || (r.test_name?.toLowerCase().includes(selectedCategory.toLowerCase()));
-    return matchSearch && matchCategory;
+    const matchCategory =
+      selectedCategory === "All" ||
+      (r.test_name?.toLowerCase() === selectedCategory.toLowerCase());
+
+    const dateValue = r.test_date ?? r.uploaded_at;
+    const reportDate = dateValue ? new Date(dateValue) : null;
+    const fromOk = !dateFrom || (reportDate && reportDate >= new Date(dateFrom));
+    const toLimit = dateTo ? new Date(dateTo) : null;
+    if (toLimit) toLimit.setHours(23, 59, 59, 999);
+    const toOk = !toLimit || (reportDate && reportDate <= toLimit);
+
+    return matchSearch && matchCategory && fromOk && toOk;
   });
 
   const sorted = useMemo(() => sortReports(filtered, sortOption), [filtered, sortOption]);
@@ -141,11 +180,27 @@ const PatientMyReports = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="flex-1 min-w-0">
               <TabsList className="w-full md:w-auto justify-start h-10 bg-muted/50 rounded-xl p-1">
-                {CATEGORY_KEYS.map((c) => (
+                {categoryOptions.map((c) => (
                   <TabsTrigger key={c} value={c} className="min-h-[36px] shrink-0 text-xs md:text-sm px-3 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">{t(c)}</TabsTrigger>
                 ))}
               </TabsList>
             </Tabs>
+            <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="h-10 w-[140px] text-xs md:text-sm rounded-xl"
+                aria-label={t("From date")}
+              />
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="h-10 w-[140px] text-xs md:text-sm rounded-xl"
+                aria-label={t("To date")}
+              />
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" aria-label={t("Sort reports")}>

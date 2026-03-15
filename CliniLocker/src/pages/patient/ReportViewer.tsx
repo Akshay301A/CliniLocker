@@ -32,7 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getReportById,
   getReportByIdWithShareToken,
@@ -40,12 +40,24 @@ import {
   getFamilyMembers,
   grantReportAccessToUser,
   analyzeReportFromPdfUrl,
-  getPublicAppBaseUrlForShare,
   type ReportAnalysis,
 } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PatientLayout } from "@/components/PatientLayout";
 import { Preloader } from "@/components/Preloader";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 
 function formatDate(s: string | undefined) {
   if (!s) return "â€”";
@@ -107,6 +119,60 @@ const ReportViewer = () => {
   const [fullScreen, setFullScreen] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<Awaited<ReturnType<typeof getFamilyMembers>>>([]);
   const { analysis, loading: analysisLoading, error: analysisError } = useReportAnalysis(pdfUrl);
+  const [activeChartTab, setActiveChartTab] = useState<string>("findings");
+  const touchStartX = useRef(0);
+
+  const chartData = useMemo(() => {
+    if (!analysis) {
+      return {
+        findingsMix: [],
+        contentVolume: [],
+        actionBalance: [],
+        tabs: [] as { id: string; label: string }[],
+      };
+    }
+    const findingsCount = analysis.findings.length;
+    const attentionCount = analysis.findings.filter((f) => f.type === "attention").length;
+    const normalCount = findingsCount - attentionCount;
+    const actionsCount = analysis.actions.length;
+    const summarySentences = analysis.summary
+      ? analysis.summary.split(/[.!?]+/).map((s) => s.trim()).filter(Boolean).length
+      : 0;
+
+    const findingsMix = [
+      { name: t("Normal"), value: normalCount },
+      { name: t("Needs Attention"), value: attentionCount },
+    ].filter((d) => d.value > 0);
+
+    const contentVolume = [
+      { name: t("Summary"), value: summarySentences },
+      { name: t("Observations"), value: findingsCount },
+      { name: t("Advice"), value: actionsCount },
+    ];
+
+    const actionBalance = [
+      { name: t("Observations"), value: findingsCount },
+      { name: t("Advice"), value: actionsCount },
+    ].filter((d) => d.value > 0);
+
+    const tabs = [
+      { id: "findings", label: t("Findings Mix") },
+      { id: "volume", label: t("Content Volume") },
+      { id: "balance", label: t("Advice Balance") },
+    ].filter((tab) => {
+      if (tab.id === "findings") return findingsMix.length > 0;
+      if (tab.id === "volume") return contentVolume.some((d) => d.value > 0);
+      return actionBalance.length > 0;
+    });
+
+    return { findingsMix, contentVolume, actionBalance, tabs };
+  }, [analysis, t]);
+
+  useEffect(() => {
+    if (chartData.tabs.length > 0) {
+      setActiveChartTab(chartData.tabs[0].id);
+    }
+  }, [chartData.tabs]);
 
   useEffect(() => {
     if (!id) return;
@@ -154,18 +220,17 @@ const ReportViewer = () => {
         if (url) return url;
       }
     }
-    return getPublicAppBaseUrlForShare();
+    throw new Error("Report file not available.");
   };
 
   const handleCopyLink = async () => {
-    const url = await getShareableUrl();
-    await navigator.clipboard.writeText(url);
-    toast.success(t("Report PDF link copied."));
-  };
-
-  const handleOpenInNewTab = async () => {
-    const url = await getShareableUrl();
-    window.open(url, "_blank");
+    try {
+      const url = await getShareableUrl();
+      await navigator.clipboard.writeText(url);
+      toast.success(t("Report PDF link copied."));
+    } catch {
+      toast.error(t("Report file not available."));
+    }
   };
 
   /** Opens the actual PDF file in a new tab (for mobile "Open PDF" button). */
@@ -178,31 +243,43 @@ const ReportViewer = () => {
   };
 
   const handleShareWhatsApp = async () => {
-    const url = await getShareableUrl();
-    const text = encodeURIComponent(
-      t("Health report PDF") + ": " + url
-    );
-    window.open(`https://wa.me/?text=${text}`, "_blank");
-    toast.success(t("Opening WhatsApp..."));
+    try {
+      const url = await getShareableUrl();
+      const text = encodeURIComponent(
+        t("Health report PDF") + ": " + url
+      );
+      window.open(`https://wa.me/?text=${text}`, "_blank");
+      toast.success(t("Opening WhatsApp..."));
+    } catch {
+      toast.error(t("Report file not available."));
+    }
   };
 
   const handleShareEmail = async () => {
-    const url = await getShareableUrl();
-    const subject = encodeURIComponent(
-      report?.test_name ? `${t("Health report")}: ${report.test_name}` : t("Health report")
-    );
-    const body = encodeURIComponent(
-      t("Health report PDF link:") + "\n\n" + url
-    );
-    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    try {
+      const url = await getShareableUrl();
+      const subject = encodeURIComponent(
+        report?.test_name ? `${t("Health report")}: ${report.test_name}` : t("Health report")
+      );
+      const body = encodeURIComponent(
+        t("Health report PDF link:") + "\n\n" + url
+      );
+      window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    } catch {
+      toast.error(t("Report file not available."));
+    }
   };
 
   const handleShareSms = async () => {
-    const url = await getShareableUrl();
-    const body = encodeURIComponent(
-      t("Health report PDF") + ": " + url
-    );
-    window.location.href = `sms:?body=${body}`;
+    try {
+      const url = await getShareableUrl();
+      const body = encodeURIComponent(
+        t("Health report PDF") + ": " + url
+      );
+      window.location.href = `sms:?body=${body}`;
+    } catch {
+      toast.error(t("Report file not available."));
+    }
   };
 
   const handleShareWithFamilyMember = async (member: { id: string; name: string; linked_user_id?: string | null }) => {
@@ -215,9 +292,13 @@ const ReportViewer = () => {
       }
       toast.success(t("Report shared with") + ` ${member.name}. ` + t("They can see it under Family Reports."));
     } else {
-      const url = await getShareableUrl();
-      await navigator.clipboard.writeText(url);
-      toast.success(t("Report PDF link copied. Send it to") + ` ${member.name}.`);
+      try {
+        const url = await getShareableUrl();
+        await navigator.clipboard.writeText(url);
+        toast.success(t("Report PDF link copied. Send it to") + ` ${member.name}.`);
+      } catch {
+        toast.error(t("Report file not available."));
+      }
     }
   };
 
@@ -321,10 +402,6 @@ const ReportViewer = () => {
                     <DropdownMenuItem onClick={handleCopyLink} className="gap-2 cursor-pointer">
                       <Copy className="h-4 w-4" /> {t("Copy link")}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleOpenInNewTab} className="gap-2 cursor-pointer">
-                      <ExternalLink className="h-4 w-4" /> {t("Open in new tab")}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
                     <DropdownMenuLabel className="text-muted-foreground font-normal">
                       {t("Share via")}
                     </DropdownMenuLabel>
@@ -447,6 +524,103 @@ const ReportViewer = () => {
                 </div>
               ) : analysis ? (
                 <>
+                  {chartData.tabs.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="flex flex-wrap gap-2">
+                        {chartData.tabs.map((tab) => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActiveChartTab(tab.id)}
+                            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                              activeChartTab === tab.id
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div
+                        className="rounded-xl border border-border bg-background p-4"
+                        onTouchStart={(e) => {
+                          touchStartX.current = e.touches[0]?.clientX ?? 0;
+                        }}
+                        onTouchEnd={(e) => {
+                          const endX = e.changedTouches[0]?.clientX ?? 0;
+                          const delta = endX - touchStartX.current;
+                          if (Math.abs(delta) < 40 || chartData.tabs.length < 2) return;
+                          const currentIndex = chartData.tabs.findIndex((tab) => tab.id === activeChartTab);
+                          const nextIndex = delta < 0 ? currentIndex + 1 : currentIndex - 1;
+                          if (nextIndex >= 0 && nextIndex < chartData.tabs.length) {
+                            setActiveChartTab(chartData.tabs[nextIndex].id);
+                          }
+                        }}
+                      >
+                        {activeChartTab === "findings" && (
+                          <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={chartData.findingsMix}
+                                  dataKey="value"
+                                  nameKey="name"
+                                  innerRadius={50}
+                                  outerRadius={90}
+                                  paddingAngle={4}
+                                >
+                                  {chartData.findingsMix.map((_, idx) => (
+                                    <Cell key={idx} fill={["#22c55e", "#f97316"][idx % 2]} />
+                                  ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+                        {activeChartTab === "volume" && (
+                          <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={chartData.contentVolume}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
+                                <Bar dataKey="value" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+                        {activeChartTab === "balance" && (
+                          <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={chartData.actionBalance}
+                                  dataKey="value"
+                                  nameKey="name"
+                                  innerRadius={45}
+                                  outerRadius={90}
+                                  paddingAngle={4}
+                                >
+                                  {chartData.actionBalance.map((_, idx) => (
+                                    <Cell key={idx} fill={["#6366f1", "#0ea5e9"][idx % 2]} />
+                                  ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          {t("Swipe left or right to see more charts.")}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   {analysis.findings.length > 0 && (
                     <div className="space-y-3">
                       <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
