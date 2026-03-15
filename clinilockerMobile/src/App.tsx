@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { Download, Smartphone } from "lucide-react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -152,6 +152,20 @@ function AppUpdatePrompt() {
 }
 
 function AppRoutes() {
+  const { user, role, loading } = useAuth();
+
+  const MobileRootRedirect = () => {
+    if (loading) {
+      return <Preloader fullScreen showSplashVideo />;
+    }
+    if (Capacitor.isNativePlatform()) {
+      if (!user) return <Navigate to="/patient-login" replace />;
+      if (role === "lab") return <Navigate to="/lab/dashboard" replace />;
+      return <Navigate to="/patient/dashboard" replace />;
+    }
+    return <Index />;
+  };
+
   // Setup notification handlers when app loads
   useEffect(() => {
     ensureNotificationChannel().catch(() => {});
@@ -181,7 +195,7 @@ function AppRoutes() {
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<MobileRootRedirect />} />
           <Route path="/features" element={<Features />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/about" element={<About />} />
