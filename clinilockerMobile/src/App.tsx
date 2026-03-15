@@ -159,7 +159,10 @@ function AppRoutes() {
       return <Preloader fullScreen showSplashVideo />;
     }
     if (Capacitor.isNativePlatform()) {
-      if (!user) return <Navigate to="/patient-login" replace />;
+      const hasSeenOnboarding = localStorage.getItem("clinilocker_onboarding_seen") === "1";
+      if (!user) {
+        return hasSeenOnboarding ? <Navigate to="/patient-login" replace /> : <Index />;
+      }
       if (role === "lab") return <Navigate to="/lab/dashboard" replace />;
       return <Navigate to="/patient/dashboard" replace />;
     }
