@@ -254,7 +254,14 @@ export async function createReportShareToken(reportId: string): Promise<string |
 export async function getSignedUrl(path: string): Promise<string | null> {
   const { data, error } = await supabase.storage.from("reports").createSignedUrl(path, 604800);
   if (error || !data?.signedUrl) return null;
-  return data.signedUrl;
+  try {
+    const url = new URL(data.signedUrl);
+    url.searchParams.set("response-content-disposition", "inline");
+    url.searchParams.set("response-content-type", "application/pdf");
+    return url.toString();
+  } catch {
+    return data.signedUrl;
+  }
 }
 
 // --- Patient upload (self-upload) ---
