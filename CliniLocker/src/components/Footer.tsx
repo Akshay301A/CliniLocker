@@ -31,6 +31,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link to="/terms" className="inline-block py-1 hover:text-foreground">Terms of Service</Link></li>
               <li><Link to="/privacy" className="inline-block py-1 hover:text-foreground">Privacy Policy</Link></li>
+              <li><Link to="/delete-account" className="inline-block py-1 hover:text-foreground">Delete Account</Link></li>
             </ul>
           </div>
 
