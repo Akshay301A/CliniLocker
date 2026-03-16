@@ -28,6 +28,11 @@ const PrivacyPolicy = () => (
             reports (patient name, phone, report files), and when you use the Service (e.g. login history, preferences).
             We may also collect technical data such as IP address and device type for security and analytics.
           </p>
+          <p>
+            If you choose to upload or capture reports within the mobile app, we may request access to your device
+            camera so you can scan documents. We only use the camera to capture report images at your request and do
+            not access it in the background.
+          </p>
 
           <h2 className="font-display text-lg font-semibold text-foreground mt-8">2. How We Use Your Information</h2>
           <p>
