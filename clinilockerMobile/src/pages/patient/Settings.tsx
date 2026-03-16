@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cancelAllNotifications, cancelHealthTipNotification, ensureNotificationChannel, scheduleHealthTipNotification } from "@/lib/notifications";
 import { downloadPdfInApp } from "@/lib/nativeDownload";
 import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 
 export type NotificationPrefs = {
   sms: boolean;
@@ -144,6 +145,15 @@ const PatientSettings = () => {
       return;
     }
     toast.success(t("Privacy & security preferences saved."));
+  };
+
+  const handleOpenPrivacyPolicy = async () => {
+    const url = "https://www.clinilocker.com/privacy";
+    if (Capacitor.isNativePlatform()) {
+      await Browser.open({ url });
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const { t, setLanguage: setLanguageContext } = useLanguage();
@@ -327,6 +337,12 @@ const PatientSettings = () => {
                 onCheckedChange={(v) => setPrivacy((prev) => ({ ...prev, profileVisibleToLabs: v }))}
               />
             </div>
+          </div>
+          <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+            {t("Read our Privacy Policy for details about data collection, camera usage, and how we protect your reports.")}
+            <Button variant="link" className="px-1 text-primary" onClick={handleOpenPrivacyPolicy}>
+              {t("Open Privacy Policy")}
+            </Button>
           </div>
           <Button variant="outline" onClick={handleSavePrivacy} disabled={privacyLoading}>
             {privacyLoading ? t("Saving…") : t("Save Preferences")}
