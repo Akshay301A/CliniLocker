@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { FileText, Download, Eye, Search, ArrowUpDown } from "lucide-react";
+import { FileText, Download, Eye, Search, ArrowUpDown, SlidersHorizontal } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { PatientLayout } from "@/components/PatientLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,6 +84,7 @@ const PatientMyReports = () => {
   const [sortOption, setSortOption] = useState<SortOption>("date-desc");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -163,6 +164,12 @@ const PatientMyReports = () => {
     window.open(signedUrl, "_blank");
   };
 
+  const handleClearFilters = () => {
+    setSelectedCategory("All");
+    setDateFrom("");
+    setDateTo("");
+  };
+
   return (
     <PatientLayout>
       <div className="animate-fade-in space-y-3 md:space-y-4 pb-4">
@@ -178,33 +185,19 @@ const PatientMyReports = () => {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="flex-1 min-w-0">
-              <TabsList className="w-full md:w-auto justify-start h-10 bg-muted/50 rounded-xl p-1">
-                {categoryOptions.map((c) => (
-                  <TabsTrigger key={c} value={c} className="min-h-[36px] shrink-0 text-xs md:text-sm px-3 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">{t(c)}</TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-            <div className="flex items-center gap-2">
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="h-10 w-[140px] text-xs md:text-sm rounded-xl"
-                aria-label={t("From date")}
-              />
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="h-10 w-[140px] text-xs md:text-sm rounded-xl"
-                aria-label={t("To date")}
-              />
-            </div>
+            <Button
+              variant="outline"
+              className="h-10 rounded-xl px-4 text-xs md:text-sm"
+              onClick={() => setFiltersOpen(true)}
+            >
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              {t("All")}
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" aria-label={t("Sort reports")}>
-                  <ArrowUpDown className="h-5 w-5" />
+                <Button variant="outline" className="h-10 rounded-xl px-4 text-xs md:text-sm" aria-label={t("Sort reports")}>
+                  <ArrowUpDown className="mr-2 h-4 w-4" />
+                  {t("Sort")}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 rounded-xl">
@@ -265,6 +258,65 @@ const PatientMyReports = () => {
           </>
         )}
       </div>
+      <Drawer open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <DrawerContent className="mx-auto h-[85vh] max-w-4xl rounded-t-2xl">
+          <DrawerHeader className="border-b border-border/60 pb-3 pt-2">
+            <DrawerTitle className="text-base font-semibold text-foreground">{t("Filters")}</DrawerTitle>
+          </DrawerHeader>
+          <div className="space-y-5 overflow-y-auto px-4 pb-4 pt-4">
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">{t("Categories")}</p>
+              <div className="flex flex-wrap gap-2">
+                {categoryOptions.map((c) => (
+                  <Button
+                    key={c}
+                    type="button"
+                    variant={selectedCategory === c ? "default" : "outline"}
+                    className="h-9 rounded-full px-4 text-xs"
+                    onClick={() => setSelectedCategory(c)}
+                  >
+                    {t(c)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-foreground">{t("Date range")}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">{t("From")}</label>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="h-10 text-xs rounded-xl"
+                    aria-label={t("From date")}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">{t("To")}</label>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="h-10 text-xs rounded-xl"
+                    aria-label={t("To date")}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DrawerFooter className="flex-row gap-3 border-t border-border/60 px-4 pb-4 pt-3">
+            <Button variant="outline" className="flex-1 rounded-xl" onClick={handleClearFilters}>
+              {t("Clear filters")}
+            </Button>
+            <DrawerClose asChild>
+              <Button className="flex-1 rounded-xl">{t("Apply filters")}</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </PatientLayout>
   );
 };
