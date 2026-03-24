@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FileText, Users, TrendingUp, Calendar, Shield, Sparkles, Heart, Tag, Megaphone, Building2, Stethoscope, Pill, Bell, Clock } from "lucide-react";
+import { FileText, Users, TrendingUp, Calendar, Shield, Sparkles, Heart, Tag, Megaphone, Building2, Stethoscope, Pill, Bell, Clock, Upload } from "lucide-react";
 import { Preloader } from "@/components/Preloader";
 import { PatientLayout } from "@/components/PatientLayout";
 import { AdSense } from "@/components/AdSense";
@@ -156,6 +156,21 @@ const PatientDashboard = () => {
               {t("Welcome back")}, {displayName(userName ?? undefined)}!
             </h1>
             <p className="text-blue-50 text-sm md:text-base leading-relaxed">{t("Your health reports are safe and accessible anytime.")}</p>
+            <div className="mt-4">
+              <Link
+                to="/patient/upload"
+                className="group flex items-center gap-3 rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-left shadow-sm backdrop-blur transition-all hover:bg-white/20 hover:shadow-md"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 text-white">
+                  <Upload className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm md:text-base font-semibold text-white">{t("Upload report")}</p>
+                  <p className="text-xs md:text-sm text-blue-100/90">{t("Tap to add a report or prescription")}</p>
+                </div>
+                <span className="text-white/80 text-lg">→</span>
+              </Link>
+            </div>
             <div className="mt-5 pt-5 border-t border-blue-400/40">
               <p className="flex items-center gap-2 text-xs md:text-sm font-semibold uppercase tracking-wide text-blue-100 mb-3">
                 <Sparkles className="h-4 w-4 md:h-5 md:w-5" /> {t(TODAY_WELLNESS)}
