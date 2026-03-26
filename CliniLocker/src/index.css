@@ -156,3 +156,78 @@
     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04) !important;
   }
 }
+
+@layer base {
+  .landing-theme {
+    --background: 180 20% 99%;
+    --foreground: 200 25% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 200 25% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 25% 10%;
+    --primary: 266 80% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 230 60% 96%;
+    --secondary-foreground: 200 25% 15%;
+    --muted: 180 15% 95%;
+    --muted-foreground: 200 10% 45%;
+    --accent: 210 95% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 180 15% 90%;
+    --input: 180 15% 90%;
+    --ring: 266 80% 58%;
+    --radius: 0.75rem;
+    --gradient-primary: linear-gradient(135deg, hsl(266 80% 58%), hsl(220 90% 60%));
+    --gradient-hero: linear-gradient(135deg, hsl(258 80% 96%), hsl(220 80% 96%), hsl(240 60% 97%));
+    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4));
+    --gradient-dark: linear-gradient(135deg, hsl(200, 30%, 8%), hsl(210, 40%, 12%));
+    --shadow-glow: 0 0 40px -10px hsl(266 80% 58% / 0.35);
+    --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+    --shadow-card: 0 4px 24px -4px rgba(0, 0, 0, 0.06);
+    --shadow-elevated: 0 20px 60px -15px rgba(0, 0, 0, 0.1);
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: var(--gradient-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: var(--shadow-glass);
+  }
+
+  .glossy-btn {
+    background: var(--gradient-primary);
+    box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: all 0.3s ease;
+  }
+  .glossy-btn:hover {
+    box-shadow: 0 0 60px -10px hsl(168 80% 36% / 0.5), inset 0 1px 0 rgba(255,255,255,0.3);
+    transform: translateY(-2px);
+  }
+
+  .section-gradient {
+    background: var(--gradient-hero);
+  }
+
+  .floating {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .pulse-glow {
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px -5px hsl(168 80% 36% / 0.3); }
+  50% { box-shadow: 0 0 40px -5px hsl(168 80% 36% / 0.5); }
+}
