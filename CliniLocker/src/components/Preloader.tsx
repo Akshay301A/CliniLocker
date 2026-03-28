@@ -26,13 +26,29 @@ export function Preloader({
 }: PreloaderProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
+  const [useVideo, setUseVideo] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const prefersReduced =
+      window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const isSmallScreen = window.matchMedia && window.matchMedia("(max-width: 768px)").matches;
+    setUseVideo(!(prefersReduced || isSmallScreen));
+  }, []);
+
+  useEffect(() => {
+    if (!useVideo) {
+      setVideoReady(true);
+    }
+  }, [useVideo]);
+
+  useEffect(() => {
+    if (!useVideo) return;
     const video = videoRef.current;
     if (!video) return;
     video.play().catch(() => {});
-  }, []);
+  }, [useVideo]);
 
   useEffect(() => {
     if (!fullScreen || !exiting || !onExitComplete) return;
@@ -83,25 +99,33 @@ export function Preloader({
             : {}),
         }}
       >
-        <video
-          ref={videoRef}
-          src="/preloaderr.mp4"
-          poster="/logo%20(2).png"
-          className={`w-full h-full object-contain ${videoReady ? "opacity-100" : "opacity-0"}`}
-          style={{ visibility: videoReady ? "visible" : "hidden" }}
-          autoPlay
-          loop
-          muted
-          playsInline
-          controls={false}
-          disablePictureInPicture
-          disableRemotePlayback
-          controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
-          preload="auto"
-          onLoadedData={() => setVideoReady(true)}
-          onCanPlay={() => setVideoReady(true)}
-          aria-label="Loading"
-        />
+        {useVideo ? (
+          <video
+            ref={videoRef}
+            src="/preloaderr.mp4"
+            poster="/logo%20(2).png"
+            className={`w-full h-full object-contain ${videoReady ? "opacity-100" : "opacity-0"}`}
+            style={{ visibility: videoReady ? "visible" : "hidden" }}
+            autoPlay
+            loop
+            muted
+            playsInline
+            controls={false}
+            disablePictureInPicture
+            disableRemotePlayback
+            controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+            preload="auto"
+            onLoadedData={() => setVideoReady(true)}
+            onCanPlay={() => setVideoReady(true)}
+            aria-label="Loading"
+          />
+        ) : (
+          <img
+            src="/logo%20(2).png"
+            alt="CliniLocker loading"
+            className="w-full h-full object-contain"
+          />
+        )}
       </div>
     </div>
   );
