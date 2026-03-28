@@ -45,6 +45,22 @@ export async function getProfile(): Promise<Profile | null> {
   return data as Profile | null;
 }
 
+export async function getAdminStats(accessToken?: string | null): Promise<{ totalUsers: number } | { error: string }> {
+  const token = accessToken?.trim();
+  if (!token) return { error: "Not authenticated" };
+
+  const { data, error } = await supabase.functions.invoke("admin-stats", {
+    body: {},
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (error) return { error: error.message };
+  const parsed = data as { totalUsers?: number; error?: string } | null;
+  if (parsed?.error) return { error: String(parsed.error) };
+  return { totalUsers: Number(parsed?.totalUsers ?? 0) };
+}
+
 /** Ensure a profile row exists for the current user (e.g. trigger missed). Uses RPC to avoid conflicts. */
 export async function ensureProfileExists(): Promise<void> {
   await supabase.rpc("ensure_profile_exists");

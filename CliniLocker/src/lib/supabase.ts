@@ -38,6 +38,7 @@ export type Profile = {
   two_factor_enabled?: boolean;
   report_sharing_allowed?: boolean;
   profile_visible_to_labs?: boolean;
+  is_admin?: boolean;
   preferred_language?: string | null;
   created_at?: string;
   updated_at?: string;
