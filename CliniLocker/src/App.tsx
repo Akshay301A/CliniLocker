@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PatientProfileGuard } from "@/components/PatientProfileGuard";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { Preloader } from "@/components/Preloader";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import Index from "./pages/Index";
 import Features from "./pages/Features";
 import Pricing from "./pages/Pricing";
@@ -118,6 +119,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <AppContent />
+      <SpeedInsights />
     </AuthProvider>
   </QueryClientProvider>
 );
