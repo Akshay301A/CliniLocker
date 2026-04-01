@@ -18,6 +18,8 @@ import {
   Mail,
   MessageCircle,
   Smartphone,
+  Utensils,
+  Leaf,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +39,13 @@ import {
   getFamilyMembers,
   grantReportAccessToUser,
   analyzeReportFromPdfUrl,
+  generateDietPlanFromPdfUrl,
+  getReportAI,
+  saveDietPlan,
+  saveReportSummary,
   type ReportAnalysis,
+  type DietPlan,
+  type DietPlanPrefs,
 } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PatientLayout } from "@/components/PatientLayout";
@@ -57,40 +65,11 @@ function pathFromFileUrl(fileUrl: string): string {
   return fileUrl;
 }
 
-/** Real AI analysis with OCR fallback for image-based PDFs. */
-function useReportAnalysis(pdfUrl: string | null) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<ReportAnalysis | null>(null);
-
-  useEffect(() => {
-    if (!pdfUrl) return;
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    setAnalysis(null);
-    (async () => {
-      try {
-        const result = await analyzeReportFromPdfUrl(pdfUrl);
-        if (cancelled) return;
-        if ("error" in result) {
-          setError(result.error);
-        } else {
-          setAnalysis(result);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Failed to analyze report.");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [pdfUrl]);
-
-  return { analysis, loading, error };
-}
+const defaultDietPrefs: DietPlanPrefs = {
+  budget: "medium",
+  dietType: "veg",
+  goal: "general",
+};
 
 const ReportViewer = () => {
   const { id } = useParams();
@@ -101,7 +80,13 @@ const ReportViewer = () => {
   const [loading, setLoading] = useState(true);
   const [fullScreen, setFullScreen] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<Awaited<ReturnType<typeof getFamilyMembers>>>([]);
-  const { analysis, loading: analysisLoading, error: analysisError } = useReportAnalysis(pdfUrl);
+  const [analysis, setAnalysis] = useState<ReportAnalysis | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [dietPlan, setDietPlan] = useState<DietPlan | null>(null);
+  const [dietLoading, setDietLoading] = useState(false);
+  const [dietError, setDietError] = useState<string | null>(null);
+  const [dietPrefs, setDietPrefs] = useState<DietPlanPrefs>(defaultDietPrefs);
   const attentionFindings = analysis?.findings.filter((f) => f.type === "attention") ?? [];
   const normalFindings = analysis?.findings.filter((f) => f.type === "normal") ?? [];
   const actions = analysis?.actions ?? [];
@@ -133,6 +118,12 @@ const ReportViewer = () => {
           if (mounted) setPdfUrl(url ?? null);
         }
       }
+      if (r?.id && mounted) {
+        const stored = await getReportAI(r.id);
+        if (stored?.summary) setAnalysis(stored.summary as ReportAnalysis);
+        if (stored?.diet_plan) setDietPlan(stored.diet_plan as DietPlan);
+        if (stored?.diet_prefs) setDietPrefs(stored.diet_prefs as DietPlanPrefs);
+      }
       setLoading(false);
     };
     loadReport();
@@ -142,6 +133,44 @@ const ReportViewer = () => {
   useEffect(() => {
     getFamilyMembers().then(setFamilyMembers);
   }, []);
+
+  const handleGenerateSummary = async () => {
+    if (!pdfUrl || !id) return;
+    setAnalysisLoading(true);
+    setAnalysisError(null);
+    try {
+      const result = await analyzeReportFromPdfUrl(pdfUrl);
+      if ("error" in result) {
+        setAnalysisError(result.error);
+      } else {
+        setAnalysis(result);
+        await saveReportSummary(id, result);
+      }
+    } catch (e) {
+      setAnalysisError(e instanceof Error ? e.message : "Failed to analyze report.");
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
+  const handleGenerateDietPlan = async () => {
+    if (!pdfUrl || !id) return;
+    setDietLoading(true);
+    setDietError(null);
+    try {
+      const result = await generateDietPlanFromPdfUrl(pdfUrl, dietPrefs);
+      if ("error" in result) {
+        setDietError(result.error);
+      } else {
+        setDietPlan(result);
+        await saveDietPlan(id, result, dietPrefs);
+      }
+    } catch (e) {
+      setDietError(e instanceof Error ? e.message : "Failed to generate diet plan.");
+    } finally {
+      setDietLoading(false);
+    }
+  };
 
   const getShareableUrl = async (): Promise<string> => {
     if (pdfUrl) return pdfUrl;
@@ -441,7 +470,13 @@ const ReportViewer = () => {
                 </div>
                 <h2 className="font-display text-lg font-semibold text-foreground">{t("AI Report Summary")}</h2>
               </div>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{t("AI Generated")}</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleGenerateSummary} disabled={!pdfUrl || analysisLoading}>
+                  {analysisLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  <span className="ml-2">{analysis ? t("Regenerate") : t("Generate Summary")}</span>
+                </Button>
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{t("AI On-demand")}</span>
+              </div>
             </div>
             <div className="p-6 space-y-6">
               {analysisLoading ? (
@@ -524,7 +559,156 @@ const ReportViewer = () => {
                     </p>
                   </div>
                 </>
-              ) : null}
+              ) : (
+                <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+                  {t("Generate a summary when you are ready.")}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Card 4: AI Diet Plan */}
+          <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-border bg-muted/20">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
+                  <Utensils className="h-5 w-5 text-emerald-600" />
+                </div>
+                <h2 className="font-display text-lg font-semibold text-foreground">{t("AI Diet Plan")}</h2>
+              </div>
+              <Button variant="default" size="sm" onClick={handleGenerateDietPlan} disabled={!pdfUrl || dietLoading}>
+                {dietLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Utensils className="h-4 w-4" />}
+                <span className="ml-2">{dietPlan ? t("Regenerate Plan") : t("Generate Diet Plan")}</span>
+              </Button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {([
+                  { key: "low", label: t("Low Budget") },
+                  { key: "medium", label: t("Medium Budget") },
+                  { key: "high", label: t("High Budget") },
+                ] as const).map((b) => (
+                  <button
+                    key={b.key}
+                    onClick={() => setDietPrefs((p) => ({ ...p, budget: b.key }))}
+                    className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+                      dietPrefs.budget === b.key ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"
+                    }`}
+                  >
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {([
+                  { key: "veg", label: t("Vegetarian") },
+                  { key: "eggetarian", label: t("Eggetarian") },
+                  { key: "non-veg", label: t("Non-Veg") },
+                ] as const).map((d) => (
+                  <button
+                    key={d.key}
+                    onClick={() => setDietPrefs((p) => ({ ...p, dietType: d.key }))}
+                    className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+                      dietPrefs.dietType === d.key ? "border-emerald-500 bg-emerald-500/10 text-emerald-600" : "border-border text-muted-foreground"
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {([
+                  { key: "general", label: t("General Health") },
+                  { key: "low-sugar", label: t("Low Sugar") },
+                  { key: "low-cholesterol", label: t("Low Cholesterol") },
+                  { key: "weight-loss", label: t("Weight Loss") },
+                  { key: "kidney-care", label: t("Kidney Care") },
+                  { key: "heart-health", label: t("Heart Health") },
+                ] as const).map((g) => (
+                  <button
+                    key={g.key}
+                    onClick={() => setDietPrefs((p) => ({ ...p, goal: g.key }))}
+                    className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+                      dietPrefs.goal === g.key ? "border-orange-500 bg-orange-500/10 text-orange-600" : "border-border text-muted-foreground"
+                    }`}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+
+              {dietError && (
+                <div className="flex gap-3 rounded-lg bg-destructive/10 border border-destructive/20 p-4">
+                  <AlertCircle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
+                  <p className="text-sm text-destructive">{dietError}</p>
+                </div>
+              )}
+
+              {dietPlan ? (
+                <>
+                  <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Summary")}</p>
+                    <p className="mt-2 text-sm text-foreground leading-relaxed">{dietPlan.summary || t("No summary was generated.")}</p>
+                  </div>
+                  <div className="grid gap-4">
+                    {dietPlan.daily_plan.map((meal, idx) => (
+                      <div key={`${meal.meal}-${idx}`} className="rounded-xl border border-border bg-background p-4">
+                        <div className="flex items-center gap-2">
+                          <Leaf className="h-4 w-4 text-emerald-600" />
+                          <h3 className="font-semibold text-foreground">{meal.meal}</h3>
+                        </div>
+                        <ul className="mt-3 space-y-2 text-sm text-foreground">
+                          {meal.items.map((item, i) => (
+                            <li key={`${item.name}-${i}`} className="rounded-lg bg-muted/40 p-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-semibold">{item.name}</span>
+                                <span className="text-xs text-muted-foreground">{item.portion}</span>
+                              </div>
+                              <p className="mt-1 text-xs text-muted-foreground">{item.why}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border border-border bg-background p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Foods to avoid")}</p>
+                      {dietPlan.foods_to_avoid.length > 0 ? (
+                        <ul className="mt-2 space-y-1 text-sm text-foreground list-disc list-inside">
+                          {dietPlan.foods_to_avoid.map((item, idx) => (
+                            <li key={idx}>{item}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-sm text-muted-foreground">{t("No specific avoid list provided.")}</p>
+                      )}
+                    </div>
+                    <div className="rounded-lg border border-border bg-background p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Notes")}</p>
+                      {dietPlan.notes.length > 0 ? (
+                        <ul className="mt-2 space-y-1 text-sm text-foreground list-disc list-inside">
+                          {dietPlan.notes.map((item, idx) => (
+                            <li key={idx}>{item}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-sm text-muted-foreground">{t("No additional notes provided.")}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-3 rounded-lg bg-muted/40 border border-border p-4">
+                    <Info className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {t("Disclaimer: Diet guidance is AI-generated and should not replace professional medical advice. Consult your doctor or dietitian for personalized recommendations.")}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+                  {t("Set your preferences and generate a plan when you're ready.")}
+                </div>
+              )}
             </div>
           </div>
         </div>

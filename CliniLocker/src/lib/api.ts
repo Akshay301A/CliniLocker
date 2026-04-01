@@ -573,6 +573,27 @@ export type ReportAnalysis = {
   actions: string[];
 };
 
+export type DietPlanPrefs = {
+  budget: "low" | "medium" | "high";
+  dietType: "veg" | "eggetarian" | "non-veg";
+  goal: "general" | "low-sugar" | "low-cholesterol" | "weight-loss" | "kidney-care" | "heart-health";
+};
+
+export type DietPlan = {
+  summary: string;
+  daily_plan: { meal: string; items: { name: string; portion: string; why: string }[] }[];
+  foods_to_avoid: string[];
+  notes: string[];
+  prefs?: DietPlanPrefs;
+};
+
+export type ReportAIRecord = {
+  report_id: string;
+  summary?: ReportAnalysis | null;
+  diet_plan?: DietPlan | null;
+  diet_prefs?: DietPlanPrefs | null;
+};
+
 function hasAnalysisContent(analysis: ReportAnalysis): boolean {
   return (
     analysis.summary.trim().length > 0 ||
@@ -689,6 +710,72 @@ export async function analyzeReportFromPdfUrl(pdfUrl: string): Promise<ReportAna
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Failed to analyze report." };
   }
+}
+
+export async function generateDietPlanFromPdfUrl(
+  pdfUrl: string,
+  prefs: DietPlanPrefs
+): Promise<DietPlan | { error: string }> {
+  try {
+    const pdf = await loadPdfFromUrl(pdfUrl);
+    const extractedText = await extractTextFromPdfDoc(pdf);
+    const images = await renderPdfAsImages(pdf, 2);
+    const trimmedImages: string[] = [];
+    let totalChars = 0;
+    for (const img of images) {
+      totalChars += img.length;
+      if (totalChars > 3_000_000) break;
+      trimmedImages.push(img);
+    }
+    const { data, error } = await supabase.functions.invoke("generate-diet-plan", {
+      body: {
+        text: extractedText.slice(0, 12000),
+        images: trimmedImages,
+        prefs,
+      },
+    });
+    if (error) return { error: await getFunctionInvokeErrorMessage(error) };
+    const parsed = data as DietPlan | { error?: string } | null;
+    if ((parsed as { error?: string })?.error) return { error: String((parsed as { error: string }).error) };
+    return parsed as DietPlan;
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to generate diet plan." };
+  }
+}
+
+export async function getReportAI(reportId: string): Promise<ReportAIRecord | null> {
+  const { data, error } = await supabase.from("report_ai").select("*").eq("report_id", reportId).maybeSingle();
+  if (error || !data) return null;
+  return data as ReportAIRecord;
+}
+
+export async function saveReportSummary(reportId: string, summary: ReportAnalysis): Promise<{ error?: string }> {
+  const { error } = await supabase.from("report_ai").upsert(
+    {
+      report_id: reportId,
+      summary,
+    },
+    { onConflict: "report_id" }
+  );
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function saveDietPlan(
+  reportId: string,
+  dietPlan: DietPlan,
+  dietPrefs: DietPlanPrefs
+): Promise<{ error?: string }> {
+  const { error } = await supabase.from("report_ai").upsert(
+    {
+      report_id: reportId,
+      diet_plan: dietPlan,
+      diet_prefs: dietPrefs,
+    },
+    { onConflict: "report_id" }
+  );
+  if (error) return { error: error.message };
+  return {};
 }
 
 /** Notify a patient device when a report is ready (best-effort; requires push token on patient's device). */
