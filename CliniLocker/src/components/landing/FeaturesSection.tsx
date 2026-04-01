@@ -64,41 +64,54 @@ const features = [
 
 const FeatureCard = ({ feature, index }: { feature: typeof features[0]; index: number }) => {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const isInView = useInView(ref, { once: true, margin: "-120px" });
 
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: 24 }}
       animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      className={`group rounded-2xl p-6 sm:p-8 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 ${
-        feature.highlight
-          ? "glass-card ring-1 ring-primary/20 bg-gradient-to-br from-white/90 via-white/70 to-primary/10"
-          : "glass-card"
-      }`}
+      transition={{ duration: 0.6, delay: index * 0.08 }}
+      className="group relative overflow-hidden rounded-3xl border border-border/60 bg-white/80 p-6 sm:p-8 shadow-[0_18px_50px_rgba(16,24,40,0.08)] backdrop-blur-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_28px_80px_rgba(16,24,40,0.14)]"
     >
-      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl glossy-btn flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform duration-300">
-        <feature.icon className="w-7 h-7 text-primary-foreground" />
-      </div>
-      <div className="flex items-center gap-2 mb-2">
-        <h3 className="text-lg sm:text-xl font-bold text-foreground">{feature.title}</h3>
+      <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-primary/10 blur-2xl" />
+      <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-primary/10 blur-2xl" />
+
+      <div className="flex items-center justify-between">
+        <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-white/70 px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+          {feature.tags?.[0] ?? "CliniLocker"}
+        </div>
         {feature.highlight && (
-          <span className="text-[10px] uppercase tracking-wider font-semibold rounded-full bg-primary/10 text-primary px-2 py-0.5">
+          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary">
             New
           </span>
         )}
       </div>
-      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed mb-4">{feature.description}</p>
-      <div className="flex flex-wrap gap-2">
-        {(feature.tags ?? []).map((tag) => (
+
+      <div className="mt-4 flex items-start gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-lg shadow-primary/25">
+          <feature.icon className="h-6 w-6" />
+        </div>
+        <div>
+          <h3 className="text-lg sm:text-xl font-bold text-foreground">{feature.title}</h3>
+          <p className="mt-2 text-sm sm:text-base text-muted-foreground leading-relaxed">{feature.description}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {(feature.tags ?? []).slice(1).map((tag) => (
           <span
             key={tag}
-            className="text-[11px] font-semibold rounded-full border border-border px-2.5 py-1 text-muted-foreground bg-white/70"
+            className="rounded-full border border-border/60 bg-white/70 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground"
           >
             {tag}
           </span>
         ))}
+      </div>
+
+      <div className="mt-6 inline-flex items-center gap-2 text-xs font-semibold text-primary/80">
+        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+        {feature.highlight ? "AI-powered upgrade" : "Included by default"}
       </div>
     </motion.div>
   );
@@ -109,8 +122,9 @@ const FeaturesSection = () => {
   const headerInView = useInView(headerRef, { once: true, margin: "-100px" });
 
   return (
-    <section id="features" className="py-16 sm:py-20 lg:py-24 bg-background relative">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
+    <section id="features" className="py-16 sm:py-20 lg:py-24 bg-background relative overflow-hidden">
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 h-[520px] w-[520px] rounded-full bg-primary/10 blur-3xl" />
+      <div className="absolute -left-32 top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
 
       <div className="container mx-auto px-4 sm:px-6 relative">
         <motion.div
@@ -118,7 +132,7 @@ const FeaturesSection = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={headerInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center max-w-2xl mx-auto mb-16"
+          className="text-center max-w-3xl mx-auto mb-12 sm:mb-16"
         >
           <span className="text-primary font-semibold text-sm uppercase tracking-widest">Features</span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mt-4 mb-6">
@@ -129,7 +143,7 @@ const FeaturesSection = () => {
           </p>
         </motion.div>
 
-        <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {features.map((feature, index) => (
             <FeatureCard key={feature.title} feature={feature} index={index} />
           ))}
