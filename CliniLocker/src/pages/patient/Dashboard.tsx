@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FileText, Upload, Users, Share2, TrendingUp, Calendar, Shield, Sparkles, Heart } from "lucide-react";
+import { FileText, Upload, Users, Share2, TrendingUp, Calendar, Shield, Sparkles, Heart, Utensils } from "lucide-react";
 import { Preloader } from "@/components/Preloader";
 import { PatientLayout } from "@/components/PatientLayout";
 import { AdSense } from "@/components/AdSense";
@@ -124,6 +124,7 @@ const PatientDashboard = () => {
   const recentReports = reports.slice(0, 3);
   const lastReport = reports[0];
   const lastCheckup = lastReport?.uploaded_at ? formatDate(lastReport.uploaded_at) : "â€”";
+  const dietPlanHref = lastReport ? `/patient/report/${lastReport.id}/diet` : "/patient/reports";
   const activeQuotes = healthQuotes.length > 0 ? healthQuotes : FALLBACK_HEALTH_QUOTES;
   const activeQuote = activeQuotes[healthQuoteIndex % activeQuotes.length];
 
@@ -284,6 +285,15 @@ const PatientDashboard = () => {
             <div className="min-w-0">
               <h3 className="font-display font-semibold text-foreground">{t("My Reports")}</h3>
               <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{t("View and download all your health reports.")}</p>
+            </div>
+          </Link>
+          <Link to={dietPlanHref} className="group flex min-h-[44px] gap-3 rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card transition-all hover:shadow-hover hover:border-primary/30">
+            <Utensils className="h-7 w-7 sm:h-8 sm:w-8 text-primary shrink-0" />
+            <div className="min-w-0">
+              <h3 className="font-display font-semibold text-foreground">{t("Diet Plan")}</h3>
+              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+                {lastReport ? t("Generate a plan from your latest report.") : t("Upload a report to create a diet plan.")}
+              </p>
             </div>
           </Link>
           <Link to="/patient/upload" className="group flex min-h-[44px] gap-3 rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card transition-all hover:shadow-hover hover:border-primary/30">

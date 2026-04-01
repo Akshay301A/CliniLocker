@@ -576,7 +576,8 @@ export type ReportAnalysis = {
 export type DietPlanPrefs = {
   budget: "low" | "medium" | "high";
   dietType: "veg" | "eggetarian" | "non-veg";
-  goal: "general" | "low-sugar" | "low-cholesterol" | "weight-loss" | "kidney-care" | "heart-health";
+  goal: "general" | "low-sugar" | "low-cholesterol" | "weight-loss" | "kidney-care" | "heart-health" | "custom";
+  customGoal?: string;
 };
 
 export type DietPlan = {
@@ -717,6 +718,12 @@ export async function generateDietPlanFromPdfUrl(
   prefs: DietPlanPrefs
 ): Promise<DietPlan | { error: string }> {
   try {
+    const refreshRes = await supabase.auth.refreshSession();
+    const accessToken =
+      refreshRes.data?.session?.access_token ||
+      (await supabase.auth.getSession()).data?.session?.access_token;
+    if (!accessToken) return { error: "Not authenticated" };
+
     const pdf = await loadPdfFromUrl(pdfUrl);
     const extractedText = await extractTextFromPdfDoc(pdf);
     const images = await renderPdfAsImages(pdf, 2);
@@ -733,11 +740,41 @@ export async function generateDietPlanFromPdfUrl(
         images: trimmedImages,
         prefs,
       },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
-    if (error) return { error: await getFunctionInvokeErrorMessage(error) };
-    const parsed = data as DietPlan | { error?: string } | null;
-    if ((parsed as { error?: string })?.error) return { error: String((parsed as { error: string }).error) };
-    return parsed as DietPlan;
+    if (!error) {
+      const parsed = data as DietPlan | { error?: string } | null;
+      if ((parsed as { error?: string })?.error) return { error: String((parsed as { error: string }).error) };
+      return parsed as DietPlan;
+    }
+
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      return { error: await getFunctionInvokeErrorMessage(error) };
+    }
+
+    const fallbackRes = await fetch(`${SUPABASE_URL}/functions/v1/generate-diet-plan`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        text: extractedText.slice(0, 12000),
+        images: trimmedImages,
+        prefs,
+      }),
+    });
+    const fallbackJson = await fallbackRes.json().catch(() => ({}));
+    if (!fallbackRes.ok) {
+      return { error: String((fallbackJson as { error?: string }).error || `Diet plan failed (${fallbackRes.status})`) };
+    }
+    if ((fallbackJson as { error?: string })?.error) {
+      return { error: String((fallbackJson as { error: string }).error) };
+    }
+    return fallbackJson as DietPlan;
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Failed to generate diet plan." };
   }

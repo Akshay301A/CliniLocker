@@ -35,6 +35,7 @@ import PatientSettings from "./pages/patient/Settings";
 import PatientMyProfile from "./pages/patient/MyProfile";
 import PatientCompleteProfile from "./pages/patient/CompleteProfile";
 import ReportViewer from "./pages/patient/ReportViewer";
+import DietPlan from "./pages/patient/DietPlan";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import DeleteAccount from "./pages/DeleteAccount";
@@ -80,6 +81,7 @@ function AppRoutes() {
           <Route path="/patient/profile" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientMyProfile /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/settings" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientSettings /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/report/:id" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><ReportViewer /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
+          <Route path="/patient/report/:id/diet" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><DietPlan /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

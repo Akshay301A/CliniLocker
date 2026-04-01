@@ -1,6 +1,6 @@
 // Supabase Edge Function: generate diet plan based on report text/images + prefs
 // Set secret: OPENAI_API_KEY
-// Body: { text?: string, images?: string[], prefs: { budget, dietType, goal } }
+// Body: { text?: string, images?: string[], prefs: { budget, dietType, goal, customGoal? } }
 
 declare const Deno: {
   serve: (handler: (req: Request) => Promise<Response> | Response) => void;
@@ -43,8 +43,13 @@ type OpenAIPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
 
-function buildUserContent(text: string, images: string[], prefs: { budget: string; dietType: string; goal: string }): string | OpenAIPart[] {
-  const prefText = `Preferences:\n- Budget: ${prefs.budget}\n- Diet type: ${prefs.dietType}\n- Goal: ${prefs.goal}`;
+function buildUserContent(
+  text: string,
+  images: string[],
+  prefs: { budget: string; dietType: string; goal: string; customGoal?: string }
+): string | OpenAIPart[] {
+  const goalText = prefs.goal === "custom" && prefs.customGoal ? prefs.customGoal : prefs.goal;
+  const prefText = `Preferences:\n- Budget: ${prefs.budget}\n- Diet type: ${prefs.dietType}\n- Goal: ${goalText}`;
   if (images.length === 0) return `${prefText}\n\nReport text:\n${text.slice(0, 12000)}`;
   const parts: OpenAIPart[] = [
     {
@@ -95,7 +100,11 @@ Deno.serve(async (req) => {
     });
   }
 
-  let body: { text?: string; images?: string[]; prefs?: { budget?: string; dietType?: string; goal?: string } };
+  let body: {
+    text?: string;
+    images?: string[];
+    prefs?: { budget?: string; dietType?: string; goal?: string; customGoal?: string };
+  };
   try {
     body = await req.json();
   } catch {
@@ -114,6 +123,7 @@ Deno.serve(async (req) => {
     budget: body?.prefs?.budget || "medium",
     dietType: body?.prefs?.dietType || "veg",
     goal: body?.prefs?.goal || "general",
+    customGoal: body?.prefs?.customGoal || "",
   };
 
   if (!text && images.length === 0) {
