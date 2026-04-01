@@ -11,8 +11,12 @@ create index if not exists report_ai_report_id_idx on report_ai(report_id);
 
 alter table report_ai enable row level security;
 
+drop policy if exists "Report AI readable by owner or shared" on report_ai;
+drop policy if exists "Report AI writable by owner" on report_ai;
+drop policy if exists "Report AI update by owner" on report_ai;
+
 -- Allow owners and shared users to read AI outputs
-create policy if not exists "Report AI readable by owner or shared"
+create policy "Report AI readable by owner or shared"
   on report_ai
   for select
   using (
@@ -29,7 +33,7 @@ create policy if not exists "Report AI readable by owner or shared"
   );
 
 -- Allow owners to insert/update
-create policy if not exists "Report AI writable by owner"
+create policy "Report AI writable by owner"
   on report_ai
   for insert
   with check (
@@ -40,7 +44,7 @@ create policy if not exists "Report AI writable by owner"
     )
   );
 
-create policy if not exists "Report AI update by owner"
+create policy "Report AI update by owner"
   on report_ai
   for update
   using (
@@ -60,6 +64,8 @@ begin
 end;
 $$ language plpgsql;
 
-create trigger if not exists report_ai_set_updated_at
+drop trigger if exists report_ai_set_updated_at on report_ai;
+
+create trigger report_ai_set_updated_at
 before update on report_ai
 for each row execute function set_report_ai_updated_at();
