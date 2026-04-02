@@ -135,12 +135,8 @@ const FeaturesSection = () => {
           className="text-center max-w-3xl mx-auto mb-12 sm:mb-16"
         >
           <span className="text-primary font-semibold text-sm uppercase tracking-widest">Features</span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mt-4 mb-6">
-            All‑in‑one care tools for patients & families
-          </h2>
-          <p className="text-base sm:text-lg text-muted-foreground">
-            Organize reports, generate AI insights, build diet plans, and share securely — all in one place.
-          </p>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mt-4 mb-6">Store medical reports online with one secure health locker</h2>
+          <p className="text-base sm:text-lg text-muted-foreground">CliniLocker is a personal health record app that keeps lab reports, prescriptions, and family profiles organized, searchable, and easy to share.</p>
         </motion.div>
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">

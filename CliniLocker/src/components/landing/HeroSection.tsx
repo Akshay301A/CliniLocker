@@ -29,16 +29,15 @@ const HeroSection = () => {
             </motion.div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold leading-tight text-foreground">
-              Your Health Reports,{" "}
+              Best Medical Records App in India to{" "}
               <span className="bg-clip-text text-transparent" style={{ backgroundImage: "var(--gradient-primary)" }}>
-                Organized & Secure
-              </span>{" "}
-              in CliniLocker
+                Store Reports Online
+              </span>
             </h1>
 
             <p className="text-base sm:text-lg text-muted-foreground max-w-lg leading-relaxed">
-              Store lab reports, prescriptions, and reminders in one place. Share with doctors or family in seconds,
-              and access everything safely from web or Android.
+              Store medical reports online securely with CliniLocker. Save lab reports and prescriptions, share
+              instantly with doctors or family, and access health records anytime on web or Android.
             </p>
 
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">

@@ -40,10 +40,10 @@ const TestimonialsSection = () => {
         >
           <span className="text-primary font-semibold text-sm uppercase tracking-widest">Testimonials</span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mt-4 mb-6">
-            Trusted by Patients and Providers
+            Patients, Labs, and Doctors Trust CliniLocker
           </h2>
           <p className="text-base sm:text-lg text-muted-foreground">
-            Hear how CliniLocker is simplifying reports, reminders, and secure sharing for everyone.
+            CliniLocker helps people manage health records, store medical reports online, and share securely.
           </p>
         </motion.div>
 

@@ -46,12 +46,12 @@ const AppDownloadSection = () => {
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight" style={{ color: "hsl(0 0% 95%)" }}>
               Download CliniLocker {" "}
               <span className="bg-clip-text text-transparent" style={{ backgroundImage: "var(--gradient-primary)" }}>
-                for Android
+                for Android (India)
               </span>
             </h2>
             <p className="text-base sm:text-lg leading-relaxed" style={{ color: "hsl(200 10% 60%)" }}>
-              Access your reports on the go, scan documents, receive reminders, and share instantly.
-              Android only - direct APK download.
+              The medical records app for Android that lets you store reports online, scan documents, receive reminders,
+              and share instantly. Android only - direct APK download.
             </p>
 
             <div className="flex items-center gap-3">

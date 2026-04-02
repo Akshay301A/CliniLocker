@@ -19,10 +19,10 @@ const CTASection = () => {
           className="text-center max-w-3xl mx-auto space-y-8"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-6xl font-extrabold text-primary-foreground leading-tight">
-            Ready to Organize Your Reports?
+            Ready to Store Medical Reports Online?
           </h2>
           <p className="text-base sm:text-lg text-primary-foreground/80 max-w-xl mx-auto">
-            Create your CliniLocker account, upload reports, and share instantly with doctors or family.
+            Create your CliniLocker account, upload lab reports and prescriptions, and share instantly with doctors or family.
           </p>
           <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4">
             <a

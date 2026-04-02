@@ -53,7 +53,7 @@ const StatsSection = () => {
         >
           <span className="text-primary font-semibold text-sm uppercase tracking-widest">By the Numbers</span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mt-4">
-            Trusted and Growing
+            Trusted Medical Records App in India
           </h2>
         </motion.div>
 
