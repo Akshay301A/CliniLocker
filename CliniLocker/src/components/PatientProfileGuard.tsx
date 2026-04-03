@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { getProfile, isProfileComplete, ensureProfileExists } from "@/lib/api";
+import { getProfile, isProfileComplete, ensureProfileExists, ensureHealthCardExists } from "@/lib/api";
 
 /** For patient routes: if profile is incomplete, redirect to /patient/complete-profile. */
 export function PatientProfileGuard({ children }: { children: React.ReactNode }) {
@@ -20,6 +20,7 @@ export function PatientProfileGuard({ children }: { children: React.ReactNode })
     getProfile().then(async (profile) => {
       if (!profile) await ensureProfileExists();
       const p = profile ?? (await getProfile());
+      if (p) await ensureHealthCardExists(p);
       setComplete(isProfileComplete(p));
       setLoading(false);
     });

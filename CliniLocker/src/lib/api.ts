@@ -1,5 +1,5 @@
 ﻿import { supabase } from "./supabase";
-import type { Profile, Report, FamilyMember, Lab } from "./supabase";
+import type { Profile, Report, FamilyMember, Lab, HealthCardRow } from "./supabase";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -44,6 +44,56 @@ export async function getProfile(): Promise<Profile | null> {
   if (error) return null;
   return data as Profile | null;
 }
+
+export async function getHealthCardRow(): Promise<HealthCardRow | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data, error } = await supabase
+    .from("health_cards")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (error) return null;
+  return data as HealthCardRow | null;
+}
+
+export async function ensureHealthCardExists(profile?: Profile | null): Promise<HealthCardRow | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const existing = await getHealthCardRow();
+  if (existing) return existing;
+
+  const name = profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || "User";
+  const bloodGroup = profile?.blood_group || "O+";
+
+  const { data: nextId, error: idErr } = await supabase.rpc("next_health_id");
+  if (!idErr && typeof nextId === "string" && nextId.length > 0) {
+    const { data, error } = await supabase
+      .from("health_cards")
+      .insert({
+        user_id: user.id,
+        health_id: nextId,
+        name,
+        blood_group: bloodGroup,
+      })
+      .select("*")
+      .single();
+    if (!error && data) return data as HealthCardRow;
+  }
+
+  return await getHealthCardRow();
+}
+
+export async function getHealthCardPublic(healthId: string): Promise<Pick<HealthCardRow, "health_id" | "name" | "blood_group"> | null> {
+  const { data, error } = await supabase
+    .from("health_cards")
+    .select("health_id, name, blood_group")
+    .eq("health_id", healthId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as Pick<HealthCardRow, "health_id" | "name" | "blood_group">;
+}
+
 
 export async function getAdminStats(accessToken?: string | null): Promise<{ totalUsers: number } | { error: string }> {
   const token = accessToken?.trim();

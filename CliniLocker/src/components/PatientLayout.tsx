@@ -1,12 +1,16 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Upload, FileText, Users, Share2, Settings, LogOut, Menu, X, User } from "lucide-react";
+import { LayoutDashboard, Upload, FileText, Users, Share2, Settings, LogOut, Menu, X, User, CreditCard, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getProfile } from "@/lib/api";
+import { ensureHealthCardExists, getProfile } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AppFooter } from "@/components/AppFooter";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import HealthCardDisplay from "@/components/patient/HealthCardDisplay";
+import type { Profile } from "@/lib/supabase";
+import { toPng } from "html-to-image";
 
 const navItems = [
   { icon: LayoutDashboard, labelKey: "Dashboard", to: "/patient/dashboard", iconColor: "text-blue-600" },
@@ -26,14 +30,90 @@ export function PatientLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [healthCardOpen, setHealthCardOpen] = useState(false);
+  const [healthCardLoading, setHealthCardLoading] = useState(false);
+  const [healthCardError, setHealthCardError] = useState<string | null>(null);
+  const [healthCardData, setHealthCardData] = useState<null | import("@/lib/supabase").HealthCardRow>(null);
+  const [healthCardDownloading, setHealthCardDownloading] = useState(false);
+  const healthCardRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     getProfile().then((p) => {
+      setProfile(p ?? null);
       if (p?.avatar_url) setAvatarUrl(p.avatar_url);
       else setAvatarUrl(null);
       if (p?.full_name) setProfileName(p.full_name);
     });
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!healthCardOpen) return;
+    let mounted = true;
+    setHealthCardLoading(true);
+    setHealthCardError(null);
+    ensureHealthCardExists(profile)
+      .then((card) => {
+        if (!mounted) return;
+        if (!card) {
+          setHealthCardError(t("Unable to load health card"));
+          return;
+        }
+        setHealthCardData(card);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setHealthCardError(t("Unable to load health card"));
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setHealthCardLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [healthCardOpen, profile, t]);
+
+  const handleDownloadHealthCard = async () => {
+    if (!healthCardRef.current || !healthCardData) return;
+    try {
+      setHealthCardDownloading(true);
+      const dataUrl = await toPng(healthCardRef.current, {
+        cacheBust: true,
+        backgroundColor: "#0B0F1A",
+        pixelRatio: 2,
+      });
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `CliniLocker-Health-Card-${healthCardData.health_id}.png`;
+      link.click();
+    } catch {
+      toast.error(t("Download failed"));
+    } finally {
+      setHealthCardDownloading(false);
+    }
+  };
+
+  const handleShareHealthCard = async () => {
+    if (!healthCardData) return;
+    const shareUrl = `${window.location.origin}/user/${healthCardData.health_id}`;
+    const shareTitle = t("Digital Health Card");
+    const shareText = `${t("Health ID")}: ${healthCardData.health_id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success(t("Link copied"));
+      }
+    } catch {
+      toast.error(t("Share failed"));
+    }
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -107,6 +187,14 @@ export function PatientLayout({ children }: { children: ReactNode }) {
               : t(navItems.find((i) => i.to === location.pathname)?.labelKey || "Dashboard")}
           </h2>
           <div className="ml-auto flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setHealthCardOpen(true)}
+              aria-label={t("Digital Health Card")}
+              className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />
+            </button>
             <Link
               to="/patient/profile"
               className="flex shrink-0 items-center justify-center rounded-full ring-offset-background transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -139,6 +227,51 @@ export function PatientLayout({ children }: { children: ReactNode }) {
           <AppFooter />
         </main>
       </div>
+
+      <Dialog open={healthCardOpen} onOpenChange={setHealthCardOpen}>
+        <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
+          <DialogHeader>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <DialogTitle className="text-lg font-semibold">{t("Digital Health Card")}</DialogTitle>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleShareHealthCard}
+                  disabled={!healthCardData || healthCardLoading}
+                  aria-label={t("Share")}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-primary/10 hover:text-primary disabled:pointer-events-none disabled:opacity-60"
+                >
+                  <Share2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadHealthCard}
+                  disabled={!healthCardData || healthCardDownloading || healthCardLoading}
+                  aria-label={t("Download")}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-primary/10 hover:text-primary disabled:pointer-events-none disabled:opacity-60"
+                >
+                  <Download className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="pt-2">
+            {healthCardLoading && (
+              <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
+                {t("Loading health card...")}
+              </div>
+            )}
+            {!healthCardLoading && healthCardError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                {healthCardError}
+              </div>
+            )}
+            {!healthCardLoading && !healthCardError && healthCardData && (
+              <HealthCardDisplay card={healthCardData} containerRef={healthCardRef} />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
