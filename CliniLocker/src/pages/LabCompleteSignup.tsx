@@ -85,7 +85,11 @@ const LabCompleteSignupPage = () => {
                 placeholder="+91 98765 43210"
               />
             </div>
-            <Button type="submit" className="w-full min-h-[44px]" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full min-h-[48px] rounded-full glossy-btn text-primary-foreground font-semibold"
+              disabled={loading}
+            >
               {loading ? "Creating…" : "Continue to Dashboard"}
             </Button>
           </form>

@@ -92,12 +92,12 @@ const PatientLoginPage = () => {
 
               <Button
                 type="button"
-                className="group relative w-full min-h-[56px] rounded-2xl border-0 bg-gradient-to-r from-[#4285F4] via-[#34A853] to-[#FBBC05] p-[1px] text-foreground shadow-[0_10px_30px_-12px_rgba(66,133,244,0.55)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_-12px_rgba(234,67,53,0.5)] active:translate-y-0 disabled:opacity-60"
+                className="group relative w-full min-h-[52px] rounded-full glossy-btn text-primary-foreground font-semibold shadow-[0_12px_32px_-16px_rgba(98,61,217,0.6)] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60"
                 onClick={handleGoogleLogin}
                 disabled={loading || !privacyAccepted || !termsAccepted}
               >
-                <span className="flex h-full w-full items-center justify-center rounded-[15px] bg-white/95 px-4 text-foreground backdrop-blur-sm">
-                  <span className="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-border/60">
+                <span className="flex h-full w-full items-center justify-center gap-3 rounded-full bg-white/10 px-4 backdrop-blur-sm">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-border/60">
                     <svg className="h-4 w-4" viewBox="0 0 24 24">
                       <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.2-.9 2.2-1.9 2.9l3 2.3c1.7-1.6 2.7-4 2.7-6.9 0-.6-.1-1.3-.2-1.9H12z" />
                       <path fill="#34A853" d="M12 21c2.4 0 4.5-.8 6.1-2.2l-3-2.3c-.8.5-1.9.9-3.1.9-2.4 0-4.4-1.6-5.1-3.8H3.8V16c1.5 3 4.6 5 8.2 5z" />

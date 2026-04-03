@@ -66,13 +66,17 @@ const AcceptInvitePage = () => {
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Button
-                className="min-h-[44px] flex-1 sm:flex-initial"
+                className="min-h-[48px] flex-1 sm:flex-initial rounded-full glossy-btn text-primary-foreground font-semibold"
                 onClick={handleAcceptClick}
                 disabled={authLoading}
               >
                 <UserPlus className="mr-2 h-4 w-4" /> Accept
               </Button>
-              <Button variant="outline" className="min-h-[44px] flex-1 sm:flex-initial" asChild>
+              <Button
+                variant="outline"
+                className="min-h-[48px] flex-1 sm:flex-initial rounded-full border-primary/20 bg-white/80 text-foreground hover:bg-white"
+                asChild
+              >
                 <Link to="/">
                   <Home className="mr-2 h-4 w-4" /> Not now
                 </Link>
@@ -99,7 +103,7 @@ const AcceptInvitePage = () => {
             <p className="mt-2 text-sm text-muted-foreground">
               You're now linked to the family. Redirecting to your dashboard…
             </p>
-            <Button className="mt-6" asChild>
+            <Button className="mt-6 rounded-full glossy-btn text-primary-foreground font-semibold" asChild>
               <Link to="/patient/dashboard">Go to Dashboard</Link>
             </Button>
           </div>
@@ -118,7 +122,7 @@ const AcceptInvitePage = () => {
             </div>
             <h1 className="mt-4 font-display text-xl font-bold text-foreground">Invalid or expired invite</h1>
             <p className="mt-2 text-sm text-muted-foreground">{errorMessage}</p>
-            <Button className="mt-6" asChild>
+            <Button className="mt-6 rounded-full glossy-btn text-primary-foreground font-semibold" asChild>
               <Link to="/">Go to Home</Link>
             </Button>
           </div>
