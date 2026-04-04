@@ -43,6 +43,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import DeleteAccount from "./pages/DeleteAccount";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import HmsComingSoon from "./pages/HmsComingSoon";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,8 @@ function AppRoutes() {
           <Route path="/patient/accept-invite" element={<AcceptInvite />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/hms" element={<HmsComingSoon />} />
+          <Route path="/hms-coming-soon" element={<HmsComingSoon />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/delete-account" element={<DeleteAccount />} />
           <Route path="/lab/dashboard" element={<ProtectedRoute requiredRole="lab"><LabDashboard /></ProtectedRoute>} />

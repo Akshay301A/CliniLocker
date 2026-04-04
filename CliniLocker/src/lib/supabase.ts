@@ -103,4 +103,35 @@ export type HealthCardRow = {
   created_at?: string;
 };
 
+export type Hospital = {
+  id: string;
+  name: string;
+  created_at?: string;
+};
+
+export type HospitalUser = {
+  id: string;
+  hospital_id: string;
+  user_id: string;
+  role?: string | null;
+  created_at?: string;
+};
+
+export type HospitalPatient = {
+  id: string;
+  hospital_id: string;
+  health_id?: string | null;
+  display_name?: string | null;
+  created_at?: string;
+};
+
+export type HospitalAccessRequest = {
+  id: string;
+  hospital_id: string;
+  health_id?: string | null;
+  requested_by?: string | null;
+  status?: string | null;
+  created_at?: string;
+};
+
 

@@ -60,8 +60,11 @@ const Navbar = () => {
                   Logout
                 </button>
               )}
-              <a href="#cta" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold hidden md:inline-flex">
-                Get Started (Labs)
+              <a href="/signup" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold hidden md:inline-flex">
+                For Labs
+              </a>
+              <a href="/hms-coming-soon" className="glass-card px-5 py-2.5 rounded-full text-sm font-semibold hidden md:inline-flex text-foreground">
+                HMS (Coming Soon)
               </a>
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
@@ -103,8 +106,11 @@ const Navbar = () => {
                     Logout
                   </button>
                 )}
-                <a href="#cta" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold text-center mt-2">
-                  Get Started (Labs)
+                <a href="/signup" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold text-center mt-2">
+                  For Labs
+                </a>
+                <a href="/hms-coming-soon" className="glass-card px-5 py-2.5 rounded-full text-sm font-semibold text-center">
+                  HMS (Coming Soon)
                 </a>
               </div>
             </motion.div>
