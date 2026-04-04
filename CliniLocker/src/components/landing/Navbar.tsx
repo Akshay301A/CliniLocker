@@ -52,14 +52,6 @@ const Navbar = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              {user && (
-                <button
-                  onClick={signOut}
-                  className="hidden md:inline-flex text-sm font-semibold text-foreground/80 hover:text-foreground transition-colors"
-                >
-                  Logout
-                </button>
-              )}
               <a href="/patient-login" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold hidden md:inline-flex">
                 For Patients
               </a>
@@ -95,17 +87,6 @@ const Navbar = () => {
                     {link.label}
                   </a>
                 ))}
-                {user && (
-                  <button
-                    onClick={() => {
-                      setMobileOpen(false);
-                      signOut();
-                    }}
-                    className="text-foreground hover:text-primary font-medium py-2 px-3 rounded-lg hover:bg-muted transition-colors text-left"
-                  >
-                    Logout
-                  </button>
-                )}
                 <a href="/patient-login" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold text-center mt-2">
                   For Patients
                 </a>
