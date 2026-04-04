@@ -43,15 +43,6 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import DeleteAccount from "./pages/DeleteAccount";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
-import HmsLogin from "./pages/hms/Login";
-import HmsDashboard from "./pages/hms/Dashboard";
-import HmsPatientRegistration from "./pages/hms/PatientRegistration";
-import HmsPatientProfile from "./pages/hms/PatientProfile";
-import HmsNewVisit from "./pages/hms/NewVisit";
-import HmsPrescription from "./pages/hms/Prescription";
-import HmsBilling from "./pages/hms/Billing";
-import HmsReportUpload from "./pages/hms/ReportUpload";
-import HmsQrView from "./pages/hms/QrView";
 
 const queryClient = new QueryClient();
 
@@ -78,15 +69,6 @@ function AppRoutes() {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/delete-account" element={<DeleteAccount />} />
-          <Route path="/hms/login" element={<HmsLogin />} />
-          <Route path="/hms/dashboard" element={<HmsDashboard />} />
-          <Route path="/hms/patients/new" element={<HmsPatientRegistration />} />
-          <Route path="/hms/patients/:id" element={<HmsPatientProfile />} />
-          <Route path="/hms/visits/new" element={<HmsNewVisit />} />
-          <Route path="/hms/prescriptions/new" element={<HmsPrescription />} />
-          <Route path="/hms/billing" element={<HmsBilling />} />
-          <Route path="/hms/reports" element={<HmsReportUpload />} />
-          <Route path="/hms/qr/:id" element={<HmsQrView />} />
           <Route path="/lab/dashboard" element={<ProtectedRoute requiredRole="lab"><LabDashboard /></ProtectedRoute>} />
           <Route path="/lab/upload" element={<ProtectedRoute requiredRole="lab"><LabUpload /></ProtectedRoute>} />
           <Route path="/lab/patients" element={<ProtectedRoute requiredRole="lab"><LabPatients /></ProtectedRoute>} />
