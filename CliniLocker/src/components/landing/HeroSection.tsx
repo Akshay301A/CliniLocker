@@ -41,12 +41,9 @@ const HeroSection = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
-              <a href="/signup" className="glossy-btn text-primary-foreground px-6 sm:px-8 py-3.5 sm:py-4 rounded-full font-semibold text-base sm:text-lg inline-flex items-center gap-2 group justify-center">
-                For Labs
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </a>
-              <a href="/patient-login" className="glass-card px-6 sm:px-8 py-3.5 sm:py-4 rounded-full font-semibold text-foreground hover:bg-muted/80 transition-colors inline-flex items-center gap-2 justify-center">
+              <a href="/patient-login" className="glossy-btn text-primary-foreground px-6 sm:px-8 py-3.5 sm:py-4 rounded-full font-semibold text-base sm:text-lg inline-flex items-center gap-2 group justify-center">
                 For Patients
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </a>
               <a href="/hms-coming-soon" className="glass-card px-6 sm:px-8 py-3.5 sm:py-4 rounded-full font-semibold text-foreground hover:bg-muted/80 transition-colors inline-flex items-center gap-2 justify-center">
                 HMS (Coming Soon)

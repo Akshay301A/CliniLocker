@@ -60,8 +60,8 @@ const Navbar = () => {
                   Logout
                 </button>
               )}
-              <a href="/signup" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold hidden md:inline-flex">
-                For Labs
+              <a href="/patient-login" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold hidden md:inline-flex">
+                For Patients
               </a>
               <a href="/hms-coming-soon" className="glass-card px-5 py-2.5 rounded-full text-sm font-semibold hidden md:inline-flex text-foreground">
                 HMS (Coming Soon)
@@ -106,8 +106,8 @@ const Navbar = () => {
                     Logout
                   </button>
                 )}
-                <a href="/signup" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold text-center mt-2">
-                  For Labs
+                <a href="/patient-login" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold text-center mt-2">
+                  For Patients
                 </a>
                 <a href="/hms-coming-soon" className="glass-card px-5 py-2.5 rounded-full text-sm font-semibold text-center">
                   HMS (Coming Soon)

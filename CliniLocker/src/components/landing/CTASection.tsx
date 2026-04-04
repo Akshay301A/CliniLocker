@@ -26,17 +26,11 @@ const CTASection = () => {
           </p>
           <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4">
             <a
-              href="/signup"
+              href="/patient-login"
               className="bg-card text-foreground px-6 sm:px-8 py-3.5 sm:py-4 rounded-full font-semibold text-base sm:text-lg inline-flex items-center gap-2 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group justify-center"
             >
-              For Labs
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </a>
-            <a
-              href="/patient-login"
-              className="border-2 border-primary-foreground/30 text-primary-foreground px-6 sm:px-8 py-3.5 sm:py-4 rounded-full font-semibold text-base sm:text-lg hover:bg-primary-foreground/10 transition-all duration-300 text-center"
-            >
               For Patients
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </a>
             <a
               href="/hms-coming-soon"
