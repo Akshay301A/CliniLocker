@@ -218,6 +218,10 @@
     transform: translateY(-2px);
   }
 
+  .tonal-gradient-btn {
+    background: linear-gradient(120deg, #0058bc 0%, #0070eb 100%);
+  }
+
   .section-gradient {
     background: var(--gradient-hero);
   }

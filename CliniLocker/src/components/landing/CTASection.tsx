@@ -26,7 +26,7 @@ const CTASection = () => {
           </p>
           <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4">
             <a
-              href="/signup"
+              href="/hms/login"
               className="bg-card text-foreground px-6 sm:px-8 py-3.5 sm:py-4 rounded-full font-semibold text-base sm:text-lg inline-flex items-center gap-2 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group justify-center"
             >
               Get Started (Labs)

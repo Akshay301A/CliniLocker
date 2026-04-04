@@ -60,7 +60,7 @@ const Navbar = () => {
                   Logout
                 </button>
               )}
-              <a href="#cta" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold hidden md:inline-flex">
+              <a href="/hms/login" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold hidden md:inline-flex">
                 Get Started (Labs)
               </a>
               <button
@@ -103,7 +103,7 @@ const Navbar = () => {
                     Logout
                   </button>
                 )}
-                <a href="#cta" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold text-center mt-2">
+                <a href="/hms/login" className="glossy-btn text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold text-center mt-2">
                   Get Started (Labs)
                 </a>
               </div>
