@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Upload, FileText, Users, Share2, Settings, LogOut, Menu, X, User } from "lucide-react";
+import { LayoutDashboard, Upload, FileText, Users, Share2, Settings, LogOut, Menu, X, User, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -112,18 +112,27 @@ export function PatientLayout({ children }: { children: ReactNode }) {
               className="object-contain"
             />
           </Link>
-          <Link
-            to="/patient/profile"
-            className="flex items-center justify-center rounded-full transition-opacity hover:opacity-80"
-            aria-label={t("Profile")}
-          >
-            <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
-              {avatarUrl && <AvatarImage src={avatarUrl} alt={profileName ?? t("Profile")} />}
-              <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                {profileName ? profileName.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
-              </AvatarFallback>
-            </Avatar>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/patient/health-card"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-muted/60 text-foreground transition-colors hover:bg-muted"
+              aria-label={t("Digital Health Card")}
+            >
+              <CreditCard className="h-4 w-4" />
+            </Link>
+            <Link
+              to="/patient/profile"
+              className="flex items-center justify-center rounded-full transition-opacity hover:opacity-80"
+              aria-label={t("Profile")}
+            >
+              <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
+                {avatarUrl && <AvatarImage src={avatarUrl} alt={profileName ?? t("Profile")} />}
+                <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                  {profileName ? profileName.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+          </div>
         </header>
 
         {/* Desktop Header */}
@@ -147,18 +156,27 @@ export function PatientLayout({ children }: { children: ReactNode }) {
               ? t("View Report")
               : t(navItems.find((i) => i.to === location.pathname)?.labelKey || "Dashboard")}
           </h2>
-          <Link
-            to="/patient/profile"
-            className="ml-auto flex shrink-0 items-center justify-center rounded-full ring-offset-background transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            aria-label={t("My Profile")}
-          >
-            <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
-              {avatarUrl && <AvatarImage src={avatarUrl} alt={profileName ?? t("Profile")} />}
-              <AvatarFallback className="bg-primary/10 text-primary">
-                <User className="h-4 w-4 sm:h-5 sm:w-5" />
-              </AvatarFallback>
-            </Avatar>
-          </Link>
+          <div className="ml-auto flex items-center gap-2">
+            <Link
+              to="/patient/health-card"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-muted/60 text-foreground transition-colors hover:bg-muted"
+              aria-label={t("Digital Health Card")}
+            >
+              <CreditCard className="h-4 w-4" />
+            </Link>
+            <Link
+              to="/patient/profile"
+              className="flex shrink-0 items-center justify-center rounded-full ring-offset-background transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              aria-label={t("My Profile")}
+            >
+              <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
+                {avatarUrl && <AvatarImage src={avatarUrl} alt={profileName ?? t("Profile")} />}
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  <User className="h-4 w-4 sm:h-5 sm:w-5" />
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+          </div>
         </header>
         
         {/* Main Content - Add bottom padding for mobile nav */}

@@ -17,6 +17,7 @@ import {
   Mail,
   MessageCircle,
   Smartphone,
+  Utensils,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -454,14 +455,23 @@ const ReportViewer = () => {
 
           {/* Card 3: AI Report Summary - below PDF viewer */}
           <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-border bg-muted/20">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-border bg-muted/20">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
                   <Sparkles className="h-5 w-5 text-primary" />
                 </div>
                 <h2 className="font-display text-lg font-semibold text-foreground">{t("AI Report Summary")}</h2>
               </div>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{t("AI Generated")}</span>
+              <div className="flex items-center gap-2">
+                <Link
+                  to={`/patient/report/${id}/diet`}
+                  className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700"
+                >
+                  <Utensils className="h-3.5 w-3.5" />
+                  {t("Diet Plan")}
+                </Link>
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{t("AI Generated")}</span>
+              </div>
             </div>
             <div className="p-6 space-y-6">
               {analysisLoading ? (

@@ -112,3 +112,12 @@ export type FamilyMember = {
   created_at?: string;
 };
 
+export type HealthCardRow = {
+  id?: string;
+  user_id?: string;
+  health_id: string;
+  name?: string | null;
+  blood_group?: string | null;
+  created_at?: string;
+};
+

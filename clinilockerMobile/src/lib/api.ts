@@ -1,5 +1,5 @@
 ﻿import { supabase } from "./supabase";
-import type { Profile, Report, FamilyMember, Lab } from "./supabase";
+import type { Profile, Report, FamilyMember, Lab, HealthCardRow } from "./supabase";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -43,6 +43,45 @@ export async function getProfile(): Promise<Profile | null> {
   const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
   if (error) return null;
   return data as Profile | null;
+}
+
+export async function getHealthCardRow(): Promise<HealthCardRow | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data, error } = await supabase
+    .from("health_cards")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (error) return null;
+  return data as HealthCardRow | null;
+}
+
+export async function ensureHealthCardExists(profile?: Profile | null): Promise<HealthCardRow | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const existing = await getHealthCardRow();
+  if (existing) return existing;
+
+  const name = profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || "User";
+  const bloodGroup = profile?.blood_group || "O+";
+
+  const { data: nextId, error: idErr } = await supabase.rpc("next_health_id");
+  if (!idErr && typeof nextId === "string" && nextId.length > 0) {
+    const { data, error } = await supabase
+      .from("health_cards")
+      .insert({
+        user_id: user.id,
+        health_id: nextId,
+        name,
+        blood_group: bloodGroup,
+      })
+      .select("*")
+      .single();
+    if (!error && data) return data as HealthCardRow;
+  }
+
+  return await getHealthCardRow();
 }
 
 /** Ensure a profile row exists for the current user (e.g. trigger missed). Uses RPC to avoid 409. */
@@ -708,6 +747,118 @@ export async function analyzeReportFromPdfUrl(pdfUrl: string): Promise<ReportAna
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Failed to analyze report." };
   }
+}
+
+export type DietPlanPrefs = {
+  budget: "low" | "medium" | "high";
+  dietType: "veg" | "eggetarian" | "non-veg";
+  goal: "general" | "low-sugar" | "low-cholesterol" | "weight-loss" | "kidney-care" | "heart-health" | "custom";
+  customGoal?: string;
+};
+
+export type DietPlan = {
+  summary: string;
+  daily_plan: { meal: string; items: { name: string; portion: string; why: string }[] }[];
+  foods_to_avoid: string[];
+  notes: string[];
+  prefs?: DietPlanPrefs;
+};
+
+export type ReportAIRecord = {
+  report_id: string;
+  summary?: ReportAnalysis | null;
+  diet_plan?: DietPlan | null;
+  diet_prefs?: DietPlanPrefs | null;
+};
+
+export async function generateDietPlanFromPdfUrl(
+  pdfUrl: string,
+  prefs: DietPlanPrefs
+): Promise<DietPlan | { error: string }> {
+  try {
+    const refreshRes = await supabase.auth.refreshSession();
+    const accessToken =
+      refreshRes.data?.session?.access_token ||
+      (await supabase.auth.getSession()).data?.session?.access_token;
+    if (!accessToken) return { error: "Not authenticated" };
+
+    const pdf = await loadPdfFromUrl(pdfUrl);
+    const extractedText = await extractTextFromPdfDoc(pdf);
+    const images = await renderPdfAsImages(pdf, 2);
+    const trimmedImages: string[] = [];
+    let totalChars = 0;
+    for (const img of images) {
+      totalChars += img.length;
+      if (totalChars > 3_000_000) break;
+      trimmedImages.push(img);
+    }
+    const { data, error } = await supabase.functions.invoke("generate-diet-plan", {
+      body: {
+        text: extractedText.slice(0, 12000),
+        images: trimmedImages,
+        prefs,
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    if (!error) {
+      const parsed = data as DietPlan | { error?: string } | null;
+      if ((parsed as { error?: string })?.error) return { error: String((parsed as { error: string }).error) };
+      return parsed as DietPlan;
+    }
+
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      return { error: await getFunctionInvokeErrorMessage(error) };
+    }
+
+    const fallbackRes = await fetch(`${SUPABASE_URL}/functions/v1/generate-diet-plan`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        text: extractedText.slice(0, 12000),
+        images: trimmedImages,
+        prefs,
+      }),
+    });
+    const fallbackJson = await fallbackRes.json().catch(() => ({}));
+    if (!fallbackRes.ok) {
+      return { error: String((fallbackJson as { error?: string }).error || `Diet plan failed (${fallbackRes.status})`) };
+    }
+    if ((fallbackJson as { error?: string })?.error) {
+      return { error: String((fallbackJson as { error: string }).error) };
+    }
+    return fallbackJson as DietPlan;
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to generate diet plan." };
+  }
+}
+
+export async function getReportAI(reportId: string): Promise<ReportAIRecord | null> {
+  const { data, error } = await supabase.from("report_ai").select("*").eq("report_id", reportId).maybeSingle();
+  if (error || !data) return null;
+  return data as ReportAIRecord;
+}
+
+export async function saveDietPlan(
+  reportId: string,
+  dietPlan: DietPlan,
+  dietPrefs: DietPlanPrefs
+): Promise<{ error?: string }> {
+  const { error } = await supabase.from("report_ai").upsert(
+    {
+      report_id: reportId,
+      diet_plan: dietPlan,
+      diet_prefs: dietPrefs,
+    },
+    { onConflict: "report_id" }
+  );
+  if (error) return { error: error.message };
+  return {};
 }
 
 /** Notify a patient device when a report is ready (best-effort; requires push token on patient's device). */
