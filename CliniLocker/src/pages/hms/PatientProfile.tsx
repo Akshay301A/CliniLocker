@@ -1,6 +1,8 @@
-﻿import React from "react";
+﻿import React, { useState } from "react";
 
 export default function PatientProfile() {
+  const [showHealthCard, setShowHealthCard] = useState(false);
+  const healthId = "CL-0000-0001";
   return (
     <div className="bg-surface text-on-surface">
       {/* SideNavBar */}
@@ -347,6 +349,52 @@ export default function PatientProfile() {
           </div>
         </div>
       </main>
+      {showHealthCard && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 relative">
+            <button
+              type="button"
+              onClick={() => setShowHealthCard(false)}
+              className="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface"
+              aria-label="Close"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+            <h3 className="text-lg font-bold text-on-surface mb-4">Digital Health Card</h3>
+            <div className="rounded-2xl bg-gradient-to-br from-[#2c1c62] via-[#3a2b7a] to-[#1c2f6e] text-white p-6 relative overflow-hidden">
+              <div className="absolute right-0 top-0 h-full w-1.5 bg-gradient-to-b from-[#f97316] via-[#fb923c] to-[#f97316]" />
+              <div className="flex items-start justify-between">
+                <div className="h-10 w-14 rounded-lg bg-gradient-to-br from-amber-200 via-yellow-200 to-amber-400 shadow-[0_8px_20px_rgba(253,160,133,0.4)]" />
+                <img src="/favicon.png" alt="CliniLocker" className="h-8 w-8 object-contain" />
+              </div>
+              <div className="mt-6 flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-lg font-semibold">John Doe</p>
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs">
+                    Blood Group <span className="font-semibold">O+</span>
+                  </div>
+                  <p className="mt-3 text-xs tracking-[0.32em] uppercase text-white/80">{healthId}</p>
+                </div>
+                <div className="bg-white rounded-xl p-2 shadow-lg">
+                  <div className="h-20 w-20 bg-[radial-gradient(circle_at_10px_10px,#1b1b1d_2px,transparent_0)] opacity-80" style={{ backgroundSize: "8px 8px" }} />
+                </div>
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground text-center">
+              Scan to view basic health card details. No sensitive medical data is shared.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
