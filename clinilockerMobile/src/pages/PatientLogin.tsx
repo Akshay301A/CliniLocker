@@ -128,6 +128,7 @@ const PatientLoginPage = () => {
       return;
     }
     toast.success("Welcome back!");
+    navigate(redirectTo, { replace: true });
   };
 
   const handleResetPassword = async () => {
