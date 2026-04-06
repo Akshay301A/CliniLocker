@@ -32,6 +32,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import LabCompleteSignup from "./pages/LabCompleteSignup";
 import PatientLogin from "./pages/PatientLogin";
+import ResetPassword from "./pages/ResetPassword";
 import LabDashboard from "./pages/lab/Dashboard";
 import LabUpload from "./pages/lab/Upload";
 import LabPatients from "./pages/lab/Patients";
@@ -208,6 +209,7 @@ function AppRoutes() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/lab/complete-signup" element={<LabCompleteSignup />} />
           <Route path="/patient-login" element={<PatientLogin />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/patient/accept-invite" element={<AcceptInvite />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />

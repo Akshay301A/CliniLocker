@@ -1,12 +1,16 @@
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { startGoogleOAuth } from "@/lib/oauth";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppFooter } from "@/components/AppFooter";
 import { HeartPulse, ShieldCheck, Stethoscope, User } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { getPatientEmailStatus, ensureProfileExists } from "@/lib/api";
 
 const PatientLoginPage = () => {
   const { user, role, loading: authLoading } = useAuth();
@@ -15,8 +19,15 @@ const PatientLoginPage = () => {
   const redirectTo = searchParams.get("redirect") || "/patient/dashboard";
 
   const [loading, setLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [fullName, setFullName] = useState("");
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -46,6 +57,95 @@ const PatientLoginPage = () => {
     setLoading(false);
   };
 
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!privacyAccepted || !termsAccepted) {
+      toast.error("Please accept Privacy Policy and Terms of Use.");
+      return;
+    }
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
+    if (!password || password.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+    if (authMode === "signup") {
+      if (password !== confirmPassword) {
+        toast.error("Passwords do not match.");
+        return;
+      }
+      const status = await getPatientEmailStatus(trimmedEmail);
+      if (status === "auth") {
+        toast.error("Account already exists. Please log in or reset your password.");
+        setAuthMode("login");
+        return;
+      }
+      setEmailLoading(true);
+      const { data, error } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password,
+        options: {
+          data: { full_name: fullName.trim() || "Patient" },
+          emailRedirectTo: `${window.location.origin}/patient/dashboard`,
+        },
+      });
+      if (error) {
+        toast.error(error.message);
+        setEmailLoading(false);
+        return;
+      }
+      if (data.session?.user) {
+        await ensureProfileExists();
+        toast.success("Account created! Welcome to CliniLocker.");
+        setEmailLoading(false);
+        return;
+      }
+      toast.success("Check your email to confirm your account, then sign in.");
+      setEmailLoading(false);
+      setAuthMode("login");
+      return;
+    }
+
+    setEmailLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: trimmedEmail,
+      password,
+    });
+    setEmailLoading(false);
+    if (error) {
+      if (error.message.toLowerCase().includes("invalid")) {
+        toast.error("Invalid credentials. If you used Google before, reset your password to set one.");
+      } else if (error.message.toLowerCase().includes("confirm")) {
+        toast.error("Please confirm your email to continue.");
+      } else {
+        toast.error(error.message);
+      }
+      return;
+    }
+    toast.success("Welcome back!");
+  };
+
+  const handleResetPassword = async () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      toast.error("Enter your email to reset password.");
+      return;
+    }
+    setResetLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setResetLoading(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Password reset link sent. Check your email.");
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 via-sky-50/40 to-white relative overflow-hidden">
       <div className="absolute -top-20 -left-16 h-52 w-52 rounded-full bg-sky-300/20 blur-3xl" />
@@ -72,9 +172,9 @@ const PatientLoginPage = () => {
               </p>
             </div>
 
-            <h1 className="text-xl font-semibold text-slate-900 mb-2 text-center">Continue with Google</h1>
+            <h1 className="text-xl font-semibold text-slate-900 mb-2 text-center">Patient Sign In</h1>
             <p className="text-sm text-slate-600 text-center mb-5">
-              Fast, secure sign-in with your verified Google account.
+              Continue with Google or use email & password.
             </p>
 
             <div className="space-y-3 mb-5">
@@ -128,6 +228,106 @@ const PatientLoginPage = () => {
                 </span>
               </span>
             </Button>
+
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-[11px] uppercase tracking-wide text-slate-500">
+                <span className="bg-white px-2">Or use email</span>
+              </div>
+            </div>
+
+            <div className="mb-4 flex gap-2">
+              <Button
+                type="button"
+                variant={authMode === "login" ? "default" : "outline"}
+                className="flex-1 rounded-full"
+                onClick={() => setAuthMode("login")}
+              >
+                Login
+              </Button>
+              <Button
+                type="button"
+                variant={authMode === "signup" ? "default" : "outline"}
+                className="flex-1 rounded-full"
+                onClick={() => setAuthMode("signup")}
+              >
+                Create account
+              </Button>
+            </div>
+
+            <form onSubmit={handleEmailAuth} className="space-y-4">
+              {authMode === "signup" && (
+                <div>
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Your name"
+                    className="min-h-[44px]"
+                  />
+                </div>
+              )}
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="min-h-[44px]"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="min-h-[44px]"
+                  required
+                />
+              </div>
+              {authMode === "signup" && (
+                <div>
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="min-h-[44px]"
+                    required
+                  />
+                </div>
+              )}
+              <Button
+                type="submit"
+                className="w-full min-h-[52px] rounded-2xl text-sm font-semibold"
+                disabled={emailLoading}
+              >
+                {emailLoading ? "Please wait..." : authMode === "signup" ? "Create Account" : "Sign In"}
+              </Button>
+            </form>
+
+            <div className="mt-3 text-center">
+              <Button
+                type="button"
+                variant="link"
+                className="text-sm text-sky-700"
+                onClick={handleResetPassword}
+                disabled={resetLoading}
+              >
+                {resetLoading ? "Sending..." : "Forgot password? Reset here"}
+              </Button>
+            </div>
 
             <div className="mt-5 grid grid-cols-2 gap-2 text-xs text-slate-600">
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 flex items-center gap-2">
