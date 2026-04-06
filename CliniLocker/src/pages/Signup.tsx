@@ -171,7 +171,7 @@ const SignupPage = () => {
           <div className="mt-4 pt-4 border-t border-border text-center space-y-1">
             <p className="text-xs text-muted-foreground">Patient?</p>
             <Link to="/patient-login" className="text-sm font-medium text-primary hover:underline inline-block">
-              Log in or create account ->
+              Log in or create account &rarr;
             </Link>
           </div>
         </div>
