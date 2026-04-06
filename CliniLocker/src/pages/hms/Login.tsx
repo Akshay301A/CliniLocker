@@ -1,4 +1,9 @@
-﻿const HmsLogin = () => {
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
+
+const HmsLogin = () => {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <div className="min-h-screen bg-[#F6F8FB] text-on-surface">
       <main className="min-h-screen flex items-center justify-center px-4 py-10">
@@ -67,11 +72,21 @@
                   <label className="block text-[11px] font-bold tracking-widest text-slate-400 uppercase mb-2 ml-1">
                     Password
                   </label>
-                  <input
-                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0B57D0]/30 focus:border-[#0B57D0]/40 text-slate-900 transition-all"
-                    placeholder="••••••••••••"
-                    type="password"
-                  />
+                  <div className="relative">
+                    <input
+                      className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0B57D0]/30 focus:border-[#0B57D0]/40 text-slate-900 transition-all pr-12"
+                      placeholder="********"
+                      type={showPassword ? "text" : "password"}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold tracking-widest text-slate-400 uppercase mb-2 ml-1">

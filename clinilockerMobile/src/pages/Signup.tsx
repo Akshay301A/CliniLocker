@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { createLabAndJoin } from "@/lib/api";
 import { startGoogleOAuth } from "@/lib/oauth";
 import { useAuth } from "@/contexts/AuthContext";
-import { Building2, ShieldCheck, TestTube, UserPlus2 } from "lucide-react";
+import { Building2, Eye, EyeOff, ShieldCheck, TestTube, UserPlus2 } from "lucide-react";
 
 const SignupPage = () => {
   const { user, role, loading: authLoading } = useAuth();
@@ -16,6 +16,7 @@ const SignupPage = () => {
   const [form, setForm] = useState({ labName: "", phone: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -129,15 +130,25 @@ const SignupPage = () => {
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                className="min-h-[46px] text-sm rounded-xl mt-1"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="********"
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  className="min-h-[46px] text-sm rounded-xl mt-1 pr-12"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="********"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <Button type="submit" className="w-full min-h-[46px] rounded-xl text-sm font-medium" disabled={loading}>
               {loading ? "Creating..." : "Create Account"}
