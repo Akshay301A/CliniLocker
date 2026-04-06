@@ -1,4 +1,4 @@
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { PublicLayout } from "@/components/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Eye, EyeOff, User } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 
 const PatientLoginPage = () => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/patient/dashboard";
 
@@ -118,6 +119,7 @@ const PatientLoginPage = () => {
       return;
     }
     toast.success("Welcome back!");
+    navigate(redirectTo, { replace: true });
   };
 
   const handleResetPassword = async () => {
