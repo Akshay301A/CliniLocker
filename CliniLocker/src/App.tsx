@@ -16,6 +16,9 @@ import Index from "./pages/Index";
 import Features from "./pages/Features";
 import Pricing from "./pages/Pricing";
 import About from "./pages/About";
+import Blogs from "./pages/Blogs";
+import HealthRecordLockerGuide from "./pages/blogs/HealthRecordLockerGuide";
+import CliniLockerVsPhysicalFiles from "./pages/blogs/CliniLockerVsPhysicalFiles";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import LabCompleteSignup from "./pages/LabCompleteSignup";
@@ -70,6 +73,9 @@ function AppRoutes() {
           <Route path="/features" element={<Features />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/about" element={<About />} />
+          <Route path="/blogs" element={<Blogs />} />
+          <Route path="/blogs/health-record-locker-2026" element={<HealthRecordLockerGuide />} />
+          <Route path="/blogs/clinilocker-vs-physical-medical-files" element={<CliniLockerVsPhysicalFiles />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/lab/complete-signup" element={<LabCompleteSignup />} />

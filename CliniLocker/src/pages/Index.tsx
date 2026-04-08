@@ -5,6 +5,7 @@ import AppDownloadSection from "@/components/landing/AppDownloadSection";
 import StatsSection from "@/components/landing/StatsSection";
 import TestimonialsSection from "@/components/landing/TestimonialsSection";
 import CTASection from "@/components/landing/CTASection";
+import BlogsSection from "@/components/landing/BlogsSection";
 import Footer from "@/components/landing/Footer";
 
 const Index = () => {
@@ -33,6 +34,7 @@ const Index = () => {
       <StatsSection />
       <TestimonialsSection />
       <CTASection />
+      <BlogsSection />
       <Footer />
     </div>
   );
