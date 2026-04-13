@@ -39,10 +39,6 @@ import AcceptInvite from "./pages/patient/AcceptInvite";
 import PatientSettings from "./pages/patient/Settings";
 import PatientMyProfile from "./pages/patient/MyProfile";
 import PatientHealthCard from "./pages/patient/HealthCard";
-import AbhaActivationFlow from "./pages/patient/AbhaActivationFlow";
-import AbhaConsentDashboard from "./pages/patient/AbhaConsentDashboard";
-import AbhaTimeline from "./pages/patient/AbhaTimeline";
-import AbhaRecordViewer from "./pages/patient/AbhaRecordViewer";
 import PublicHealthCard from "./pages/PublicHealthCard";
 import PatientCompleteProfile from "./pages/patient/CompleteProfile";
 import ReportViewer from "./pages/patient/ReportViewer";
@@ -115,10 +111,6 @@ function AppRoutes() {
           <Route path="/patient/family" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientFamilyMembers /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/profile" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientMyProfile /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/health-card" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientHealthCard /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
-          <Route path="/patient/abha/activate" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><AbhaActivationFlow /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
-          <Route path="/patient/abha/consents" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><AbhaConsentDashboard /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
-          <Route path="/patient/abha/timeline" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><AbhaTimeline /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
-          <Route path="/patient/abha/record/:id" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><AbhaRecordViewer /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/settings" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientSettings /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/report/:id" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><ReportViewer /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/report/:id/diet" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><DietPlan /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
