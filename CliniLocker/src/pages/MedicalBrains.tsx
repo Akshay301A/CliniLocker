@@ -39,24 +39,32 @@ const advisors = [
 const MedicalBrains = () => {
   return (
     <div className="min-h-screen bg-[#f7f3ed] text-[#0c1b2a]">
-      <nav className="sticky top-0 z-20 border-b border-[#0047AB]/10 bg-[#f7f3ed]/90 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <a href="/" className="flex items-center gap-2 text-base font-semibold text-[#0047AB]">
-            <span className="h-8 w-8 rounded-full border border-[#0047AB]/20 bg-white shadow-sm" />
+      <nav className="sticky top-0 z-20 bg-transparent py-6">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between rounded-full border border-white/70 bg-white/90 px-6 py-3 shadow-[0_14px_32px_rgba(13,27,55,0.18)] backdrop-blur">
+          <a href="/" className="flex items-center gap-3 text-base font-semibold text-[#0047AB]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#0047AB]/20 bg-white">
+              <span className="h-6 w-6 rounded-lg bg-[#0047AB]" />
+            </span>
             CliniLocker
           </a>
-          <div className="hidden items-center gap-5 text-sm font-medium text-[#47566b] md:flex">
+          <div className="hidden items-center gap-6 text-sm font-medium text-[#5d6b82] md:flex">
             <a href="/features" className="transition hover:text-[#0047AB]">Features</a>
-            <a href="/patient/abha/activate" className="transition hover:text-[#0047AB]">ABHA Sync</a>
-            <a href="/about" className="transition hover:text-[#0047AB]">About Us</a>
+            <a href="/app" className="transition hover:text-[#0047AB]">App</a>
+            <a href="/stats" className="transition hover:text-[#0047AB]">Stats</a>
+            <a href="/testimonials" className="transition hover:text-[#0047AB]">Testimonials</a>
           </div>
           <div className="flex items-center gap-3 text-sm font-semibold">
-            <a href="/patient-login" className="text-[#47566b] transition hover:text-[#0047AB]">Log in</a>
             <a
-              href="/signup"
-              className="rounded-full bg-[#0047AB] px-5 py-2 text-white shadow-sm transition hover:bg-[#003c92]"
+              href="/patient-login"
+              className="rounded-full bg-[#6f4cf5] px-5 py-2 text-white shadow-sm transition hover:bg-[#5c3fe0]"
             >
-              Get started
+              For Patients
+            </a>
+            <a
+              href="/hms"
+              className="rounded-full border border-[#0047AB]/15 bg-white px-5 py-2 text-[#0c1b2a] shadow-sm transition hover:border-[#0047AB]/30"
+            >
+              HMS
             </a>
           </div>
         </div>
