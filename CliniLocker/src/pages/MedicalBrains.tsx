@@ -36,9 +36,30 @@ const advisors = [
   },
 ];
 
+import Footer from "@/components/landing/Footer";
+import { Activity, HeartPulse, ShieldCheck, Stethoscope } from "lucide-react";
+
 const MedicalBrains = () => {
   return (
-    <div className="min-h-screen bg-[#f7f3ed] text-[#0c1b2a]">
+    <div className="relative min-h-screen overflow-hidden bg-white text-[#0c1b2a]">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-[#0047AB]/5 blur-3xl" />
+        <div className="absolute top-32 right-[-80px] h-72 w-72 rounded-full bg-[#B2AC88]/12 blur-3xl" />
+        <div className="absolute bottom-16 left-[10%] h-56 w-56 rounded-full bg-[#0047AB]/7 blur-2xl" />
+        <div className="absolute left-24 top-40 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#0047AB]/15 bg-white/80 text-[#0047AB] shadow-sm">
+          <Stethoscope className="h-6 w-6" />
+        </div>
+        <div className="absolute right-32 top-56 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#0047AB]/15 bg-white/80 text-[#0047AB] shadow-sm">
+          <HeartPulse className="h-6 w-6" />
+        </div>
+        <div className="absolute left-[55%] bottom-24 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#0047AB]/15 bg-white/80 text-[#0047AB] shadow-sm">
+          <ShieldCheck className="h-6 w-6" />
+        </div>
+        <div className="absolute left-8 bottom-40 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#0047AB]/15 bg-white/80 text-[#0047AB] shadow-sm">
+          <Activity className="h-5 w-5" />
+        </div>
+      </div>
+
       <nav className="sticky top-0 z-20 py-5">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="w-full rounded-full bg-white/95 shadow-lg h-16 transition-all duration-300">
@@ -105,6 +126,7 @@ const MedicalBrains = () => {
           ))}
         </section>
       </main>
+      <Footer />
     </div>
   );
 };
