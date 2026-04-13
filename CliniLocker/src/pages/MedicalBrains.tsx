@@ -39,31 +39,32 @@ const advisors = [
 const MedicalBrains = () => {
   return (
     <div className="min-h-screen bg-[#f7f3ed] text-[#0c1b2a]">
-      <nav className="sticky top-0 z-20 bg-transparent py-6">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between rounded-full border border-white/70 bg-white/90 px-6 py-3 shadow-[0_14px_32px_rgba(13,27,55,0.18)] backdrop-blur">
-          <a href="/" className="flex items-center gap-3">
-            <img src="/logo (2).png" alt="CliniLocker" className="h-9 w-auto" />
-            <span className="sr-only">CliniLocker</span>
-          </a>
-          <div className="hidden items-center gap-6 text-sm font-medium text-[#5d6b82] md:flex">
-            <a href="/features" className="transition hover:text-[#0047AB]">Features</a>
-            <a href="/app" className="transition hover:text-[#0047AB]">App</a>
-            <a href="/stats" className="transition hover:text-[#0047AB]">Stats</a>
-            <a href="/testimonials" className="transition hover:text-[#0047AB]">Testimonials</a>
-          </div>
-          <div className="flex items-center gap-3 text-sm font-semibold">
-            <a
-              href="/patient-login"
-              className="rounded-full bg-[#6f4cf5] px-5 py-2 text-white shadow-sm transition hover:bg-[#5c3fe0]"
-            >
-              For Patients
-            </a>
-            <a
-              href="/hms"
-              className="rounded-full border border-[#0047AB]/15 bg-white px-5 py-2 text-[#0c1b2a] shadow-sm transition hover:border-[#0047AB]/30"
-            >
-              HMS
-            </a>
+      <nav className="sticky top-0 z-20 py-5">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="w-full rounded-full bg-white/95 shadow-lg h-16 transition-all duration-300">
+            <div className="flex h-16 items-center justify-between px-4 md:px-6">
+              <a href="/" className="flex items-center gap-3">
+                <img
+                  src="/logo (2).png"
+                  alt="CliniLocker logo"
+                  className="h-35 w-[240px] object-contain"
+                />
+              </a>
+              <div className="hidden items-center gap-7 text-sm font-medium text-[#5d6b82] md:flex">
+                <a href="/features" className="transition hover:text-[#0047AB]">Features</a>
+                <a href="/app" className="transition hover:text-[#0047AB]">App</a>
+                <a href="/stats" className="transition hover:text-[#0047AB]">Stats</a>
+                <a href="/testimonials" className="transition hover:text-[#0047AB]">Testimonials</a>
+              </div>
+              <div className="flex items-center gap-3">
+                <a href="/patient-login" className="rounded-full bg-[#6f4cf5] px-5 py-2.5 text-white shadow-sm transition hover:bg-[#5c3fe0] text-sm font-semibold hidden md:inline-flex">
+                  For Patients
+                </a>
+                <a href="/hms/login" className="rounded-full bg-white px-5 py-2.5 text-[#0c1b2a] shadow-sm text-sm font-semibold hidden md:inline-flex border border-[#0047AB]/15">
+                  HMS
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </nav>
