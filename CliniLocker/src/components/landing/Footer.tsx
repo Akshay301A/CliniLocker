@@ -18,6 +18,11 @@
             <h4 className="font-semibold text-background mb-4">Legal</h4>
             <ul className="space-y-2">
               <li>
+                <a href="/medical-brains" className="text-background/50 hover:text-primary text-sm transition-colors">
+                  Clinical Advisory Board
+                </a>
+              </li>
+              <li>
                 <a href="/privacy" className="text-background/50 hover:text-primary text-sm transition-colors">
                   Privacy Policy
                 </a>
