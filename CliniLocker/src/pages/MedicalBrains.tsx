@@ -41,11 +41,9 @@ const MedicalBrains = () => {
     <div className="min-h-screen bg-[#f7f3ed] text-[#0c1b2a]">
       <nav className="sticky top-0 z-20 bg-transparent py-6">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between rounded-full border border-white/70 bg-white/90 px-6 py-3 shadow-[0_14px_32px_rgba(13,27,55,0.18)] backdrop-blur">
-          <a href="/" className="flex items-center gap-3 text-base font-semibold text-[#0047AB]">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#0047AB]/20 bg-white">
-              <span className="h-6 w-6 rounded-lg bg-[#0047AB]" />
-            </span>
-            CliniLocker
+          <a href="/" className="flex items-center gap-3">
+            <img src="/logo (2).png" alt="CliniLocker" className="h-9 w-auto" />
+            <span className="sr-only">CliniLocker</span>
           </a>
           <div className="hidden items-center gap-6 text-sm font-medium text-[#5d6b82] md:flex">
             <a href="/features" className="transition hover:text-[#0047AB]">Features</a>
