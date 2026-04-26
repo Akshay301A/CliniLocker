@@ -1,10 +1,10 @@
 ﻿import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { Download, Smartphone, Star } from "lucide-react";
-import appMockup from "@/assets/landing/app-mockup.png";
 
 const ANDROID_APK_PATH = "/downloads/CliniLocker-Android-v1.0.0-release.apk";
 const ANDROID_APP_VERSION = "1.0.0";
+const APP_MOCKUP_PATH = "/mockup.png";
 
 const AppDownloadSection = () => {
   const ref = useRef(null);
@@ -26,7 +26,7 @@ const AppDownloadSection = () => {
             <div className="relative">
               <div className="absolute inset-0 glossy-btn rounded-full blur-3xl opacity-20 scale-75" />
               <img
-                src={appMockup}
+                src={APP_MOCKUP_PATH}
                 alt="CliniLocker mobile app interface"
                 loading="lazy"
                 width={800}
