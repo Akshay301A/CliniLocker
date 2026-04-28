@@ -11,7 +11,7 @@ import { getPatientReports, getFamilyMembers, getProfile, getMedicationReminders
 import { fetchHealthQuotes } from "@/lib/healthQuotes";
 import type { ReportWithLab } from "@/lib/api";
 import { toast } from "sonner";
-import { AbhaStatusCard } from "@/components/abha/AbhaStatusCard";
+import { DoctorShareFab } from "@/components/patient/DoctorShareFab";
 
 // Feature flags - set to true when labs are added
 const SHOW_LAB_OFFERS = false;
@@ -150,7 +150,6 @@ const PatientDashboard = () => {
   return (
     <PatientLayout>
       <div className="animate-fade-in space-y-4 md:space-y-5 pb-6">
-        <AbhaStatusCard />
         {/* Welcome Card - Enhanced Gradient Background */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 p-5 md:p-6 shadow-lg">
           <div className="relative z-10">
@@ -446,6 +445,7 @@ const PatientDashboard = () => {
           </>
         )}
       </div>
+      <DoctorShareFab />
     </PatientLayout>
   );
 };

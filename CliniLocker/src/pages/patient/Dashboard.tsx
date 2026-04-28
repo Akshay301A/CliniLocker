@@ -10,9 +10,10 @@ import { getPatientReports, getFamilyMembers, getProfile, getShowAds } from "@/l
 import { fetchHealthQuotes } from "@/lib/healthQuotes";
 import type { ReportWithLab } from "@/lib/api";
 import { toast } from "sonner";
+import { DoctorShareFab } from "@/components/patient/DoctorShareFab";
 
 function formatDate(s: string | undefined) {
-  if (!s) return "â€”";
+  if (!s) return "—";
   return new Date(s).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
 }
 
@@ -23,23 +24,23 @@ function displayName(fullName: string | null | undefined): string {
   return parts[0] ?? "there";
 }
 
-/** Real health tips everyone should follow â€“ shown in rotation at bottom of dashboard. */
+/** Real health tips everyone should follow, shown in rotation at bottom of dashboard. */
 const REAL_HEALTH_TIPS = [
-  "Get 7â€“8 hours of sleep each night for better focus and immunity.",
+  "Get 7–8 hours of sleep each night for better focus and immunity.",
   "Drink at least 8 glasses of water daily to stay hydrated.",
   "Wash your hands before meals and after using the restroom.",
   "Get an annual health check-up and keep your vaccination records up to date.",
   "Eat a balanced diet with plenty of fruits and vegetables.",
   "Aim for at least 30 minutes of physical activity most days.",
   "Limit screen time before bed for better sleep quality.",
-  "Donâ€™t skip breakfast â€“ it helps energy and concentration.",
-  "Use sunscreen with SPF 30+ when youâ€™re outdoors.",
+  "Don’t skip breakfast – it helps energy and concentration.",
+  "Use sunscreen with SPF 30+ when you’re outdoors.",
   "Brush your teeth twice daily and floss once a day.",
   "Take short breaks from sitting every hour if you work at a desk.",
   "Manage stress with relaxation, exercise, or talking to someone.",
   "Avoid smoking and limit alcohol for long-term health.",
   "Know your numbers: blood pressure, weight, and blood sugar when advised.",
-  "Store and take medicines as prescribed; donâ€™t share them.",
+  "Store and take medicines as prescribed; don’t share them.",
 ];
 
 const FALLBACK_HEALTH_QUOTES = [
@@ -123,7 +124,7 @@ const PatientDashboard = () => {
 
   const recentReports = reports.slice(0, 3);
   const lastReport = reports[0];
-  const lastCheckup = lastReport?.uploaded_at ? formatDate(lastReport.uploaded_at) : "â€”";
+  const lastCheckup = lastReport?.uploaded_at ? formatDate(lastReport.uploaded_at) : "—";
   const dietPlanHref = lastReport ? `/patient/report/${lastReport.id}/diet` : "/patient/reports";
   const activeQuotes = healthQuotes.length > 0 ? healthQuotes : FALLBACK_HEALTH_QUOTES;
   const activeQuote = activeQuotes[healthQuoteIndex % activeQuotes.length];
@@ -133,7 +134,7 @@ const PatientDashboard = () => {
       <div className="animate-fade-in space-y-4 sm:space-y-6">
         <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card">
           <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground">
-            {t("Welcome back")}, {displayName(userName ?? undefined)}! ðŸ‘‹
+            {t("Welcome back")}, {displayName(userName ?? undefined)}!
           </h1>
           <p className="mt-1 text-sm sm:text-base text-muted-foreground">{t("Your health reports are safe and accessible anytime.")}</p>
           <div className="mt-4 pt-4 border-t border-border">
@@ -196,11 +197,11 @@ const PatientDashboard = () => {
               <div className="min-w-0 flex-1 grid grid-cols-2 gap-x-3 gap-y-0.5">
                 <div>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">{t("BP")}</p>
-                  <p className="text-base font-bold text-foreground leading-tight">{bloodPressure ?? "â€”"}</p>
+                  <p className="text-base font-bold text-foreground leading-tight">{bloodPressure ?? "—"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">{t("Weight")}</p>
-                  <p className="text-base font-bold text-foreground leading-tight">{weight != null ? `${weight} kg` : "â€”"}</p>
+                  <p className="text-base font-bold text-foreground leading-tight">{weight != null ? `${weight} kg` : "—"}</p>
                 </div>
               </div>
             </div>
@@ -241,7 +242,7 @@ const PatientDashboard = () => {
                   </div>
                   <div>
                     <p className="font-medium text-foreground">{r.test_name}</p>
-                    <p className="text-xs text-muted-foreground">{r.labs?.name ?? "â€”"}</p>
+                    <p className="text-xs text-muted-foreground">{r.labs?.name ?? "—"}</p>
                   </div>
                 </div>
                 <span className="text-xs text-muted-foreground">{formatDate(r.uploaded_at)}</span>
@@ -249,7 +250,7 @@ const PatientDashboard = () => {
             ))}
           </div>
             <Link to="/patient/reports" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
-              {t("View all reports")} â†’
+              {t("View all reports")} →
             </Link>
         </div>
 
@@ -319,7 +320,7 @@ const PatientDashboard = () => {
           </Link>
         </div>
 
-        {/* Health inspiration â€“ real tips, rotate every 30s */}
+        {/* Health inspiration, real tips rotate every 30s */}
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card">
           <div className="flex items-center gap-2 mb-3 sm:mb-4">
             <TrendingUp className="h-5 w-5 text-primary shrink-0" />
@@ -335,6 +336,7 @@ const PatientDashboard = () => {
           </>
         )}
       </div>
+      <DoctorShareFab />
     </PatientLayout>
   );
 };

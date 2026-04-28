@@ -2,10 +2,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { ViewModeProvider, useViewMode } from "@/contexts/ViewModeContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PatientProfileGuard } from "@/components/PatientProfileGuard";
 import { ScrollToTop } from "@/components/ScrollToTop";
@@ -43,6 +44,11 @@ import PublicHealthCard from "./pages/PublicHealthCard";
 import PatientCompleteProfile from "./pages/patient/CompleteProfile";
 import ReportViewer from "./pages/patient/ReportViewer";
 import DietPlan from "./pages/patient/DietPlan";
+import ChooseRole from "./pages/ChooseRole";
+import DoctorOnboarding from "./pages/doctor/Onboarding";
+import DoctorDashboard from "./pages/doctor/Dashboard";
+import DoctorShareViewer from "./pages/doctor/ShareViewer";
+import DoctorSettings from "./pages/doctor/Settings";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import DeleteAccount from "./pages/DeleteAccount";
@@ -63,6 +69,20 @@ const queryClient = new QueryClient();
 const PRELOADER_MIN_MS = 3000;
 
 function AppRoutes() {
+  const { user, role, loading } = useAuth();
+  const { activeView } = useViewMode();
+
+  const AuthenticatedRootRedirect = () => {
+    if (loading) return <Preloader fullScreen />;
+    if (!user) return <Index />;
+    if (role === "lab") return <Navigate to="/lab/dashboard" replace />;
+    if (role === null) return <Navigate to="/choose-role" replace />;
+    if (role === "doctor") {
+      return <Navigate to={activeView === "doctor" ? "/doctor/dashboard" : "/patient/dashboard"} replace />;
+    }
+    return <Navigate to="/patient/dashboard" replace />;
+  };
+
   return (
     <TooltipProvider>
       <Toaster />
@@ -70,7 +90,7 @@ function AppRoutes() {
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<AuthenticatedRootRedirect />} />
           <Route path="/features" element={<Features />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/about" element={<About />} />
@@ -83,6 +103,11 @@ function AppRoutes() {
           <Route path="/lab/complete-signup" element={<LabCompleteSignup />} />
           <Route path="/patient-login" element={<PatientLogin />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/choose-role" element={<ChooseRole />} />
+          <Route path="/doctor/onboarding" element={<DoctorOnboarding />} />
+          <Route path="/doctor/dashboard" element={<ProtectedRoute requiredRole="doctor"><DoctorDashboard /></ProtectedRoute>} />
+          <Route path="/doctor/share/:id" element={<ProtectedRoute requiredRole="doctor"><DoctorShareViewer /></ProtectedRoute>} />
+          <Route path="/doctor/settings" element={<ProtectedRoute requiredRole="doctor"><DoctorSettings /></ProtectedRoute>} />
           <Route path="/patient/accept-invite" element={<AcceptInvite />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -154,9 +179,11 @@ function AppContent() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <AppContent />
-      <SpeedInsights />
-      <Analytics />
+      <ViewModeProvider>
+        <AppContent />
+        <SpeedInsights />
+        <Analytics />
+      </ViewModeProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

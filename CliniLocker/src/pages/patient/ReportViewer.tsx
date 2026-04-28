@@ -19,6 +19,8 @@ import {
   MessageCircle,
   Smartphone,
   Utensils,
+  Volume2,
+  Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,9 +48,10 @@ import {
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PatientLayout } from "@/components/PatientLayout";
 import { Preloader } from "@/components/Preloader";
+import { supabase } from "@/lib/supabase";
 
 function formatDate(s: string | undefined) {
-  if (!s) return "Ã¢â‚¬â€";
+  if (!s) return "—";
   return new Date(s).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
 }
 /** Extract storage path from file_url (path or URL). */
@@ -64,7 +67,7 @@ function pathFromFileUrl(fileUrl: string): string {
 const ReportViewer = () => {
   const { id } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [report, setReport] = useState<Awaited<ReturnType<typeof getReportById>>>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,9 +77,13 @@ const ReportViewer = () => {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [dietPlan, setDietPlan] = useState<DietPlan | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const [speechError, setSpeechError] = useState<string | null>(null);
   const attentionFindings = analysis?.findings.filter((f) => f.type === "attention") ?? [];
   const normalFindings = analysis?.findings.filter((f) => f.type === "normal") ?? [];
   const actions = analysis?.actions ?? [];
+  const isHandwritten = Boolean(report?.is_handwritten);
+  const speechSupported = typeof window !== "undefined" && "speechSynthesis" in window;
 
   useEffect(() => {
     if (!id) return;
@@ -121,7 +128,7 @@ const ReportViewer = () => {
   }, []);
 
   const handleGenerateSummary = async () => {
-    if (!pdfUrl || !id) return;
+    if (!pdfUrl || !id || isHandwritten) return;
     setAnalysisLoading(true);
     setAnalysisError(null);
     try {
@@ -137,6 +144,64 @@ const ReportViewer = () => {
     } finally {
       setAnalysisLoading(false);
     }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (speechSupported) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [speechSupported]);
+
+  const getSpeechText = async (text: string): Promise<string> => {
+    if (!text.trim()) return text;
+    if (language === "en") return text;
+    try {
+      const { data, error } = await supabase.functions.invoke("translate", {
+        body: { text, target: language },
+      });
+      if (!error && data?.translated) return String(data.translated);
+    } catch {
+      // fallback to translated cache
+    }
+    return t(text);
+  };
+
+  const handleSpeakSummary = async () => {
+    if (!speechSupported) {
+      toast.error(t("Audio playback is not supported on this device."));
+      return;
+    }
+    if (!analysis?.summary) {
+      toast.error(t("No summary to read."));
+      return;
+    }
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    setSpeechError(null);
+    const spokenText = await getSpeechText(analysis.summary);
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+    const langMap: Record<string, string> = {
+      en: "en-IN",
+      hi: "hi-IN",
+      ta: "ta-IN",
+      te: "te-IN",
+      kn: "kn-IN",
+      ml: "ml-IN",
+    };
+    utterance.lang = langMap[language] || "en-IN";
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => {
+      setSpeaking(false);
+      setSpeechError(t("Unable to play audio right now."));
+    };
+    setSpeaking(true);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
   };
 
 
@@ -387,7 +452,7 @@ const ReportViewer = () => {
                   <div className="flex-1 min-h-0 overflow-hidden">
                     {pdfUrl ? (
                       <>
-                        {/* Mobile: many browsers don't render PDF in iframe â€” show Open PDF button instead */}
+                        {/* Mobile: many browsers don't render PDF in iframe — show Open PDF button instead */}
                         <div className="flex h-[480px] flex-col items-center justify-center text-center p-6 md:hidden bg-muted/30">
                           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 mb-4">
                             <FileText className="h-7 w-7 text-primary" />
@@ -439,7 +504,7 @@ const ReportViewer = () => {
                 <h2 className="font-display text-lg font-semibold text-foreground">{t("AI Report Summary")}</h2>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleGenerateSummary} disabled={!pdfUrl || analysisLoading}>
+                <Button variant="outline" size="sm" onClick={handleGenerateSummary} disabled={!pdfUrl || analysisLoading || isHandwritten}>
                   {analysisLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                   <span className="ml-2">{analysis ? t("Regenerate") : t("Generate Summary")}</span>
                 </Button>
@@ -458,7 +523,19 @@ const ReportViewer = () => {
               </div>
             </div>
             <div className="p-6 space-y-6">
-              {analysisLoading ? (
+              {isHandwritten ? (
+                <div className="flex gap-3 rounded-lg bg-amber-50 border border-amber-200 p-4">
+                  <AlertCircle className="h-5 w-5 shrink-0 text-amber-700 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-900">
+                      {t("We detected handwriting.")}
+                    </p>
+                    <p className="mt-1 text-xs text-amber-800">
+                      {t("For your safety, AI summaries are disabled for handwritten reports.")}
+                    </p>
+                  </div>
+                </div>
+              ) : analysisLoading ? (
                 <div className="flex items-center gap-3 text-muted-foreground py-6">
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                   <span className="text-sm">{t("Analyzing your reportâ€¦")}</span>
@@ -473,15 +550,15 @@ const ReportViewer = () => {
                   <div className="grid gap-3 rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground sm:grid-cols-2">
                     <div>
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Patient")}</p>
-                      <p className="font-semibold text-foreground">{report?.patient_name ?? "â€”"}</p>
+                      <p className="font-semibold text-foreground">{report?.patient_name ?? "—"}</p>
                     </div>
                     <div>
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Report")}</p>
-                      <p className="font-semibold text-foreground">{report?.test_name ?? "â€”"}</p>
+                      <p className="font-semibold text-foreground">{report?.test_name ?? "—"}</p>
                     </div>
                     <div>
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Lab")}</p>
-                      <p className="font-semibold text-foreground">{report?.labs?.name ?? "â€”"}</p>
+                      <p className="font-semibold text-foreground">{report?.labs?.name ?? "—"}</p>
                     </div>
                     <div>
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Test Date")}</p>
@@ -489,8 +566,21 @@ const ReportViewer = () => {
                     </div>
                   </div>                  <div className="space-y-4">
                     <div className="rounded-lg border border-border bg-muted/30 p-4">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Summary")}</p>
-                      <p className="mt-2 text-sm text-foreground leading-relaxed">{analysis.summary || t("No summary was generated for this report.")}</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Summary")}</p>
+                        {analysis.summary && (
+                          <Button variant="ghost" size="sm" className="gap-2" onClick={handleSpeakSummary}>
+                            {speaking ? <Square className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                            <span className="text-xs">{speaking ? t("Stop") : t("Listen")}</span>
+                          </Button>
+                        )}
+                      </div>
+                      {speechError && (
+                        <p className="mt-1 text-xs text-destructive">{speechError}</p>
+                      )}
+                      <p className="mt-2 text-sm text-foreground leading-relaxed">
+                        {analysis.summary ? t(analysis.summary) : t("No summary was generated for this report.")}
+                      </p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="rounded-lg border border-border bg-background p-4">
@@ -498,7 +588,7 @@ const ReportViewer = () => {
                         {attentionFindings.length > 0 ? (
                           <ul className="mt-2 space-y-1 text-sm text-foreground list-disc list-inside">
                             {attentionFindings.map((item, idx) => (
-                              <li key={idx}>{item.text}</li>
+                              <li key={idx}>{t(item.text)}</li>
                             ))}
                           </ul>
                         ) : (
@@ -510,7 +600,7 @@ const ReportViewer = () => {
                         {normalFindings.length > 0 ? (
                           <ul className="mt-2 space-y-1 text-sm text-foreground list-disc list-inside">
                             {normalFindings.map((item, idx) => (
-                              <li key={idx}>{item.text}</li>
+                              <li key={idx}>{t(item.text)}</li>
                             ))}
                           </ul>
                         ) : (
@@ -523,7 +613,7 @@ const ReportViewer = () => {
                       {actions.length > 0 ? (
                         <ul className="mt-2 space-y-1 text-sm text-foreground list-disc list-inside">
                           {actions.map((item, idx) => (
-                            <li key={idx}>{item}</li>
+                            <li key={idx}>{t(item)}</li>
                           ))}
                         </ul>
                       ) : (

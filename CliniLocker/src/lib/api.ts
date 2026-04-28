@@ -1,5 +1,5 @@
 ﻿import { supabase } from "./supabase";
-import type { Profile, Report, FamilyMember, Lab, HealthCardRow } from "./supabase";
+import type { Profile, Report, FamilyMember, Lab, HealthCardRow, ShareRow } from "./supabase";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -141,6 +141,112 @@ export async function updateProfile(updates: Partial<Profile>): Promise<Profile 
   const { data, error } = await supabase.from("profiles").update(payload).eq("id", user.id).select().single();
   if (error) return { error: error.message };
   return data as Profile | null;
+}
+
+export async function updateProfileRole(role: "patient" | "doctor"): Promise<Profile | null | { error: string }> {
+  return updateProfile({ role });
+}
+
+export type DoctorVerificationPayload = {
+  fullName: string;
+  registrationNumber: string;
+  medicalCouncil: string;
+};
+
+export async function verifyDoctorProfile(
+  payload: DoctorVerificationPayload
+): Promise<{ verified: boolean; status: string; message?: string } | { error: string }> {
+  const { data: authData } = await supabase.auth.getSession();
+  const accessToken = authData?.session?.access_token;
+  if (!accessToken) return { error: "Not authenticated. Please sign in again." };
+
+  const { data, error } = await supabase.functions.invoke("verify-doctor", {
+    body: payload,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (error) return { error: await getFunctionInvokeErrorMessage(error) };
+  return data as { verified: boolean; status: string; message?: string };
+}
+
+export async function getDoctorPublicProfile(doctorId: string): Promise<{
+  id: string;
+  full_name: string | null;
+  is_verified: boolean;
+  registration_number: string | null;
+  medical_council: string | null;
+} | null> {
+  const { data, error } = await supabase.rpc("get_doctor_public_profile", {
+    p_doctor_id: doctorId,
+  });
+  if (error || !Array.isArray(data) || !data[0]) return null;
+  return data[0] as {
+    id: string;
+    full_name: string | null;
+    is_verified: boolean;
+    registration_number: string | null;
+    medical_council: string | null;
+  };
+}
+
+export async function createDoctorShare(doctorId: string, reportIds: string[]): Promise<{ shareId: string } | { error: string }> {
+  const uniqueReportIds = Array.from(new Set(reportIds.filter(Boolean)));
+  if (!doctorId) return { error: "Doctor ID is required" };
+  if (uniqueReportIds.length === 0) return { error: "Select at least one report" };
+
+  const { data, error } = await supabase.rpc("create_doctor_share", {
+    p_doctor_id: doctorId,
+    p_report_ids: uniqueReportIds,
+  });
+  if (error || typeof data !== "string") return { error: error?.message ?? "Unable to share reports" };
+  return { shareId: data };
+}
+
+export async function getDoctorShares(): Promise<ShareRow[]> {
+  const { data, error } = await supabase
+    .from("shares")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  return (data ?? []) as ShareRow[];
+}
+
+export async function getDoctorShare(shareId: string): Promise<ShareRow | null> {
+  const { data, error } = await supabase
+    .from("shares")
+    .select("*")
+    .eq("id", shareId)
+    .maybeSingle();
+  if (error) return null;
+  return data as ShareRow | null;
+}
+
+export async function markDoctorShareRead(shareId: string): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("shares")
+    .update({ unread: false })
+    .eq("id", shareId);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function updateDoctorShareNotes(shareId: string, quickNotes: string): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("shares")
+    .update({ quick_notes: quickNotes, unread: false })
+    .eq("id", shareId);
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function getShareReports(shareId: string): Promise<Report[]> {
+  const { data, error } = await supabase.rpc("get_share_reports", {
+    p_share_id: shareId,
+  });
+  if (error) return [];
+  return (data ?? []) as Report[];
 }
 
 /**
@@ -356,6 +462,7 @@ export async function insertReport(row: {
   file_url: string;
   test_date?: string | null;
   status?: string;
+  is_handwritten?: boolean | null;
 }): Promise<{ id: string } | { error: string }> {
   const { data: { user } } = await supabase.auth.getUser();
   const { data, error } = await supabase
@@ -1041,6 +1148,7 @@ export async function insertPrescription(prescription: {
   doctor_name?: string | null;
   prescription_date?: string | null;
   reminders: MedicationReminder[];
+  is_handwritten?: boolean | null;
 }): Promise<{ id: string } | { error: string }> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not signed in" };
@@ -1053,6 +1161,7 @@ export async function insertPrescription(prescription: {
       file_url: prescription.file_url,
       doctor_name: prescription.doctor_name,
       prescription_date: prescription.prescription_date,
+      is_handwritten: prescription.is_handwritten ?? false,
     })
     .select()
     .single();

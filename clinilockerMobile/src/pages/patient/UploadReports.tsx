@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, FileText, CheckCircle, X, Pill, ClipboardList, ImagePlus, Plus, Camera, Images, FolderOpen } from "lucide-react";
+import { Upload, FileText, CheckCircle, X, Pill, ClipboardList, ImagePlus, Plus, Camera, Images, FolderOpen, AlertCircle } from "lucide-react";
 import { PatientLayout } from "@/components/PatientLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +62,7 @@ const PatientUploadReports = () => {
   const [customCategory, setCustomCategory] = useState("");
   const [labName, setLabName] = useState("");
   const [testDate, setTestDate] = useState("");
+  const [isHandwritten, setIsHandwritten] = useState(false);
 
   const [pageOption, setPageOption] = useState<PageOption>("1");
   const [customPageCount, setCustomPageCount] = useState("4");
@@ -103,6 +104,16 @@ const PatientUploadReports = () => {
       return next;
     });
   }, [selectedPageCount, uploadType, uploadMode]);
+
+  useEffect(() => {
+    if (uploadType === "report" && uploadMode === "images") {
+      setIsHandwritten(true);
+      return;
+    }
+    if (uploadType !== "report") {
+      setIsHandwritten(false);
+    }
+  }, [uploadType, uploadMode]);
 
   useEffect(() => {
     return () => {
@@ -267,6 +278,7 @@ const PatientUploadReports = () => {
     }
 
     if (uploadType === "report") {
+      const handwrittenFlag = uploadMode === "images" ? true : isHandwritten;
       const category = testName === "Other" ? customCategory.trim() : testName.trim();
       if (!category) {
         toast.error(t("Please select a report category."));
@@ -337,6 +349,7 @@ const PatientUploadReports = () => {
         test_name: category,
         file_url: path,
         test_date: testDate || null,
+        is_handwritten: handwrittenFlag,
       });
       setLoading(false);
 
@@ -351,7 +364,12 @@ const PatientUploadReports = () => {
       setTestName("");
       setLabName("");
       setTestDate("");
-      toast.success(t("Report uploaded successfully!"));
+      setIsHandwritten(false);
+      if (handwrittenFlag) {
+        toast.success(t("Handwritten report saved. AI summaries are disabled for safety."));
+      } else {
+        toast.success(t("Report uploaded successfully!"));
+      }
       await sendPatientAlertPush({
         patientId: user.id,
         title: "Report Uploaded",
@@ -365,6 +383,7 @@ const PatientUploadReports = () => {
     }
 
     // Prescription upload
+    const handwrittenFlag = isHandwritten;
     if (!file) {
       toast.error(t("Please attach a PDF file."));
       return;
@@ -383,21 +402,7 @@ const PatientUploadReports = () => {
         return;
       }
 
-      toast.info(t("Analyzing prescription..."));
-      const { supabase } = await import("@/lib/supabase");
-      const { data: urlData } = await supabase.storage.from("prescriptions").createSignedUrl(path, 3600);
-
-      if (!urlData?.signedUrl) {
-        toast.error(t("Failed to get prescription URL."));
-        setLoading(false);
-        setAnalyzing(false);
-        return;
-      }
-
-      const analysis = await analyzePrescriptionFromPdfUrl(urlData.signedUrl);
-
-      if ("error" in analysis) {
-        toast.error(t("Failed to analyze prescription. Uploading without reminders."));
+      if (handwrittenFlag) {
         const ins = await insertPrescription({
           patient_id: user.id,
           patient_name: profile?.full_name ?? "Self",
@@ -405,6 +410,7 @@ const PatientUploadReports = () => {
           doctor_name: labName.trim() || null,
           prescription_date: testDate || null,
           reminders: [],
+          is_handwritten: true,
         });
         if ("error" in ins) {
           toast.error(ins.error);
@@ -412,25 +418,59 @@ const PatientUploadReports = () => {
           setAnalyzing(false);
           return;
         }
+        toast.success(t("We detected handwriting. Please manually enter your medicine schedule to ensure 100% accuracy."));
       } else {
-        const ins = await insertPrescription({
-          patient_id: user.id,
-          patient_name: profile?.full_name ?? "Self",
-          file_url: path,
-          doctor_name: labName.trim() || analysis.doctor_name || null,
-          prescription_date: testDate || analysis.prescription_date || null,
-          reminders: analysis.medications || [],
-        });
+        toast.info(t("Analyzing prescription..."));
+        const { supabase } = await import("@/lib/supabase");
+        const { data: urlData } = await supabase.storage.from("prescriptions").createSignedUrl(path, 3600);
 
-        if ("error" in ins) {
-          toast.error(ins.error);
+        if (!urlData?.signedUrl) {
+          toast.error(t("Failed to get prescription URL."));
           setLoading(false);
           setAnalyzing(false);
           return;
         }
 
-        const reminderCount = analysis.medications?.length || 0;
-        toast.success(t(`Prescription uploaded and ${reminderCount} reminder(s) created!`));
+        const analysis = await analyzePrescriptionFromPdfUrl(urlData.signedUrl);
+
+        if ("error" in analysis) {
+          toast.error(t("Failed to analyze prescription. Uploading without reminders."));
+          const ins = await insertPrescription({
+            patient_id: user.id,
+            patient_name: profile?.full_name ?? "Self",
+            file_url: path,
+            doctor_name: labName.trim() || null,
+            prescription_date: testDate || null,
+            reminders: [],
+            is_handwritten: false,
+          });
+          if ("error" in ins) {
+            toast.error(ins.error);
+            setLoading(false);
+            setAnalyzing(false);
+            return;
+          }
+        } else {
+          const ins = await insertPrescription({
+            patient_id: user.id,
+            patient_name: profile?.full_name ?? "Self",
+            file_url: path,
+            doctor_name: labName.trim() || analysis.doctor_name || null,
+            prescription_date: testDate || analysis.prescription_date || null,
+            reminders: analysis.medications || [],
+            is_handwritten: false,
+          });
+
+          if ("error" in ins) {
+            toast.error(ins.error);
+            setLoading(false);
+            setAnalyzing(false);
+            return;
+          }
+
+          const reminderCount = analysis.medications?.length || 0;
+          toast.success(t(`Prescription uploaded and ${reminderCount} reminder(s) created!`));
+        }
       }
 
       await sendPatientAlertPush({
@@ -447,6 +487,7 @@ const PatientUploadReports = () => {
       setFile(null);
       setLabName("");
       setTestDate("");
+      setIsHandwritten(false);
     } catch (error) {
       console.error("Prescription upload error:", error);
       toast.error(t("Failed to process prescription."));
@@ -535,6 +576,26 @@ const PatientUploadReports = () => {
                     </button>
                   </div>
                 </div>
+                {uploadMode === "images" ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    {t("We detected handwriting. AI summaries are disabled for handwritten reports.")}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-border bg-muted/40 px-3 py-2">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={isHandwritten}
+                        onChange={(e) => setIsHandwritten(e.target.checked)}
+                      />
+                      <span>{t("This report contains handwriting")}</span>
+                    </label>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("Handwritten reports will not be summarized automatically.")}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <Label className="mb-2 block">{t("Report Category")}</Label>
                   <Select value={testName} onValueChange={setTestName}>
@@ -581,12 +642,35 @@ const PatientUploadReports = () => {
                   <Label htmlFor="prescriptionDate">{t("Prescription Date (optional)")}</Label>
                   <Input id="prescriptionDate" type="date" className="min-h-[44px]" value={testDate} onChange={(e) => setTestDate(e.target.value)} />
                 </div>
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                  <ClipboardList className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-                  <p className="text-xs text-blue-900 dark:text-blue-100">
-                    {t("After uploading, AI will analyze your prescription and create medication reminders automatically. You can edit them later.")}
+                <div className="rounded-lg border border-border bg-muted/40 px-3 py-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={isHandwritten}
+                      onChange={(e) => setIsHandwritten(e.target.checked)}
+                    />
+                    <span>{t("This prescription is handwritten")}</span>
+                  </label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("We detected handwriting. For your safety, please manually enter your medicine schedule to ensure 100% accuracy.")}
                   </p>
                 </div>
+                {isHandwritten ? (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                    <AlertCircle className="h-5 w-5 text-amber-700 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <p className="text-xs text-amber-900 dark:text-amber-100">
+                      {t("We detected handwriting. For your safety, please manually enter your medicine schedule to ensure 100% accuracy.")}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                    <ClipboardList className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                    <p className="text-xs text-blue-900 dark:text-blue-100">
+                      {t("After uploading, AI will analyze your prescription and create medication reminders automatically. You can edit them later.")}
+                    </p>
+                  </div>
+                )}
               </>
             )}
           </div>

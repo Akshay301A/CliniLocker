@@ -14,8 +14,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { Download, Smartphone } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { ViewModeProvider, useViewMode } from "@/contexts/ViewModeContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PatientProfileGuard } from "@/components/PatientProfileGuard";
 import { ScrollToTop } from "@/components/ScrollToTop";
@@ -47,10 +49,11 @@ import AcceptInvite from "./pages/patient/AcceptInvite";
 import PatientSettings from "./pages/patient/Settings";
 import PatientMyProfile from "./pages/patient/MyProfile";
 import PatientHealthCard from "./pages/patient/HealthCard";
-import AbhaActivationFlow from "./pages/patient/AbhaActivationFlow";
-import AbhaConsentDashboard from "./pages/patient/AbhaConsentDashboard";
-import AbhaTimeline from "./pages/patient/AbhaTimeline";
-import AbhaRecordViewer from "./pages/patient/AbhaRecordViewer";
+import ChooseRole from "./pages/ChooseRole";
+import DoctorOnboarding from "./pages/doctor/Onboarding";
+import DoctorDashboard from "./pages/doctor/Dashboard";
+import DoctorShareViewer from "./pages/doctor/ShareViewer";
+import DoctorSettings from "./pages/doctor/Settings";
 import PatientCompleteProfile from "./pages/patient/CompleteProfile";
 import PatientReminders from "./pages/patient/Reminders";
 import ReportViewer from "./pages/patient/ReportViewer";
@@ -160,6 +163,7 @@ function AppUpdatePrompt() {
 
 function AppRoutes() {
   const { user, role, loading } = useAuth();
+  const { activeView } = useViewMode();
 
   const MobileRootRedirect = () => {
     if (loading) {
@@ -171,6 +175,8 @@ function AppRoutes() {
         return hasSeenOnboarding ? <Navigate to="/patient-login" replace /> : <Index />;
       }
       if (role === "lab") return <Navigate to="/lab/dashboard" replace />;
+      if (role === null) return <Navigate to="/choose-role" replace />;
+      if (role === "doctor" && activeView === "doctor") return <Navigate to="/doctor/dashboard" replace />;
       return <Navigate to="/patient/dashboard" replace />;
     }
     return <Index />;
@@ -214,6 +220,11 @@ function AppRoutes() {
           <Route path="/lab/complete-signup" element={<LabCompleteSignup />} />
           <Route path="/patient-login" element={<PatientLogin />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/choose-role" element={<ChooseRole />} />
+          <Route path="/doctor/onboarding" element={<DoctorOnboarding />} />
+          <Route path="/doctor/dashboard" element={<ProtectedRoute requiredRole="doctor"><DoctorDashboard /></ProtectedRoute>} />
+          <Route path="/doctor/share/:id" element={<ProtectedRoute requiredRole="doctor"><DoctorShareViewer /></ProtectedRoute>} />
+          <Route path="/doctor/settings" element={<ProtectedRoute requiredRole="doctor"><DoctorSettings /></ProtectedRoute>} />
           <Route path="/patient/accept-invite" element={<AcceptInvite />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -230,10 +241,6 @@ function AppRoutes() {
           <Route path="/patient/family" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientFamilyMembers /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/profile" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientMyProfile /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/health-card" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientHealthCard /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
-          <Route path="/patient/abha/activate" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><AbhaActivationFlow /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
-          <Route path="/patient/abha/consents" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><AbhaConsentDashboard /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
-          <Route path="/patient/abha/timeline" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><AbhaTimeline /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
-          <Route path="/patient/abha/record/:id" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><AbhaRecordViewer /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/settings" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientSettings /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/reminders" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientReminders /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/report/:id" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><ReportViewer /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
@@ -278,7 +285,9 @@ function AppContent() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <AppContent />
+      <ViewModeProvider>
+        <AppContent />
+      </ViewModeProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

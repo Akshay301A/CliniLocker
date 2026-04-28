@@ -1,14 +1,24 @@
-import { useState, useEffect } from "react";
-import { PatientLayout } from "@/components/PatientLayout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+import { useEffect, useState } from "react";
+import { Bell, Download, Globe, Shield } from "lucide-react";
 import { toast } from "sonner";
-import { Bell, Shield, Globe, Download } from "lucide-react";
-import { getProfile, updateProfile, getLinkedLabs, getPatientReports, getFamilyMembers, getSignedUrl, type LinkedLab, type ReportWithLab } from "@/lib/api";
+import { PatientLayout } from "@/components/PatientLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useViewMode } from "@/contexts/ViewModeContext";
+import {
+  getFamilyMembers,
+  getLinkedLabs,
+  getPatientReports,
+  getProfile,
+  getSignedUrl,
+  updateProfile,
+  type LinkedLab,
+  type ReportWithLab,
+} from "@/lib/api";
 
 export type NotificationPrefs = {
   sms: boolean;
@@ -25,22 +35,29 @@ const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
   email: false,
   reportReady: true,
   healthTips: false,
-  promotional: true, // enabled by default
+  promotional: true,
 };
 
-/** WhatsApp and Email toggles hidden until integration is ready; state still saved. */
 const NOTIFICATION_KEYS_VISIBLE: (keyof NotificationPrefs)[] = ["sms", "reportReady", "healthTips", "promotional"];
-/** First toggle ("sms" key) is shown as "Push Notifications": controls app push only. */
 
-function prefsFromProfile(p: { notify_sms?: boolean; notify_whatsapp?: boolean; notify_email?: boolean; notify_report_ready?: boolean; notify_health_tips?: boolean; notify_promotional?: boolean } | null): NotificationPrefs {
-  if (!p) return DEFAULT_NOTIFICATIONS;
+function prefsFromProfile(
+  profile: {
+    notify_sms?: boolean;
+    notify_whatsapp?: boolean;
+    notify_email?: boolean;
+    notify_report_ready?: boolean;
+    notify_health_tips?: boolean;
+    notify_promotional?: boolean;
+  } | null,
+): NotificationPrefs {
+  if (!profile) return DEFAULT_NOTIFICATIONS;
   return {
-    sms: p.notify_sms ?? DEFAULT_NOTIFICATIONS.sms,
-    whatsapp: p.notify_whatsapp ?? DEFAULT_NOTIFICATIONS.whatsapp,
-    email: p.notify_email ?? DEFAULT_NOTIFICATIONS.email,
-    reportReady: p.notify_report_ready ?? DEFAULT_NOTIFICATIONS.reportReady,
-    healthTips: p.notify_health_tips ?? DEFAULT_NOTIFICATIONS.healthTips,
-    promotional: p.notify_promotional ?? DEFAULT_NOTIFICATIONS.promotional,
+    sms: profile.notify_sms ?? DEFAULT_NOTIFICATIONS.sms,
+    whatsapp: profile.notify_whatsapp ?? DEFAULT_NOTIFICATIONS.whatsapp,
+    email: profile.notify_email ?? DEFAULT_NOTIFICATIONS.email,
+    reportReady: profile.notify_report_ready ?? DEFAULT_NOTIFICATIONS.reportReady,
+    healthTips: profile.notify_health_tips ?? DEFAULT_NOTIFICATIONS.healthTips,
+    promotional: profile.notify_promotional ?? DEFAULT_NOTIFICATIONS.promotional,
   };
 }
 
@@ -50,45 +67,59 @@ const DEFAULT_PRIVACY = {
   profileVisibleToLabs: false,
 };
 
-const PatientSettings = () => {
+const LANGUAGE_OPTIONS = [
+  { value: "en", label: "English" },
+  { value: "hi", label: "Hindi" },
+  { value: "ta", label: "Tamil" },
+  { value: "te", label: "Telugu" },
+  { value: "kn", label: "Kannada" },
+  { value: "ml", label: "Malayalam" },
+];
+
+export default function PatientSettings() {
+  const { role } = useAuth();
+  const { t, setLanguage: setLanguageContext } = useLanguage();
+  const { activeView, setActiveView } = useViewMode();
+
   const [notifications, setNotifications] = useState<NotificationPrefs>(DEFAULT_NOTIFICATIONS);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsLoaded, setNotificationsLoaded] = useState(false);
-
   const [privacy, setPrivacy] = useState(DEFAULT_PRIVACY);
   const [privacyLoading, setPrivacyLoading] = useState(false);
-
   const [preferredLanguage, setPreferredLanguage] = useState("en");
   const [languageLoading, setLanguageLoading] = useState(false);
-
   const [linkedLabs, setLinkedLabs] = useState<LinkedLab[]>([]);
   const [linkedLabsLoading, setLinkedLabsLoading] = useState(true);
   const [exportLoading, setExportLoading] = useState(false);
   const [downloadReportsLoading, setDownloadReportsLoading] = useState(false);
+  const [switchProfileLoading, setSwitchProfileLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
-    getProfile().then((p) => {
-      if (mounted) {
-        setNotifications(prefsFromProfile(p));
-        setNotificationsLoaded(true);
-        if (p) {
-          setPrivacy({
-            twoFactorEnabled: p.two_factor_enabled ?? DEFAULT_PRIVACY.twoFactorEnabled,
-            reportSharingAllowed: p.report_sharing_allowed ?? DEFAULT_PRIVACY.reportSharingAllowed,
-            profileVisibleToLabs: p.profile_visible_to_labs ?? DEFAULT_PRIVACY.profileVisibleToLabs,
-          });
-          setPreferredLanguage(p.preferred_language ?? "en");
-        }
+
+    getProfile().then((profile) => {
+      if (!mounted) return;
+      setNotifications(prefsFromProfile(profile));
+      setNotificationsLoaded(true);
+      if (profile) {
+        setPrivacy({
+          twoFactorEnabled: profile.two_factor_enabled ?? DEFAULT_PRIVACY.twoFactorEnabled,
+          reportSharingAllowed: profile.report_sharing_allowed ?? DEFAULT_PRIVACY.reportSharingAllowed,
+          profileVisibleToLabs: profile.profile_visible_to_labs ?? DEFAULT_PRIVACY.profileVisibleToLabs,
+        });
+        setPreferredLanguage(profile.preferred_language ?? "en");
       }
     });
+
     getLinkedLabs().then((labs) => {
-      if (mounted) {
-        setLinkedLabs(labs);
-        setLinkedLabsLoading(false);
-      }
+      if (!mounted) return;
+      setLinkedLabs(labs);
+      setLinkedLabsLoading(false);
     });
-    return () => { mounted = false; };
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleSaveNotifications = async () => {
@@ -124,8 +155,6 @@ const PatientSettings = () => {
     toast.success(t("Privacy & security preferences saved."));
   };
 
-  const { t, setLanguage: setLanguageContext } = useLanguage();
-
   const handleSaveLanguage = async () => {
     setLanguageLoading(true);
     const result = await updateProfile({ preferred_language: preferredLanguage });
@@ -149,22 +178,22 @@ const PatientSettings = () => {
       const exportData = {
         exportedAt: new Date().toISOString(),
         profile: profile ?? null,
-        reports: (reports ?? []).map((r) => ({
-          id: r.id,
-          test_name: r.test_name,
-          patient_name: r.patient_name,
-          uploaded_at: r.uploaded_at,
-          test_date: r.test_date,
-          lab_name: (r as ReportWithLab).labs?.name ?? null,
+        reports: (reports ?? []).map((report) => ({
+          id: report.id,
+          test_name: report.test_name,
+          patient_name: report.patient_name,
+          uploaded_at: report.uploaded_at,
+          test_date: report.test_date,
+          lab_name: (report as ReportWithLab).labs?.name ?? null,
         })),
         familyMembers: familyMembers ?? [],
       };
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `clinilocker-export-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `clinilocker-export-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
       URL.revokeObjectURL(url);
       toast.success(t("Export downloaded."));
     } catch {
@@ -183,21 +212,22 @@ const PatientSettings = () => {
         setDownloadReportsLoading(false);
         return;
       }
-      for (let i = 0; i < reports.length; i++) {
-        const r = reports[i];
-        const signedUrl = r.file_url ? await getSignedUrl(r.file_url) : null;
+      for (let i = 0; i < reports.length; i += 1) {
+        const report = reports[i];
+        const signedUrl = report.file_url ? await getSignedUrl(report.file_url) : null;
         if (signedUrl) {
-          const name = (r.test_name || r.id).replace(/[^a-zA-Z0-9._-]/g, "_") + ".pdf";
-          const a = document.createElement("a");
-          a.href = signedUrl;
-          a.download = name;
-          a.rel = "noopener noreferrer";
-          a.target = "_blank";
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
+          const link = document.createElement("a");
+          link.href = signedUrl;
+          link.download = `${(report.test_name || report.id).replace(/[^a-zA-Z0-9._-]/g, "_")}.pdf`;
+          link.rel = "noopener noreferrer";
+          link.target = "_blank";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
         }
-        if (i < reports.length - 1) await new Promise((r) => setTimeout(r, 400));
+        if (i < reports.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 400));
+        }
       }
       toast.success(reports.length === 1 ? t("Download started. Check your downloads.") : `${reports.length} ${t("reports")}. ${t("Check your downloads.")}`);
     } catch {
@@ -205,6 +235,13 @@ const PatientSettings = () => {
     } finally {
       setDownloadReportsLoading(false);
     }
+  };
+
+  const handleSwitchProfile = (checked: boolean) => {
+    setSwitchProfileLoading(true);
+    setActiveView(checked ? "doctor" : "patient");
+    toast.success(checked ? t("Doctor View enabled.") : t("Patient View enabled."));
+    setSwitchProfileLoading(false);
   };
 
   return (
@@ -215,7 +252,24 @@ const PatientSettings = () => {
           <p className="mt-1 text-muted-foreground">{t("Manage your account, privacy, and preferences.")}</p>
         </div>
 
-        {/* Notifications */}
+        {role === "doctor" && (
+          <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-5 shadow-card">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="font-display text-lg font-semibold text-slate-950">{t("Switch Profile")}</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  {t("Change between your Doctor workspace and your personal Patient View without signing out.")}
+                </p>
+              </div>
+              <div className="flex items-center gap-3 rounded-full border border-blue-200 bg-white px-4 py-2">
+                <span className={`text-sm font-medium ${activeView === "patient" ? "text-slate-950" : "text-slate-400"}`}>{t("Patient")}</span>
+                <Switch checked={activeView === "doctor"} onCheckedChange={handleSwitchProfile} disabled={switchProfileLoading} />
+                <span className={`text-sm font-medium ${activeView === "doctor" ? "text-slate-950" : "text-slate-400"}`}>{t("Doctor")}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5 text-primary" />
@@ -227,22 +281,23 @@ const PatientSettings = () => {
               { key: "reportReady" as const, label: t("Report Ready Alerts"), desc: t("Get notified when a new report is available (from app)") },
               { key: "healthTips" as const, label: t("Health Tips"), desc: t("Receive weekly health tips from the app") },
               { key: "promotional" as const, label: t("Promotional Updates"), desc: t("Lab offers and discounts") },
-            ].filter((item) => NOTIFICATION_KEYS_VISIBLE.includes(item.key)).map((item) => (
-              <div key={item.key} className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+            ]
+              .filter((item) => NOTIFICATION_KEYS_VISIBLE.includes(item.key))
+              .map((item) => (
+                <div key={item.key} className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{item.desc}</p>
+                  </div>
+                  <Switch checked={notifications[item.key]} onCheckedChange={(value) => setNotifications((prev) => ({ ...prev, [item.key]: value }))} />
                 </div>
-                <Switch checked={notifications[item.key]} onCheckedChange={(val) => setNotifications((prev) => ({ ...prev, [item.key]: val }))} />
-              </div>
-            ))}
+              ))}
           </div>
           <Button variant="outline" onClick={handleSaveNotifications} disabled={!notificationsLoaded || notificationsLoading}>
-            {notificationsLoading ? t("Saving…") : t("Save Preferences")}
+            {notificationsLoading ? t("Saving...") : t("Save Preferences")}
           </Button>
         </div>
 
-        {/* Privacy & Security */}
         <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
@@ -257,38 +312,28 @@ const PatientSettings = () => {
                 <p className="text-sm font-medium text-foreground">{t("Two-Factor Authentication (2FA)")}</p>
                 <p className="text-xs text-muted-foreground">{t("When ON: we prefer stronger account security for your sign-in experience.")}</p>
               </div>
-              <Switch
-                checked={privacy.twoFactorEnabled}
-                onCheckedChange={(v) => setPrivacy((prev) => ({ ...prev, twoFactorEnabled: v }))}
-              />
+              <Switch checked={privacy.twoFactorEnabled} onCheckedChange={(value) => setPrivacy((prev) => ({ ...prev, twoFactorEnabled: value }))} />
             </div>
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div>
                 <p className="text-sm font-medium text-foreground">{t("Report Sharing")}</p>
-                <p className="text-xs text-muted-foreground">When ON: labs you’re linked with can add and share reports to your account. When OFF: they cannot link new reports to you.</p>
+                <p className="text-xs text-muted-foreground">When ON: labs you're linked with can add and share reports to your account. When OFF: they cannot link new reports to you.</p>
               </div>
-              <Switch
-                checked={privacy.reportSharingAllowed}
-                onCheckedChange={(v) => setPrivacy((prev) => ({ ...prev, reportSharingAllowed: v }))}
-              />
+              <Switch checked={privacy.reportSharingAllowed} onCheckedChange={(value) => setPrivacy((prev) => ({ ...prev, reportSharingAllowed: value }))} />
             </div>
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div>
                 <p className="text-sm font-medium text-foreground">{t("Profile Visibility to Labs")}</p>
-                <p className="text-xs text-muted-foreground">When ON: linked labs can see your name and phone. When OFF: they see only what’s needed to deliver your reports.</p>
+                <p className="text-xs text-muted-foreground">When ON: linked labs can see your name and phone. When OFF: they see only what's needed to deliver your reports.</p>
               </div>
-              <Switch
-                checked={privacy.profileVisibleToLabs}
-                onCheckedChange={(v) => setPrivacy((prev) => ({ ...prev, profileVisibleToLabs: v }))}
-              />
+              <Switch checked={privacy.profileVisibleToLabs} onCheckedChange={(value) => setPrivacy((prev) => ({ ...prev, profileVisibleToLabs: value }))} />
             </div>
           </div>
           <Button variant="outline" onClick={handleSavePrivacy} disabled={privacyLoading}>
-            {privacyLoading ? t("Saving…") : t("Save Preferences")}
+            {privacyLoading ? t("Saving...") : t("Save Preferences")}
           </Button>
         </div>
 
-        {/* Language */}
         <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
           <div className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-primary" />
@@ -302,23 +347,19 @@ const PatientSettings = () => {
             <select
               id="language"
               value={preferredLanguage}
-              onChange={(e) => setPreferredLanguage(e.target.value)}
+              onChange={(event) => setPreferredLanguage(event.target.value)}
               className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              <option value="en">English</option>
-              <option value="hi">Hindi</option>
-              <option value="ta">Tamil</option>
-              <option value="te">Telugu</option>
-              <option value="kn">Kannada</option>
-              <option value="ml">Malayalam</option>
+              {LANGUAGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
           </div>
           <Button variant="outline" onClick={handleSaveLanguage} disabled={languageLoading}>
-            {languageLoading ? t("Saving…") : t("Save language")}
+            {languageLoading ? t("Saving...") : t("Save language")}
           </Button>
         </div>
 
-        {/* Data Management */}
         <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
           <div className="flex items-center gap-2">
             <Download className="h-5 w-5 text-primary" />
@@ -326,15 +367,14 @@ const PatientSettings = () => {
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button variant="outline" onClick={handleExportData} disabled={exportLoading}>
-              <Download className="mr-2 h-4 w-4" /> {exportLoading ? t("Exporting…") : t("Export All Data")}
+              <Download className="mr-2 h-4 w-4" /> {exportLoading ? t("Exporting...") : t("Export All Data")}
             </Button>
             <Button variant="outline" onClick={handleDownloadAllReports} disabled={downloadReportsLoading}>
-              <Download className="mr-2 h-4 w-4" /> {downloadReportsLoading ? t("Preparing…") : t("Download All Reports")}
+              <Download className="mr-2 h-4 w-4" /> {downloadReportsLoading ? t("Preparing...") : t("Download All Reports")}
             </Button>
           </div>
         </div>
 
-        {/* Linked Labs */}
         <div className="rounded-xl border border-border bg-card p-6 shadow-card space-y-4">
           <h3 className="font-display text-lg font-semibold text-foreground">{t("Linked Labs")}</h3>
           {linkedLabsLoading ? (
@@ -350,7 +390,7 @@ const PatientSettings = () => {
                       {lab.lab_name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-foreground block">{lab.lab_name}</span>
+                      <span className="block text-sm font-medium text-foreground">{lab.lab_name}</span>
                       <span className="text-xs text-muted-foreground">{lab.reports_count} {lab.reports_count === 1 ? t("report") : t("reports")}</span>
                     </div>
                   </div>
@@ -363,7 +403,4 @@ const PatientSettings = () => {
       </div>
     </PatientLayout>
   );
-};
-
-export default PatientSettings;
-
+}

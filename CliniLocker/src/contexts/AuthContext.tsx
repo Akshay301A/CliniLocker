@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { ensureProfileExists } from "@/lib/api";
 
-type Role = "lab" | "patient" | null;
+type Role = "lab" | "patient" | "doctor" | null;
 
 const ROLE_FETCH_TIMEOUT_MS = 8000;
 
@@ -11,10 +12,14 @@ type AuthContextType = {
   session: Session | null;
   role: Role;
   labId: string | null;
+  profileReady: boolean;
+  isVerified: boolean;
+  doctorOnboardingComplete: boolean;
   /** True until we know session (and user if any). App shell and routing use this. */
   loading: boolean;
   /** True only when we have a user but haven't finished checking lab_users yet. Only lab routes wait on this. */
   roleLoading: boolean;
+  refreshRole: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -25,12 +30,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<Role>(null);
   const [labId, setLabId] = useState<string | null>(null);
+  const [profileReady, setProfileReady] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [doctorOnboardingComplete, setDoctorOnboardingComplete] = useState(false);
   const [loading, setLoading] = useState(true);
   const [roleLoading, setRoleLoading] = useState(false);
 
-  async function fetchRole(userId: string): Promise<{ role: Role; labId: string | null }> {
-    const timeoutPromise = new Promise<{ role: Role; labId: string | null }>((resolve) =>
-      setTimeout(() => resolve({ role: null, labId: null }), ROLE_FETCH_TIMEOUT_MS)
+  async function fetchRole(userId: string): Promise<{
+    role: Role;
+    labId: string | null;
+    profileReady: boolean;
+    isVerified: boolean;
+    doctorOnboardingComplete: boolean;
+  }> {
+    const timeoutPromise = new Promise<{
+      role: Role;
+      labId: string | null;
+      profileReady: boolean;
+      isVerified: boolean;
+      doctorOnboardingComplete: boolean;
+    }>((resolve) =>
+      setTimeout(() => resolve({
+        role: null,
+        labId: null,
+        profileReady: false,
+        isVerified: false,
+        doctorOnboardingComplete: false,
+      }), ROLE_FETCH_TIMEOUT_MS)
     );
     const fetchPromise = (async () => {
       try {
@@ -40,11 +66,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq("user_id", userId)
           .limit(1);
         if (labUsers && labUsers.length > 0) {
-          return { role: "lab" as Role, labId: labUsers[0].lab_id };
+          return {
+            role: "lab" as Role,
+            labId: labUsers[0].lab_id,
+            profileReady: true,
+            isVerified: true,
+            doctorOnboardingComplete: true,
+          };
         }
-        return { role: null, labId: null };
+        await ensureProfileExists();
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, is_verified, registration_number, medical_council, full_name")
+          .eq("id", userId)
+          .maybeSingle();
+        const onboardingComplete =
+          !!profile?.full_name?.trim() &&
+          !!profile?.registration_number?.trim() &&
+          !!profile?.medical_council?.trim();
+        return {
+          role: (profile?.role as Role) ?? null,
+          labId: null,
+          profileReady: !!profile,
+          isVerified: !!profile?.is_verified,
+          doctorOnboardingComplete: onboardingComplete,
+        };
       } catch {
-        return { role: null, labId: null };
+        return {
+          role: null,
+          labId: null,
+          profileReady: false,
+          isVerified: false,
+          doctorOnboardingComplete: false,
+        };
       }
     })();
     return Promise.race([fetchPromise, timeoutPromise]);
@@ -60,16 +114,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       if (currentSession?.user) {
         setRoleLoading(true);
-        fetchRole(currentSession.user.id).then(({ role: r, labId: lid }) => {
+        fetchRole(currentSession.user.id).then(({ role: r, labId: lid, profileReady: ready, isVerified: verified, doctorOnboardingComplete: onboardingComplete }) => {
           if (mounted) {
             setRole(r);
             setLabId(lid);
+            setProfileReady(ready);
+            setIsVerified(verified);
+            setDoctorOnboardingComplete(onboardingComplete);
             setRoleLoading(false);
           }
         });
       } else {
         setRole(null);
         setLabId(null);
+        setProfileReady(false);
+        setIsVerified(false);
+        setDoctorOnboardingComplete(false);
       }
     }
 
@@ -99,16 +159,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       if (newSession?.user) {
         setRoleLoading(true);
-        fetchRole(newSession.user.id).then(({ role: r, labId: lid }) => {
+        fetchRole(newSession.user.id).then(({ role: r, labId: lid, profileReady: ready, isVerified: verified, doctorOnboardingComplete: onboardingComplete }) => {
           if (mounted) {
             setRole(r);
             setLabId(lid);
+            setProfileReady(ready);
+            setIsVerified(verified);
+            setDoctorOnboardingComplete(onboardingComplete);
             setRoleLoading(false);
           }
         });
       } else {
         setRole(null);
         setLabId(null);
+        setProfileReady(false);
+        setIsVerified(false);
+        setDoctorOnboardingComplete(false);
         setRoleLoading(false);
       }
     });
@@ -133,16 +199,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  async function refreshRole() {
+    if (!user) return;
+    setRoleLoading(true);
+    const { role: r, labId: lid, profileReady: ready, isVerified: verified, doctorOnboardingComplete: onboardingComplete } = await fetchRole(user.id);
+    setRole(r);
+    setLabId(lid);
+    setProfileReady(ready);
+    setIsVerified(verified);
+    setDoctorOnboardingComplete(onboardingComplete);
+    setRoleLoading(false);
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setRole(null);
     setLabId(null);
+    setProfileReady(false);
+    setIsVerified(false);
+    setDoctorOnboardingComplete(false);
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, role, labId, loading, roleLoading, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, labId, profileReady, isVerified, doctorOnboardingComplete, loading, roleLoading, refreshRole, signOut }}>
       {children}
     </AuthContext.Provider>
   );

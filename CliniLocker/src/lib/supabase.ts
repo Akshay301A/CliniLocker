@@ -14,6 +14,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export type Profile = {
   id: string;
+  role?: "patient" | "doctor" | null;
+  is_verified?: boolean;
+  registration_number?: string | null;
+  medical_council?: string | null;
   full_name?: string | null;
   phone?: string | null;
   phone_verified?: boolean;
@@ -25,7 +29,6 @@ export type Profile = {
   gender?: string | null;
   blood_group?: string | null;
   address?: string | null;
-  abha_id?: string | null;
   emergency_contact_name?: string | null;
   emergency_contact_relation?: string | null;
   emergency_contact_phone?: string | null;
@@ -79,6 +82,7 @@ export type Report = {
   viewed_at?: string | null;
   test_date?: string | null;
   notes?: string | null;
+  is_handwritten?: boolean | null;
 };
 
 export type FamilyMember = {
@@ -101,6 +105,19 @@ export type HealthCardRow = {
   name?: string | null;
   blood_group?: string | null;
   created_at?: string;
+};
+
+export type ShareRow = {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  patient_name?: string | null;
+  doctor_name?: string | null;
+  report_ids: string[];
+  quick_notes?: string | null;
+  unread?: boolean;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Hospital = {
