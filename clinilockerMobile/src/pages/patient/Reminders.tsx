@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getMedicationReminders, getPrescriptionSignedUrl, updateMedicationReminder, deleteMedicationReminder } from "@/lib/api";
+import { createMedicationReminder, getMedicationReminders, getPrescriptionSignedUrl, updateMedicationReminder, deleteMedicationReminder } from "@/lib/api";
 import { PdfBottomSheet } from "@/components/PdfBottomSheet";
 import { getReminderNotificationOffsets, setReminderNotificationOffsets, clearReminderNotificationOffsets } from "@/lib/notifications";
 
@@ -54,6 +54,7 @@ const PatientReminders = () => {
   const [reminders, setReminders] = useState<ReminderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingReminder, setEditingReminder] = useState<ReminderRow | null>(null);
   const [pdfSheetOpen, setPdfSheetOpen] = useState(false);
@@ -93,10 +94,80 @@ const PatientReminders = () => {
   };
 
   const reminderCountText = useMemo(() => {
-    if (reminders.length === 0) return t("No reminders");
-    if (reminders.length === 1) return t("1 reminder active");
-    return `${reminders.length} ${t("reminders active")}`;
-  }, [reminders.length, t]);
+    const activeCount = reminders.filter((reminder) => reminder.is_active !== false).length;
+    if (activeCount === 0) return t("No reminders");
+    if (activeCount === 1) return t("1 reminder active");
+    return `${activeCount} ${t("reminders active")}`;
+  }, [reminders, t]);
+
+  const resetCreateForm = () => {
+    setEditForm({
+      medication_name: "",
+      dosage: "",
+      frequency: "",
+      timesInput: "",
+      notes: "",
+      is_active: true,
+      reminderOffsets: [-10, -5, 0],
+    });
+  };
+
+  const handleOpenCreate = () => {
+    resetCreateForm();
+    setIsCreateOpen(true);
+  };
+
+  const handleCreateReminder = async () => {
+    const times = parseTimes(editForm.timesInput);
+    if (!editForm.medication_name.trim() || !editForm.dosage.trim() || !editForm.frequency.trim()) {
+      toast.error(t("Please fill in all required fields."));
+      return;
+    }
+    if (!hasValidTimes(times)) {
+      toast.error(t("Time format must be HH:mm (example: 08:00, 20:30)."));
+      return;
+    }
+    if (editForm.reminderOffsets.length === 0) {
+      toast.error(t("Please select at least one reminder timing."));
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const result = await createMedicationReminder({
+        medication_name: editForm.medication_name,
+        dosage: editForm.dosage,
+        frequency: editForm.frequency,
+        times,
+        notes: editForm.notes,
+        is_active: editForm.is_active,
+      });
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+
+      setReminderNotificationOffsets(result.id, editForm.reminderOffsets);
+      if (editForm.is_active && times.length > 0) {
+        const { scheduleMedicationReminder } = await import("@/lib/notifications");
+        await scheduleMedicationReminder(
+          result.id,
+          editForm.medication_name.trim(),
+          editForm.dosage.trim(),
+          times,
+          new Date().toISOString().split("T")[0],
+          undefined,
+          { offsets: editForm.reminderOffsets }
+        );
+      }
+
+      toast.success(t("Reminder created successfully!"));
+      setIsCreateOpen(false);
+      await loadReminders();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleEdit = (reminder: ReminderRow) => {
     setEditingReminder(reminder);
@@ -278,13 +349,11 @@ const PatientReminders = () => {
                 {t("Manage your medication reminders. Edit times, dosages, or deactivate reminders.")}
               </p>
             </div>
-            <Link to="/patient/upload">
-              <Button className="h-9 shrink-0 gap-1.5 rounded-xl px-3 text-xs shadow-sm md:h-10 md:gap-2 md:px-4 md:text-sm">
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">{t("Add Prescription")}</span>
-                <span className="sm:hidden">{t("Add")}</span>
-              </Button>
-            </Link>
+            <Button type="button" className="h-9 shrink-0 gap-1.5 rounded-xl px-3 text-xs shadow-sm md:h-10 md:gap-2 md:px-4 md:text-sm" onClick={handleOpenCreate}>
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">{t("Add Reminder")}</span>
+              <span className="sm:hidden">{t("Add")}</span>
+            </Button>
           </div>
           <div className="mt-3 flex items-center gap-2">
             <Badge variant="secondary" className="rounded-lg px-3 py-1 text-xs">
@@ -302,14 +371,20 @@ const PatientReminders = () => {
             <Pill className="mx-auto mb-4 h-16 w-16 text-muted-foreground opacity-50" />
             <h2 className="mb-2 text-lg font-semibold text-foreground">{t("No reminders yet")}</h2>
             <p className="mb-6 text-sm text-muted-foreground">
-              {t("Upload a prescription to automatically create medication reminders.")}
+              {t("Upload a prescription, then add your medication reminders manually.")}
             </p>
-            <Link to="/patient/upload">
-              <Button>
+            <div className="flex items-center justify-center gap-3">
+              <Button type="button" onClick={handleOpenCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("Add Reminder")}
+              </Button>
+              <Link to="/patient/upload">
+              <Button variant="outline">
                 <Plus className="mr-2 h-4 w-4" />
                 {t("Upload Prescription")}
               </Button>
-            </Link>
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
@@ -397,6 +472,108 @@ const PatientReminders = () => {
           </div>
         )}
       </div>
+
+      <Dialog
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          setIsCreateOpen(open);
+          if (!open) resetCreateForm();
+        }}
+      >
+        <DialogContent className="max-w-md rounded-2xl border-primary/20">
+          <DialogHeader>
+            <DialogTitle>{t("Add Reminder")}</DialogTitle>
+            <DialogDescription>{t("Create a medication reminder manually.")}</DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-2 space-y-4">
+            <div>
+              <Label>{t("Medication Name")}</Label>
+              <Input
+                value={editForm.medication_name}
+                onChange={(e) => setEditForm({ ...editForm, medication_name: e.target.value })}
+                placeholder={t("e.g., Paracetamol")}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>{t("Dosage")}</Label>
+                <Input
+                  value={editForm.dosage}
+                  onChange={(e) => setEditForm({ ...editForm, dosage: e.target.value })}
+                  placeholder={t("e.g., 500mg")}
+                />
+              </div>
+              <div>
+                <Label>{t("Frequency")}</Label>
+                <Input
+                  value={editForm.frequency}
+                  onChange={(e) => setEditForm({ ...editForm, frequency: e.target.value })}
+                  placeholder={t("e.g., 2x daily")}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>{t("Times (HH:mm, comma-separated)")}</Label>
+              <Input
+                value={editForm.timesInput}
+                onChange={(e) => setEditForm({ ...editForm, timesInput: e.target.value })}
+                placeholder={t("08:00, 20:00")}
+              />
+            </div>
+            <div>
+              <Label>{t("Notes (optional)")}</Label>
+              <Input
+                value={editForm.notes}
+                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                placeholder={t("e.g., take after food")}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-xl border border-border/70 bg-muted/40 px-3 py-2">
+              <Label className="text-sm">{t("Reminder Active")}</Label>
+              <Switch
+                checked={editForm.is_active}
+                onCheckedChange={(checked) => setEditForm({ ...editForm, is_active: checked })}
+              />
+            </div>
+            <div className="rounded-xl border border-border/70 bg-muted/40 p-3">
+              <Label className="text-sm font-medium">{t("Notify me at")}</Label>
+              <div className="mt-2 space-y-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={editForm.reminderOffsets.includes(-10)}
+                    onCheckedChange={(v) => toggleOffset(-10, Boolean(v))}
+                  />
+                  <span>{t("10 minutes before")}</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={editForm.reminderOffsets.includes(-5)}
+                    onCheckedChange={(v) => toggleOffset(-5, Boolean(v))}
+                  />
+                  <span>{t("5 minutes before")}</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={editForm.reminderOffsets.includes(0)}
+                    onCheckedChange={(v) => toggleOffset(0, Boolean(v))}
+                  />
+                  <span>{t("At exact time")}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-2">
+            <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} disabled={saving}>
+              {t("Cancel")}
+            </Button>
+            <Button type="button" onClick={() => void handleCreateReminder()} disabled={saving}>
+              {saving ? t("Saving...") : t("Create Reminder")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={isEditOpen}

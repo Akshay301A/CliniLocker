@@ -22,7 +22,6 @@ import {
   insertReport,
   uploadPrescriptionFile,
   insertPrescription,
-  analyzePrescriptionFromPdfUrl,
 } from "@/lib/api";
 import { jsPDF } from "jspdf";
 
@@ -349,7 +348,6 @@ const PatientUploadReports = () => {
           file_url: path,
           doctor_name: labName.trim() || null,
           prescription_date: testDate || null,
-          reminders: [],
           is_handwritten: true,
         });
         if ("error" in ins) {
@@ -360,57 +358,21 @@ const PatientUploadReports = () => {
         }
         toast.success(t("We detected handwriting. Please manually enter your medicine schedule to ensure 100% accuracy."));
       } else {
-        toast.info(t("Analyzing prescription..."));
-        const { supabase } = await import("@/lib/supabase");
-        const { data: urlData } = await supabase.storage.from("prescriptions").createSignedUrl(path, 3600);
-
-        if (!urlData?.signedUrl) {
-          toast.error(t("Failed to get prescription URL."));
+        const ins = await insertPrescription({
+          patient_id: user.id,
+          patient_name: profile?.full_name ?? "Self",
+          file_url: path,
+          doctor_name: labName.trim() || null,
+          prescription_date: testDate || null,
+          is_handwritten: false,
+        });
+        if ("error" in ins) {
+          toast.error(ins.error);
           setLoading(false);
           setAnalyzing(false);
           return;
         }
-
-        const analysis = await analyzePrescriptionFromPdfUrl(urlData.signedUrl);
-
-        if ("error" in analysis) {
-          toast.error(t("Failed to analyze prescription. Uploading without reminders."));
-          const ins = await insertPrescription({
-            patient_id: user.id,
-            patient_name: profile?.full_name ?? "Self",
-            file_url: path,
-            doctor_name: labName.trim() || null,
-            prescription_date: testDate || null,
-            reminders: [],
-            is_handwritten: false,
-          });
-          if ("error" in ins) {
-            toast.error(ins.error);
-            setLoading(false);
-            setAnalyzing(false);
-            return;
-          }
-        } else {
-          const ins = await insertPrescription({
-            patient_id: user.id,
-            patient_name: profile?.full_name ?? "Self",
-            file_url: path,
-            doctor_name: labName.trim() || analysis.doctor_name || null,
-            prescription_date: testDate || analysis.prescription_date || null,
-            reminders: analysis.medications || [],
-            is_handwritten: false,
-          });
-
-          if ("error" in ins) {
-            toast.error(ins.error);
-            setLoading(false);
-            setAnalyzing(false);
-            return;
-          }
-
-          const reminderCount = analysis.medications?.length || 0;
-          toast.success(t(`Prescription uploaded and ${reminderCount} reminder(s) created!`));
-        }
+        toast.success(t("Prescription uploaded successfully. Add your reminders manually."));
       }
 
       setUploaded(true);
@@ -459,7 +421,7 @@ const PatientUploadReports = () => {
     <PatientLayout>
       <div className="mx-auto max-w-xl animate-fade-in w-full">
         <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground">{t("Upload Report or Prescription")}</h1>
-        <p className="mt-1 text-sm sm:text-base text-muted-foreground">{t("Add reports or prescriptions to your health vault. Prescriptions will be analyzed to create medication reminders.")}</p>
+        <p className="mt-1 text-sm sm:text-base text-muted-foreground">{t("Add reports or prescriptions to your health vault. Medication reminders can be added manually after prescription upload.")}</p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
           <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card">
@@ -595,7 +557,7 @@ const PatientUploadReports = () => {
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
                     <ClipboardList className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
                     <p className="text-xs text-blue-900">
-                      {t("After uploading, AI will analyze your prescription and create medication reminders automatically. You can edit them later.")}
+                      {t("After uploading, you can manually add your own medication reminders.")}
                     </p>
                   </div>
                 )}
@@ -702,7 +664,7 @@ const PatientUploadReports = () => {
             {converting
               ? t("Converting images to PDF…")
               : analyzing
-                ? t("Analyzing prescription…")
+                ? t("Saving prescription…")
                 : loading
                   ? t("Uploading…")
                   : uploadType === "report"

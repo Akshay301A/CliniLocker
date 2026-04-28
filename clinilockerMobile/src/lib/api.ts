@@ -133,27 +133,51 @@ export async function updateProfileRole(role: "patient" | "doctor"): Promise<Pro
 }
 
 export type DoctorVerificationPayload = {
-  fullName: string;
+  doctorName: string;
   registrationNumber: string;
-  medicalCouncil: string;
+  stateCouncil: string;
+  yearOfRegistration?: string;
 };
 
 export async function verifyDoctorProfile(
   payload: DoctorVerificationPayload
-): Promise<{ verified: boolean; status: string; message?: string } | { error: string }> {
+): Promise<{
+  verified: boolean;
+  status: string;
+  message?: string;
+  details?: {
+    doctor_name: string;
+    qualification: string | null;
+    university: string | null;
+  };
+} | { error: string }> {
   const { data: authData } = await supabase.auth.getSession();
   const accessToken = authData?.session?.access_token;
   if (!accessToken) return { error: "Not authenticated. Please sign in again." };
 
   const { data, error } = await supabase.functions.invoke("verify-doctor", {
-    body: payload,
+    body: {
+      doctor_name: payload.doctorName,
+      registration_number: payload.registrationNumber,
+      state_council: payload.stateCouncil,
+      year_of_registration: payload.yearOfRegistration?.trim() || null,
+    },
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
   });
 
   if (error) return { error: await getFunctionInvokeErrorMessage(error) };
-  return data as { verified: boolean; status: string; message?: string };
+  return data as {
+    verified: boolean;
+    status: string;
+    message?: string;
+    details?: {
+      doctor_name: string;
+      qualification: string | null;
+      university: string | null;
+    };
+  };
 }
 
 export async function getDoctorPublicProfile(doctorId: string): Promise<{
@@ -1164,14 +1188,13 @@ export async function uploadPrescriptionFile(path: string, file: File): Promise<
   return {};
 }
 
-/** Insert prescription with reminders */
+/** Insert prescription record. Reminders are added manually by the patient. */
 export async function insertPrescription(prescription: {
   patient_id: string;
   patient_name: string;
   file_url: string;
   doctor_name?: string | null;
   prescription_date?: string | null;
-  reminders: MedicationReminder[];
   is_handwritten?: boolean | null;
 }): Promise<{ id: string } | { error: string }> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -1192,50 +1215,6 @@ export async function insertPrescription(prescription: {
     .single();
   
   if (prescError || !presc) return { error: prescError?.message || "Failed to create prescription" };
-  
-  // Insert reminders
-  if (prescription.reminders.length > 0) {
-    const remindersToInsert = prescription.reminders
-      .filter((r) => r.medication_name?.trim() && r.dosage?.trim() && r.frequency?.trim())
-      .map((r) => ({
-      prescription_id: presc.id,
-      patient_id: user.id,
-      medication_name: r.medication_name,
-      dosage: r.dosage,
-      frequency: r.frequency,
-      duration_days: r.duration_days || null,
-      start_date: r.start_date || new Date().toISOString().split('T')[0],
-      times: r.times || null,
-      notes: r.notes || null,
-      is_active: true,
-    }));
-
-    if (remindersToInsert.length > 0) {
-      const { data: insertedReminders, error: remError } = await supabase
-        .from("medication_reminders")
-        .insert(remindersToInsert)
-        .select();
-
-      if (remError) {
-        console.error("Failed to create reminders:", remError);
-      } else if (insertedReminders) {
-      // Schedule notifications for active reminders with times
-        const { scheduleMedicationReminder } = await import("./notifications");
-        for (const reminder of insertedReminders) {
-          if (reminder.is_active && reminder.times && reminder.times.length > 0) {
-            await scheduleMedicationReminder(
-              reminder.id,
-              reminder.medication_name,
-              reminder.dosage,
-              reminder.times,
-              reminder.start_date,
-              reminder.duration_days
-            );
-          }
-        }
-      }
-    }
-  }
   
   return { id: presc.id };
 }
@@ -1263,7 +1242,7 @@ export async function getPrescriptions(): Promise<PrescriptionRow[]> {
   return (data ?? []) as PrescriptionRow[];
 }
 
-/** Get all active medication reminders */
+/** Get medication reminders for current user. */
 type MedicationReminderRow = {
   id: string;
   prescription_id?: string | null;
@@ -1283,16 +1262,54 @@ type MedicationReminderRow = {
   } | null;
 };
 
-export async function getMedicationReminders(): Promise<MedicationReminderRow[]> {
+export async function getMedicationReminders(options?: { activeOnly?: boolean }): Promise<MedicationReminderRow[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
-  const { data } = await supabase
+  let query = supabase
     .from("medication_reminders")
     .select("*, prescriptions(file_url, doctor_name, prescription_date)")
     .eq("patient_id", user.id)
-    .eq("is_active", true)
     .order("start_date", { ascending: true });
+  if (options?.activeOnly) {
+    query = query.eq("is_active", true);
+  }
+  const { data } = await query;
   return (data ?? []) as MedicationReminderRow[];
+}
+
+export async function createMedicationReminder(reminder: {
+  prescription_id?: string | null;
+  medication_name: string;
+  dosage: string;
+  frequency: string;
+  duration_days?: number | null;
+  start_date?: string | null;
+  times?: string[] | null;
+  notes?: string | null;
+  is_active?: boolean;
+}): Promise<{ id: string } | { error: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const { data, error } = await supabase
+    .from("medication_reminders")
+    .insert({
+      prescription_id: reminder.prescription_id ?? null,
+      patient_id: user.id,
+      medication_name: reminder.medication_name.trim(),
+      dosage: reminder.dosage.trim(),
+      frequency: reminder.frequency.trim(),
+      duration_days: reminder.duration_days ?? null,
+      start_date: reminder.start_date || new Date().toISOString().split("T")[0],
+      times: reminder.times ?? null,
+      notes: reminder.notes?.trim() || null,
+      is_active: reminder.is_active ?? true,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) return { error: error?.message ?? "Failed to create reminder" };
+  return { id: data.id as string };
 }
 
 /** Update medication reminder */

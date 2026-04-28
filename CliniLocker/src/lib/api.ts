@@ -148,27 +148,51 @@ export async function updateProfileRole(role: "patient" | "doctor"): Promise<Pro
 }
 
 export type DoctorVerificationPayload = {
-  fullName: string;
+  doctorName: string;
   registrationNumber: string;
-  medicalCouncil: string;
+  stateCouncil: string;
+  yearOfRegistration?: string;
 };
 
 export async function verifyDoctorProfile(
   payload: DoctorVerificationPayload
-): Promise<{ verified: boolean; status: string; message?: string } | { error: string }> {
+): Promise<{
+  verified: boolean;
+  status: string;
+  message?: string;
+  details?: {
+    doctor_name: string;
+    qualification: string | null;
+    university: string | null;
+  };
+} | { error: string }> {
   const { data: authData } = await supabase.auth.getSession();
   const accessToken = authData?.session?.access_token;
   if (!accessToken) return { error: "Not authenticated. Please sign in again." };
 
   const { data, error } = await supabase.functions.invoke("verify-doctor", {
-    body: payload,
+    body: {
+      doctor_name: payload.doctorName,
+      registration_number: payload.registrationNumber,
+      state_council: payload.stateCouncil,
+      year_of_registration: payload.yearOfRegistration?.trim() || null,
+    },
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
   });
 
   if (error) return { error: await getFunctionInvokeErrorMessage(error) };
-  return data as { verified: boolean; status: string; message?: string };
+  return data as {
+    verified: boolean;
+    status: string;
+    message?: string;
+    details?: {
+      doctor_name: string;
+      qualification: string | null;
+      university: string | null;
+    };
+  };
 }
 
 export async function getDoctorPublicProfile(doctorId: string): Promise<{
@@ -1140,14 +1164,13 @@ export async function uploadPrescriptionFile(path: string, file: File): Promise<
   return {};
 }
 
-/** Insert prescription with reminders */
+/** Insert prescription record. Reminders are added manually by the patient. */
 export async function insertPrescription(prescription: {
   patient_id: string;
   patient_name: string;
   file_url: string;
   doctor_name?: string | null;
   prescription_date?: string | null;
-  reminders: MedicationReminder[];
   is_handwritten?: boolean | null;
 }): Promise<{ id: string } | { error: string }> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -1167,33 +1190,6 @@ export async function insertPrescription(prescription: {
     .single();
 
   if (prescError || !presc) return { error: prescError?.message || "Failed to create prescription" };
-
-  if (prescription.reminders.length > 0) {
-    const remindersToInsert = prescription.reminders
-      .filter((r) => r.medication_name?.trim() && r.dosage?.trim() && r.frequency?.trim())
-      .map((r) => ({
-      prescription_id: presc.id,
-      patient_id: user.id,
-      medication_name: r.medication_name,
-      dosage: r.dosage,
-      frequency: r.frequency,
-      duration_days: r.duration_days || null,
-      start_date: r.start_date || new Date().toISOString().split("T")[0],
-      times: r.times || null,
-      notes: r.notes || null,
-      is_active: true,
-    }));
-
-    if (remindersToInsert.length > 0) {
-      const { error: remError } = await supabase
-        .from("medication_reminders")
-        .insert(remindersToInsert);
-      if (remError) {
-        console.error("Failed to create reminders:", remError);
-      }
-    }
-  }
-
   return { id: presc.id };
 }
 

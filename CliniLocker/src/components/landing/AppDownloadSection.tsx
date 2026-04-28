@@ -2,8 +2,8 @@
 import { useRef } from "react";
 import { Download, Smartphone, Star } from "lucide-react";
 
-const ANDROID_APK_PATH = "/downloads/CliniLocker-Android-v1.0.0-release.apk";
-const ANDROID_APP_VERSION = "1.0.0";
+const ANDROID_APK_PATH = "/downloads/CliniLocker-Android-v1-release.apk";
+const ANDROID_APP_VERSION = "1";
 const APP_MOCKUP_PATH = "/mockup.png";
 
 const AppDownloadSection = () => {

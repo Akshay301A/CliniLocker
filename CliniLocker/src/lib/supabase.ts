@@ -18,6 +18,9 @@ export type Profile = {
   is_verified?: boolean;
   registration_number?: string | null;
   medical_council?: string | null;
+  registration_year?: string | null;
+  verified_at?: string | null;
+  verification_metadata?: Record<string, unknown> | null;
   full_name?: string | null;
   phone?: string | null;
   phone_verified?: boolean;

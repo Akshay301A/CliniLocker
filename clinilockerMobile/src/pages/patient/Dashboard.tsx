@@ -89,7 +89,7 @@ const PatientDashboard = () => {
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([getPatientReports(), getFamilyMembers(), getProfile(), getMedicationReminders()]).then(([r, f, p, rem]) => {
+    Promise.all([getPatientReports(), getFamilyMembers(), getProfile(), getMedicationReminders({ activeOnly: true })]).then(([r, f, p, rem]) => {
       if (mounted) {
         setReports(r);
         setFamilyCount(f.length);
