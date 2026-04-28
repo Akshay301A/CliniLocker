@@ -7,6 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { createDoctorShare, getDoctorPublicProfile, getPatientReports, type ReportWithLab } from "@/lib/api";
 import { toast } from "sonner";
 
+type JsQrFn = (
+  data: Uint8ClampedArray,
+  width: number,
+  height: number
+) => { data?: string | null } | null;
+
 function extractUuid(value: string): string | null {
   const match = value.match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
   return match?.[0] ?? null;
@@ -24,10 +30,16 @@ export function DoctorShareFab() {
   const streamRef = useRef<MediaStream | null>(null);
 
   const doctorUuid = useMemo(() => extractUuid(doctorIdInput), [doctorIdInput]);
-  const scannerSupported =
+  const cameraSupported =
     typeof window !== "undefined" &&
-    "BarcodeDetector" in window &&
     !!navigator.mediaDevices?.getUserMedia;
+
+  const handleOpen = () => {
+    setOpen(true);
+    if (cameraSupported) {
+      setScanning(true);
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -52,10 +64,10 @@ export function DoctorShareFab() {
   }, []);
 
   useEffect(() => {
-    if (!scanning || !scannerSupported || !videoRef.current) return;
+    if (!scanning || !cameraSupported || !videoRef.current) return;
 
     let cancelled = false;
-    let intervalId: number | null = null;
+    let timeoutId: number | null = null;
 
     const start = async () => {
       try {
@@ -70,26 +82,52 @@ export function DoctorShareFab() {
         streamRef.current = stream;
         videoRef.current!.srcObject = stream;
         await videoRef.current!.play();
-        const detector = new (window as typeof window & {
-          BarcodeDetector: new (options?: { formats?: string[] }) => { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue?: string }>> };
-        }).BarcodeDetector({ formats: ["qr_code"] });
+        const hasBarcodeDetector = "BarcodeDetector" in window;
+        const detector = hasBarcodeDetector
+          ? new (window as typeof window & {
+              BarcodeDetector: new (options?: { formats?: string[] }) => {
+                detect: (source: CanvasImageSource) => Promise<Array<{ rawValue?: string }>>;
+              };
+            }).BarcodeDetector({ formats: ["qr_code"] })
+          : null;
+        const jsQr: JsQrFn | null = hasBarcodeDetector
+          ? null
+          : ((await import("jsqr")).default as JsQrFn);
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
 
-        intervalId = window.setInterval(async () => {
-          if (!videoRef.current) return;
+        const finishScan = (rawValue?: string | null) => {
+          const uuid = rawValue ? extractUuid(rawValue) : null;
+          if (!uuid) return false;
+          setDoctorIdInput(uuid);
+          setScanning(false);
+          streamRef.current?.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+          return true;
+        };
+
+        const scanFrame = async () => {
+          if (cancelled || !videoRef.current) return;
           try {
-            const codes = await detector.detect(videoRef.current);
-            const value = codes[0]?.rawValue;
-            const uuid = value ? extractUuid(value) : null;
-            if (uuid) {
-              setDoctorIdInput(uuid);
-              setScanning(false);
-              streamRef.current?.getTracks().forEach((track) => track.stop());
-              streamRef.current = null;
+            if (videoRef.current.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+              if (detector) {
+                const codes = await detector.detect(videoRef.current);
+                if (finishScan(codes[0]?.rawValue)) return;
+              } else if (jsQr && context && videoRef.current.videoWidth && videoRef.current.videoHeight) {
+                canvas.width = videoRef.current.videoWidth;
+                canvas.height = videoRef.current.videoHeight;
+                context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+                const image = context.getImageData(0, 0, canvas.width, canvas.height);
+                if (finishScan(jsQr(image.data, image.width, image.height)?.data)) return;
+              }
             }
           } catch {
             // ignore scan frame failures
           }
-        }, 500);
+          timeoutId = window.setTimeout(scanFrame, 350);
+        };
+
+        void scanFrame();
       } catch {
         setScanning(false);
         toast.error("Unable to access camera scanner");
@@ -100,11 +138,11 @@ export function DoctorShareFab() {
 
     return () => {
       cancelled = true;
-      if (intervalId) window.clearInterval(intervalId);
+      if (timeoutId) window.clearTimeout(timeoutId);
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     };
-  }, [scannerSupported, scanning]);
+  }, [cameraSupported, scanning]);
 
   const toggleReport = (reportId: string) => {
     setSelectedReportIds((prev) =>
@@ -135,14 +173,22 @@ export function DoctorShareFab() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
         className="fixed bottom-24 right-5 z-30 inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-[0_18px_40px_rgba(37,99,235,0.32)]"
         aria-label="Scan to Share"
       >
         <QrCode className="h-6 w-6" />
       </button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+          if (!nextOpen) {
+            setScanning(false);
+          }
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Scan to Share</DialogTitle>
@@ -151,8 +197,8 @@ export function DoctorShareFab() {
           <div className="space-y-4">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Doctor QR</p>
-              <p className="mt-2 text-sm text-slate-500">Scan the doctor QR or paste the doctor UUID manually.</p>
-              {scannerSupported && (
+              <p className="mt-2 text-sm text-slate-500">Point your camera at the doctor QR. If camera access is unavailable, you can still paste the doctor UUID manually.</p>
+              {cameraSupported && (
                 <div className="mt-4">
                   {!scanning ? (
                     <Button type="button" variant="outline" className="rounded-full" onClick={() => setScanning(true)}>
