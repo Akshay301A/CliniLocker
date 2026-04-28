@@ -15,6 +15,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { Download, Smartphone } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style as StatusBarStyle } from "@capacitor/status-bar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ViewModeProvider, useViewMode } from "@/contexts/ViewModeContext";
@@ -186,6 +187,11 @@ function AppRoutes() {
   useEffect(() => {
     ensureNotificationChannel().catch(() => {});
     requestEssentialPermissionsOnce().catch(() => {});
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+      StatusBar.setStyle({ style: StatusBarStyle.Dark }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: "#ffffff" }).catch(() => {});
+    }
 
     const cleanup = setupNotificationHandlers((data) => {
       // When user taps notification, navigate to reminders page

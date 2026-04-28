@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Settings, Repeat2, LogOut, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
@@ -29,7 +30,10 @@ export function DoctorLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <header
+        className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur"
+        style={Capacitor.isNativePlatform() ? { paddingTop: "env(safe-area-inset-top)" } : undefined}
+      >
         <div className="flex items-center justify-between gap-3 px-4 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
@@ -52,9 +56,9 @@ export function DoctorLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="space-y-4 px-4 py-4 pb-24">{children}</main>
+      <main className="space-y-4 px-4 py-4" style={{ paddingBottom: "calc(6.5rem + env(safe-area-inset-bottom))" }}>{children}</main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}>
         <div className="mx-auto flex max-w-md items-center justify-between">
           {navItems.map((item) => {
             const active = location.pathname === item.to;

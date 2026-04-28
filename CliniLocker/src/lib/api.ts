@@ -94,6 +94,21 @@ export async function getHealthCardPublic(healthId: string): Promise<Pick<Health
   return data as Pick<HealthCardRow, "health_id" | "name" | "blood_group">;
 }
 
+export type PatientQrBundle = {
+  health_id: string;
+  name: string | null;
+  blood_group: string | null;
+  reports: Array<Report & { labs?: { name: string } | null }>;
+};
+
+export async function getPatientQrBundle(healthId: string): Promise<PatientQrBundle | null> {
+  const { data, error } = await supabase.rpc("get_patient_qr_bundle", {
+    p_health_id: healthId,
+  });
+  if (error || !data) return null;
+  return data as PatientQrBundle;
+}
+
 
 export async function getAdminStats(accessToken?: string | null): Promise<{ totalUsers: number } | { error: string }> {
   const token = accessToken?.trim();

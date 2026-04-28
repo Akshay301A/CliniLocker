@@ -55,7 +55,7 @@ export default function HealthCardDisplay({ card, containerRef }: Props) {
         </div>
       </div>
       <p className="mt-4 text-xs text-muted-foreground text-center">
-        Scan to view basic health card details. No sensitive medical data is shared.
+        Scan to view the patient card first, then open linked reports tied to this health ID.
       </p>
     </div>
   );

@@ -339,7 +339,7 @@ const PatientReminders = () => {
     <PatientLayout>
       <div className="animate-fade-in space-y-4 pb-6 md:space-y-5">
         <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-emerald-500/10 p-4 md:p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0 flex-1">
               <h1 className="flex items-center gap-2 font-display text-xl font-bold text-foreground md:text-2xl">
                 <Pill className="h-6 w-6 text-primary md:h-7 md:w-7" />
@@ -349,10 +349,9 @@ const PatientReminders = () => {
                 {t("Manage your medication reminders. Edit times, dosages, or deactivate reminders.")}
               </p>
             </div>
-            <Button type="button" className="h-9 shrink-0 gap-1.5 rounded-xl px-3 text-xs shadow-sm md:h-10 md:gap-2 md:px-4 md:text-sm" onClick={handleOpenCreate}>
+            <Button type="button" className="h-11 w-full shrink-0 gap-2 rounded-2xl px-4 text-sm shadow-sm sm:h-10 sm:w-auto sm:rounded-xl" onClick={handleOpenCreate}>
               <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("Add Reminder")}</span>
-              <span className="sm:hidden">{t("Add")}</span>
+              <span>{t("Add Reminder")}</span>
             </Button>
           </div>
           <div className="mt-3 flex items-center gap-2">
@@ -373,14 +372,14 @@ const PatientReminders = () => {
             <p className="mb-6 text-sm text-muted-foreground">
               {t("Upload a prescription, then add your medication reminders manually.")}
             </p>
-            <div className="flex items-center justify-center gap-3">
-              <Button type="button" onClick={handleOpenCreate}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
+              <Button type="button" className="h-11 w-full rounded-2xl sm:w-auto" onClick={handleOpenCreate}>
                 <Plus className="mr-2 h-4 w-4" />
                 {t("Add Reminder")}
               </Button>
-              <Link to="/patient/upload">
-              <Button variant="outline">
-                <Plus className="mr-2 h-4 w-4" />
+              <Link to="/patient/upload" className="w-full sm:w-auto">
+              <Button variant="outline" className="h-11 w-full rounded-2xl sm:w-auto">
+                <FileText className="mr-2 h-4 w-4" />
                 {t("Upload Prescription")}
               </Button>
               </Link>

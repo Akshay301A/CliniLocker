@@ -84,6 +84,31 @@ export async function ensureHealthCardExists(profile?: Profile | null): Promise<
   return await getHealthCardRow();
 }
 
+export async function getHealthCardPublic(healthId: string): Promise<Pick<HealthCardRow, "health_id" | "name" | "blood_group"> | null> {
+  const { data, error } = await supabase
+    .from("health_cards")
+    .select("health_id, name, blood_group")
+    .eq("health_id", healthId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as Pick<HealthCardRow, "health_id" | "name" | "blood_group">;
+}
+
+export type PatientQrBundle = {
+  health_id: string;
+  name: string | null;
+  blood_group: string | null;
+  reports: Array<Report & { labs?: { name: string } | null }>;
+};
+
+export async function getPatientQrBundle(healthId: string): Promise<PatientQrBundle | null> {
+  const { data, error } = await supabase.rpc("get_patient_qr_bundle", {
+    p_health_id: healthId,
+  });
+  if (error || !data) return null;
+  return data as PatientQrBundle;
+}
+
 /** Ensure a profile row exists for the current user (e.g. trigger missed). Uses RPC to avoid 409. */
 export async function ensureProfileExists(): Promise<void> {
   await supabase.rpc("ensure_profile_exists");

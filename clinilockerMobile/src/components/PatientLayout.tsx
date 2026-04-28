@@ -99,7 +99,10 @@ export function PatientLayout({ children }: { children: ReactNode }) {
       {/* Main */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Mobile Header - Logo Left, Profile Right */}
-        <header className="flex h-16 items-center justify-between bg-card px-4 border-b border-border/30 md:hidden">
+        <header
+          className="flex items-center justify-between border-b border-border/30 bg-card px-4 pb-3 pt-3 md:hidden"
+          style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
+        >
           <Link
             to="/patient/dashboard"
             className="flex items-center"
@@ -180,7 +183,10 @@ export function PatientLayout({ children }: { children: ReactNode }) {
         </header>
         
         {/* Main Content - Add bottom padding for mobile nav */}
-        <main className="flex-1 flex flex-col p-4 md:p-6 overflow-x-hidden pb-20 md:pb-6 bg-background">
+        <main
+          className="flex-1 flex flex-col overflow-x-hidden bg-background p-4 md:p-6"
+          style={{ paddingBottom: "calc(6.5rem + env(safe-area-inset-bottom))" }}
+        >
           <div className="flex-1 min-h-0">{children}</div>
           <AppFooter />
         </main>

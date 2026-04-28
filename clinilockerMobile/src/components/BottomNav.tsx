@@ -14,7 +14,10 @@ export function BottomNav() {
   const location = useLocation();
 
   return (
-    <nav className="fixed bottom-3 left-3 right-3 z-50 flex items-center justify-around bg-blue-600 rounded-full px-1 py-2 shadow-xl md:hidden max-w-md mx-auto">
+    <nav
+      className="fixed left-3 right-3 z-50 mx-auto flex max-w-md items-center justify-around rounded-full bg-blue-600 px-1 py-2 shadow-xl md:hidden"
+      style={{ bottom: "max(env(safe-area-inset-bottom), 0.75rem)" }}
+    >
       {navItems.map((item) => {
         const isActive = location.pathname === item.to || 
           (item.to === "/patient/dashboard" && location.pathname === "/patient/dashboard") ||
