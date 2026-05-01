@@ -146,6 +146,15 @@ async function clickFirstAvailable(actions: Array<() => Promise<void>>) {
   throw new Error("Unable to open the Registration Number search tab on the IMR page.");
 }
 
+function normalizeLookupValue(value: string) {
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\bstate\b/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 async function fillFirstMatchingInput(page: Page, selectors: string[], value: string) {
   for (const selector of selectors) {
     const locator = page.locator(selector).first();
@@ -178,9 +187,18 @@ async function selectCouncil(page: Page, stateCouncil: string) {
           options: ArrayLike<{ value: string; textContent?: string | null }>;
           dispatchEvent: (event: Event) => void;
         };
-        const normalize = (value: string) => value.replace(/\s+/g, " ").trim().toLowerCase();
+        const normalize = (value: string) =>
+          value
+            .replace(/\s+/g, " ")
+            .replace(/[^\w\s]/g, " ")
+            .replace(/\bstate\b/g, " ")
+            .trim()
+            .toLowerCase();
         const target = normalize(label);
-        const option = Array.from(select.options).find((entry) => normalize(entry.textContent || "") === target);
+        const option = Array.from(select.options).find((entry) => {
+          const optionLabel = normalize(entry.textContent || "");
+          return optionLabel === target || optionLabel.includes(target) || target.includes(optionLabel);
+        });
         if (!option) {
           throw new Error(`Council option not found: ${label}`);
         }
@@ -195,6 +213,103 @@ async function selectCouncil(page: Page, stateCouncil: string) {
   }
 
   throw new Error(`Unable to find State Medical Council dropdown option for "${stateCouncil}".`);
+}
+
+async function fillAdvancedSearchForm(
+  page: Page,
+  payload: { registrationNumber: string; stateCouncil: string; yearOfRegistration?: string }
+) {
+  const filled = await page.evaluate((formPayload) => {
+    const normalize = (value: string | null | undefined) =>
+      (value || "")
+        .replace(/\s+/g, " ")
+        .replace(/[^\w\s]/g, " ")
+        .replace(/\bstate\b/g, " ")
+        .trim()
+        .toLowerCase();
+
+    const containerCandidates = Array.from(document.querySelectorAll("section, div, article, form"));
+    const targetContainer = containerCandidates.find((node: any) => {
+      const text = normalize(node?.textContent);
+      return text.includes("browse by any details") || text.includes("please select at least one option");
+    });
+
+    if (!targetContainer) {
+      return { ok: false, reason: "advanced-search-section-not-found" };
+    }
+
+    const textInputs = Array.from(
+      targetContainer.querySelectorAll("input[type='text'], input:not([type]), input[placeholder]")
+    ) as any[];
+    const selects = Array.from(targetContainer.querySelectorAll("select")) as any[];
+
+    const registrationInput = textInputs.find((input: any) => {
+      const text = normalize(
+        [input?.placeholder, input?.name, input?.id, input?.getAttribute?.("aria-label"), input?.closest("label")?.textContent]
+          .filter(Boolean)
+          .join(" ")
+      );
+      return text.includes("registration");
+    });
+
+    if (!registrationInput) {
+      return { ok: false, reason: "registration-input-not-found" };
+    }
+
+    registrationInput.value = formPayload.registrationNumber;
+    registrationInput.dispatchEvent(new Event("input", { bubbles: true }));
+    registrationInput.dispatchEvent(new Event("change", { bubbles: true }));
+
+    const councilSelect = selects.find((select: any) => {
+      const text = normalize(
+        [select?.name, select?.id, select?.getAttribute?.("aria-label"), select?.closest("label")?.textContent]
+          .filter(Boolean)
+          .join(" ")
+      );
+      return text.includes("council") || text.includes("medical");
+    });
+
+    if (!councilSelect) {
+      return { ok: false, reason: "council-select-not-found" };
+    }
+
+    const targetCouncil = normalize(formPayload.stateCouncil);
+    const matchingCouncil = Array.from(councilSelect.options || []).find((option: any) => {
+      const optionText = normalize(option?.textContent || option?.label || "");
+      return optionText === targetCouncil || optionText.includes(targetCouncil) || targetCouncil.includes(optionText);
+    });
+
+    if (!matchingCouncil) {
+      return { ok: false, reason: `council-option-not-found:${formPayload.stateCouncil}` };
+    }
+
+    councilSelect.value = matchingCouncil.value;
+    councilSelect.dispatchEvent(new Event("input", { bubbles: true }));
+    councilSelect.dispatchEvent(new Event("change", { bubbles: true }));
+
+    if (formPayload.yearOfRegistration) {
+      const yearTarget = normalize(formPayload.yearOfRegistration);
+      const yearSelect = selects.find((select: any) => select !== councilSelect);
+      if (yearSelect) {
+        const matchingYear = Array.from(yearSelect.options || []).find((option: any) => {
+          const optionText = normalize(option?.textContent || option?.label || "");
+          return optionText === yearTarget || optionText.includes(yearTarget);
+        });
+        if (matchingYear) {
+          yearSelect.value = matchingYear.value;
+          yearSelect.dispatchEvent(new Event("input", { bubbles: true }));
+          yearSelect.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
+    }
+
+    return { ok: true };
+  }, payload);
+
+  if (!filled?.ok) {
+    const reason = typeof filled?.reason === "string" ? filled.reason : "unknown";
+    throw new Error(`Unable to fill the IMR advanced search form (${reason}).`);
+  }
 }
 
 async function waitForSearchResults(page: Page) {
@@ -327,29 +442,14 @@ async function lookupDoctorInImr(payload: {
     await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
     await clickFirstAvailable([
-      () => page.getByRole("tab", { name: /registration number/i }).first().click({ timeout: 4000 }),
-      () => page.getByRole("link", { name: /registration number/i }).first().click({ timeout: 4000 }),
-      () => page.getByRole("button", { name: /registration number/i }).first().click({ timeout: 4000 }),
-      () => page.getByText(/search by registration number/i).first().click({ timeout: 4000 }),
-      () => page.getByText(/registration number/i).first().click({ timeout: 4000 }),
+      () => page.getByRole("tab", { name: /advance search|any details/i }).first().click({ timeout: 4000 }),
+      () => page.getByRole("link", { name: /advance search|any details/i }).first().click({ timeout: 4000 }),
+      () => page.getByRole("button", { name: /advance search|any details/i }).first().click({ timeout: 4000 }),
+      () => page.getByText(/browse by any details/i).first().click({ timeout: 4000 }),
+      () => page.getByText(/advance search/i).first().click({ timeout: 4000 }),
     ]);
 
-    await fillFirstMatchingInput(page, [
-      "input[placeholder*='Registration' i]",
-      "input[name*='registration' i]",
-      "input[id*='registration' i]",
-      "input[type='text']",
-    ], payload.registrationNumber);
-
-    await selectCouncil(page, payload.stateCouncil);
-
-    if (payload.yearOfRegistration?.trim()) {
-      await fillFirstMatchingInput(page, [
-        "input[placeholder*='Year' i]",
-        "input[name*='year' i]",
-        "input[id*='year' i]",
-      ], payload.yearOfRegistration.trim());
-    }
+    await fillAdvancedSearchForm(page, payload);
 
     await clickFirstAvailable([
       () => page.getByRole("button", { name: /^submit$/i }).first().click({ timeout: 4000 }),
