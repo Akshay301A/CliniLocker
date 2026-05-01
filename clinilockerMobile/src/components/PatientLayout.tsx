@@ -100,8 +100,8 @@ export function PatientLayout({ children }: { children: ReactNode }) {
       <div className="flex flex-1 flex-col min-w-0">
         {/* Mobile Header - Logo Left, Profile Right */}
         <header
-          className="flex items-center justify-between gap-3 border-b border-border/30 bg-card px-3.5 pb-2.5 pt-2 md:hidden sm:px-4 sm:pb-3"
-          style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.4rem)" }}
+          className="flex items-center justify-between gap-3 border-b border-border/20 bg-card px-3.5 pb-2 pt-2 md:hidden sm:px-4 sm:pb-2.5"
+          style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.14rem)" }}
         >
           <Link
             to="/patient/dashboard"
@@ -111,13 +111,13 @@ export function PatientLayout({ children }: { children: ReactNode }) {
             <img
               src="/logo%20(2).png"
               alt="CliniLocker"
-              className="h-11 w-auto max-w-[9.5rem] object-contain sm:h-12 sm:max-w-[10.5rem]"
+              className="h-[3.35rem] w-auto max-w-[12rem] object-contain sm:h-[3.5rem] sm:max-w-[12.5rem]"
             />
           </Link>
           <div className="flex items-center gap-2">
             <Link
               to="/patient/health-card"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/60 text-foreground transition-colors hover:bg-muted"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/55 text-foreground transition-colors hover:bg-muted"
               aria-label={t("Digital Health Card")}
             >
               <CreditCard className="h-4 w-4" />
@@ -127,7 +127,7 @@ export function PatientLayout({ children }: { children: ReactNode }) {
               className="flex items-center justify-center rounded-full transition-opacity hover:opacity-80"
               aria-label={t("Profile")}
             >
-              <Avatar className="h-9 w-9 shrink-0 sm:h-10 sm:w-10">
+              <Avatar className="h-10 w-10 shrink-0 sm:h-11 sm:w-11">
                 {avatarUrl && <AvatarImage src={avatarUrl} alt={profileName ?? t("Profile")} />}
                 <AvatarFallback className="bg-primary/10 text-primary text-xs">
                   {profileName ? profileName.charAt(0).toUpperCase() : <User className="h-4 w-4" />}

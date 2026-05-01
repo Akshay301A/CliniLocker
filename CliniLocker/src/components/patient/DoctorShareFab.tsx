@@ -76,6 +76,7 @@ export function DoctorShareFab() {
   const [bundleLoading, setBundleLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [startingCamera, setStartingCamera] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
@@ -105,6 +106,7 @@ export function DoctorShareFab() {
     setTorchSupported(false);
     setTorchEnabled(false);
     setStartingCamera(false);
+    setCameraReady(false);
   };
 
   const resetShareFlow = () => {
@@ -117,6 +119,7 @@ export function DoctorShareFab() {
     setScanError(null);
     setPermissionDialogOpen(false);
     setScannedTarget(null);
+    setCameraReady(false);
     stopCamera();
   };
 
@@ -128,6 +131,7 @@ export function DoctorShareFab() {
     setScanError(null);
     setPermissionDialogOpen(false);
     setScannedTarget(null);
+    setCameraReady(false);
     setOpen(true);
     if (cameraSupported) {
       setStartingCamera(true);
@@ -239,6 +243,7 @@ export function DoctorShareFab() {
         setScanError(null);
         setPermissionDialogOpen(false);
         setStartingCamera(true);
+        setCameraReady(false);
 
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -272,6 +277,7 @@ export function DoctorShareFab() {
         video.setAttribute("muted", "true");
         video.setAttribute("playsinline", "true");
         video.setAttribute("webkit-playsinline", "true");
+        video.setAttribute("disablePictureInPicture", "true");
         await new Promise<void>((resolve) => {
           if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
             resolve();
@@ -284,8 +290,20 @@ export function DoctorShareFab() {
           video.addEventListener("loadedmetadata", onLoadedMetadata, { once: true });
         });
         await video.play();
+        await new Promise<void>((resolve) => {
+          if (!video.paused && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+            resolve();
+            return;
+          }
+          const onPlaying = () => {
+            video.removeEventListener("playing", onPlaying);
+            resolve();
+          };
+          video.addEventListener("playing", onPlaying, { once: true });
+        });
 
         setStartingCamera(false);
+        setCameraReady(true);
 
         if (!canvasRef.current) {
           canvasRef.current = document.createElement("canvas");
@@ -401,7 +419,7 @@ export function DoctorShareFab() {
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 bg-black">
+        <div className={`fixed inset-0 z-50 ${scannedTarget ? "bg-white" : "bg-black"}`}>
           {!scannedTarget ? (
             <section className="relative h-full w-full overflow-hidden bg-black text-white">
               <button
@@ -423,10 +441,13 @@ export function DoctorShareFab() {
                   `}</style>
                   <video
                     ref={videoRef}
-                    className="scanner-video h-full w-full object-cover"
+                    className={`scanner-video h-full w-full object-cover transition-opacity duration-150 ${
+                      cameraReady ? "opacity-100" : "opacity-0"
+                    }`}
                     autoPlay
                     muted
                     playsInline
+                    disablePictureInPicture
                     poster="data:image/gif;base64,R0lGODlhAQABAAAAACw="
                   />
                   <div className="pointer-events-none absolute inset-0 bg-black/28" />
@@ -454,11 +475,6 @@ export function DoctorShareFab() {
                       {torchEnabled ? <FlashlightOff className="h-5 w-5" /> : <Flashlight className="h-5 w-5" />}
                     </button>
                   ) : null}
-                  {startingCamera ? (
-                    <div className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1.5 text-xs font-medium text-white backdrop-blur">
-                      Starting camera...
-                    </div>
-                  ) : null}
                 </>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center px-6 text-center">
@@ -467,16 +483,17 @@ export function DoctorShareFab() {
               )}
             </section>
           ) : showDoctorFlow ? (
-              <section className="p-4 sm:p-6">
+              <section className="min-h-full bg-white px-4 py-5 sm:px-6">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Doctor QR</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-500">Doctor QR</p>
                     <h2 className="mt-2 text-xl font-bold text-slate-950 sm:text-2xl">Select reports to share</h2>
+                    <p className="mt-1 text-sm text-sky-600">Choose the reports you want to send to this doctor.</p>
                   </div>
                   <button
                     type="button"
                     onClick={resetShareFlow}
-                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500"
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sky-100 bg-white text-slate-500 shadow-sm"
                     aria-label="Close share sheet"
                   >
                     <X className="h-5 w-5" />
@@ -484,13 +501,15 @@ export function DoctorShareFab() {
                 </div>
 
                 {doctorProfile ? (
-                  <div className="mt-4 rounded-[24px] border border-blue-100 bg-blue-50/70 p-4">
+                  <div className="mt-4 rounded-[28px] border border-sky-100 bg-white p-4 shadow-[0_20px_45px_rgba(14,116,144,0.08)]">
                     <div className="flex items-center gap-2">
-                      <UserRoundSearch className="h-4 w-4 text-blue-700" />
+                      <UserRoundSearch className="h-4 w-4 text-sky-500" />
                       <p className="font-semibold text-slate-900">{doctorProfile.full_name || "Doctor"}</p>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant="outline">{doctorProfile.medical_council || "Council pending"}</Badge>
+                      <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700">
+                        {doctorProfile.medical_council || "Council pending"}
+                      </Badge>
                       <Badge variant={doctorProfile.is_verified ? "default" : "secondary"}>
                         {doctorProfile.is_verified ? "Verified" : "Pending"}
                       </Badge>
@@ -508,8 +527,8 @@ export function DoctorShareFab() {
                         onClick={() => toggleReport(report.id)}
                         className={`w-full rounded-[24px] border px-4 py-4 text-left transition ${
                           selected
-                            ? "border-blue-200 bg-blue-50"
-                            : "border-slate-200 bg-white hover:bg-slate-50"
+                            ? "border-sky-200 bg-sky-50"
+                            : "border-slate-200 bg-white hover:border-sky-100 hover:bg-sky-50/40"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -542,16 +561,17 @@ export function DoctorShareFab() {
                 </Button>
               </section>
           ) : (
-              <section className="p-4 sm:p-6">
+              <section className="min-h-full bg-white px-4 py-5 sm:px-6">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Patient QR</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-500">Patient QR</p>
                     <h2 className="mt-2 text-xl font-bold text-slate-950 sm:text-2xl">Patient card and linked reports</h2>
+                    <p className="mt-1 text-sm text-sky-600">Review the patient card first, then open linked reports.</p>
                   </div>
                   <button
                     type="button"
                     onClick={resetShareFlow}
-                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500"
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-sky-100 bg-white text-slate-500 shadow-sm"
                     aria-label="Close patient sheet"
                   >
                     <X className="h-5 w-5" />
@@ -559,23 +579,23 @@ export function DoctorShareFab() {
                 </div>
 
                 {bundleLoading ? (
-                  <div className="mt-6 flex items-center justify-center rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-10 text-slate-500">
+                  <div className="mt-6 flex items-center justify-center rounded-[24px] border border-sky-100 bg-sky-50 px-4 py-10 text-sky-700">
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Loading patient QR...
                   </div>
                 ) : patientBundle ? (
                   <>
-                    <div className="mt-4 rounded-[24px] border border-emerald-100 bg-emerald-50/70 p-4">
+                    <div className="mt-4 rounded-[28px] border border-sky-100 bg-white p-4 shadow-[0_20px_45px_rgba(14,116,144,0.08)]">
                       <p className="text-lg font-bold text-slate-950">{patientBundle.name || "CliniLocker Patient"}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <Badge variant="outline">Health ID: {patientBundle.health_id}</Badge>
-                        <Badge variant="outline">Blood Group: {patientBundle.blood_group || "-"}</Badge>
+                        <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700">Health ID: {patientBundle.health_id}</Badge>
+                        <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700">Blood Group: {patientBundle.blood_group || "-"}</Badge>
                         <Badge variant="secondary">{patientBundle.reports.length} reports linked</Badge>
                       </div>
                       <Button
                         type="button"
                         variant="outline"
-                        className="mt-4 rounded-full border-emerald-200"
+                        className="mt-4 rounded-full border-sky-200 text-sky-700 hover:bg-sky-50"
                         onClick={() => void handleViewPatientReports()}
                       >
                         View Reports
@@ -585,7 +605,7 @@ export function DoctorShareFab() {
                     {showPatientReports ? (
                       <div className="mt-5 max-h-[52vh] space-y-3 overflow-y-auto pr-1">
                         {patientBundle.reports.length === 0 ? (
-                          <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                          <div className="rounded-[24px] border border-sky-100 bg-sky-50 px-4 py-6 text-center text-sm text-sky-700">
                             No reports are linked to this patient yet.
                           </div>
                         ) : (

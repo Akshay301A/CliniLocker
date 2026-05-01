@@ -169,9 +169,14 @@
 .scanner-video::-webkit-media-controls,
 .scanner-video::-webkit-media-controls-enclosure,
 .scanner-video::-webkit-media-controls-panel,
+.scanner-video::-webkit-media-controls-overlay-play-button,
 .scanner-video::-webkit-media-controls-play-button,
 .scanner-video::-webkit-media-controls-start-playback-button {
   display: none !important;
   -webkit-appearance: none;
   opacity: 0 !important;
+}
+
+.scanner-video[poster] {
+  background: #000 !important;
 }
