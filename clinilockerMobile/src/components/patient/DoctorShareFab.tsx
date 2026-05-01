@@ -1,5 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ExternalLink, Loader2, QrCode, Send, UserRoundSearch, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ExternalLink, Flashlight, FlashlightOff, Loader2, QrCode, Send, UserRoundSearch, X } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +32,10 @@ type JsQrFn = (
 type ScannedTarget =
   | { kind: "doctor"; doctorId: string }
   | { kind: "patient"; healthId: string };
+
+type BarcodeDetectorLike = {
+  detect: (source: CanvasImageSource) => Promise<Array<{ rawValue?: string }>>;
+};
 
 function extractUuid(value: string): string | null {
   const match = value.match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
@@ -63,10 +76,17 @@ export function DoctorShareFab() {
   const [loading, setLoading] = useState(false);
   const [bundleLoading, setBundleLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [startingCamera, setStartingCamera] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [permissionDialogOpen, setPermissionDialogOpen] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchEnabled, setTorchEnabled] = useState(false);
   const [scannedTarget, setScannedTarget] = useState<ScannedTarget | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastScanTimeRef = useRef(0);
 
   const cameraSupported =
     typeof window !== "undefined" &&
@@ -76,6 +96,18 @@ export function DoctorShareFab() {
   const showDoctorFlow = scannedTarget?.kind === "doctor";
   const showPatientFlow = scannedTarget?.kind === "patient";
 
+  const stopCamera = () => {
+    if (animationFrameRef.current) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setTorchSupported(false);
+    setTorchEnabled(false);
+    setStartingCamera(false);
+  };
+
   const resetShareFlow = () => {
     setOpen(false);
     setScanning(false);
@@ -84,7 +116,9 @@ export function DoctorShareFab() {
     setPatientReportUrls({});
     setShowPatientReports(false);
     setScanError(null);
+    setPermissionDialogOpen(false);
     setScannedTarget(null);
+    stopCamera();
   };
 
   const handleOpen = () => {
@@ -93,13 +127,16 @@ export function DoctorShareFab() {
     setPatientReportUrls({});
     setShowPatientReports(false);
     setScanError(null);
+    setPermissionDialogOpen(false);
     setScannedTarget(null);
     setOpen(true);
     if (cameraSupported) {
+      setStartingCamera(true);
       setScanning(true);
     } else {
       setScanning(false);
-      setScanError("Camera access is not available on this device/browser.");
+      setStartingCamera(false);
+      setScanError("Camera access is not available on this device or browser.");
     }
   };
 
@@ -131,6 +168,7 @@ export function DoctorShareFab() {
           setScanError("Patient QR details could not be loaded.");
           setScannedTarget(null);
           setScanning(cameraSupported);
+          setStartingCamera(cameraSupported);
           return;
         }
         setPatientBundle(bundle);
@@ -140,7 +178,7 @@ export function DoctorShareFab() {
 
   useEffect(() => {
     return () => {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      stopCamera();
     };
   }, []);
 
@@ -148,73 +186,124 @@ export function DoctorShareFab() {
     if (!scanning || !cameraSupported || !videoRef.current) return;
 
     let cancelled = false;
-    let timeoutId: number | null = null;
+
+    const finishScan = (rawValue?: string | null) => {
+      const target = parseScannedQr(rawValue);
+      if (!target) return false;
+      setScannedTarget(target);
+      setScanning(false);
+      stopCamera();
+      return true;
+    };
+
+    const scanFrame = async (
+      video: HTMLVideoElement,
+      context: CanvasRenderingContext2D,
+      canvas: HTMLCanvasElement,
+      detector: BarcodeDetectorLike | null,
+      jsQr: JsQrFn | null
+    ) => {
+      if (cancelled) return;
+
+      try {
+        const now = performance.now();
+        if (
+          now - lastScanTimeRef.current >= 120 &&
+          video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+        ) {
+          lastScanTimeRef.current = now;
+
+          if (detector) {
+            const codes = await detector.detect(video);
+            if (finishScan(codes[0]?.rawValue)) return;
+          } else if (jsQr && video.videoWidth && video.videoHeight) {
+            const maxWidth = 720;
+            const scale = Math.min(1, maxWidth / Math.max(video.videoWidth, 1));
+            canvas.width = Math.max(1, Math.floor(video.videoWidth * scale));
+            canvas.height = Math.max(1, Math.floor(video.videoHeight * scale));
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const image = context.getImageData(0, 0, canvas.width, canvas.height);
+            if (finishScan(jsQr(image.data, image.width, image.height)?.data)) return;
+          }
+        }
+      } catch {
+        // Ignore intermittent frame-level scan failures and keep scanning.
+      }
+
+      animationFrameRef.current = window.requestAnimationFrame(() => {
+        void scanFrame(video, context, canvas, detector, jsQr);
+      });
+    };
 
     const start = async () => {
       try {
         setScanError(null);
+        setPermissionDialogOpen(false);
+        setStartingCamera(true);
+
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } },
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 1280 },
+          },
           audio: false,
         });
+
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
+
         streamRef.current = stream;
-        videoRef.current!.srcObject = stream;
-        await videoRef.current!.play();
+        const videoTrack = stream.getVideoTracks()[0];
+        const capabilities = (videoTrack?.getCapabilities?.() as { torch?: boolean } | undefined) ?? undefined;
+        setTorchSupported(Boolean(capabilities?.torch));
+        setTorchEnabled(false);
+
+        const video = videoRef.current;
+        if (!video) return;
+        video.srcObject = stream;
+        video.muted = true;
+        video.autoplay = true;
+        video.setAttribute("autoplay", "true");
+        video.setAttribute("muted", "true");
+        video.setAttribute("playsinline", "true");
+        video.setAttribute("webkit-playsinline", "true");
+        await video.play();
+
+        setStartingCamera(false);
+
+        if (!canvasRef.current) {
+          canvasRef.current = document.createElement("canvas");
+        }
+        const canvas = canvasRef.current;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) {
+          throw new Error("Unable to start scanner canvas.");
+        }
 
         const hasBarcodeDetector = "BarcodeDetector" in window;
         const detector = hasBarcodeDetector
           ? new (window as typeof window & {
-              BarcodeDetector: new (options?: { formats?: string[] }) => {
-                detect: (source: CanvasImageSource) => Promise<Array<{ rawValue?: string }>>;
-              };
+              BarcodeDetector: new (options?: { formats?: string[] }) => BarcodeDetectorLike;
             }).BarcodeDetector({ formats: ["qr_code"] })
           : null;
-        const jsQr: JsQrFn | null = hasBarcodeDetector
-          ? null
-          : ((await import("jsqr")).default as JsQrFn);
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d", { willReadFrequently: true });
+        const jsQr = hasBarcodeDetector ? null : ((await import("jsqr")).default as JsQrFn);
 
-        const finishScan = (rawValue?: string | null) => {
-          const target = parseScannedQr(rawValue);
-          if (!target) return false;
-          setScannedTarget(target);
-          setScanning(false);
-          streamRef.current?.getTracks().forEach((track) => track.stop());
-          streamRef.current = null;
-          return true;
-        };
-
-        const scanFrame = async () => {
-          if (cancelled || !videoRef.current) return;
-          try {
-            if (videoRef.current.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-              if (detector) {
-                const codes = await detector.detect(videoRef.current);
-                if (finishScan(codes[0]?.rawValue)) return;
-              } else if (jsQr && context && videoRef.current.videoWidth && videoRef.current.videoHeight) {
-                canvas.width = videoRef.current.videoWidth;
-                canvas.height = videoRef.current.videoHeight;
-                context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-                const image = context.getImageData(0, 0, canvas.width, canvas.height);
-                if (finishScan(jsQr(image.data, image.width, image.height)?.data)) return;
-              }
-            }
-          } catch {
-            // Ignore intermittent frame-level scan failures.
-          }
-          timeoutId = window.setTimeout(scanFrame, 350);
-        };
-
-        void scanFrame();
-      } catch {
+        void scanFrame(video, context, canvas, detector, jsQr);
+      } catch (error) {
+        stopCamera();
         setScanning(false);
-        setScanError("Unable to access the camera. Please allow camera permission and try again.");
-        toast.error("Unable to access camera scanner");
+        const denied =
+          error instanceof DOMException &&
+          (error.name === "NotAllowedError" || error.name === "SecurityError");
+        setScanError(
+          denied
+            ? "Camera permission is currently blocked for CliniLocker."
+            : "We couldn't start the camera right now."
+        );
+        setPermissionDialogOpen(true);
       }
     };
 
@@ -222,11 +311,25 @@ export function DoctorShareFab() {
 
     return () => {
       cancelled = true;
-      if (timeoutId) window.clearTimeout(timeoutId);
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+      stopCamera();
     };
   }, [cameraSupported, scanning]);
+
+  const handleTorchToggle = async () => {
+    const track = streamRef.current?.getVideoTracks?.()[0];
+    if (!track) return;
+
+    try {
+      await track.applyConstraints({
+        advanced: [{ torch: !torchEnabled } as MediaTrackConstraintSet],
+      });
+      setTorchEnabled((current) => !current);
+    } catch {
+      toast.error("Flashlight is not available on this device.");
+      setTorchSupported(false);
+      setTorchEnabled(false);
+    }
+  };
 
   const toggleReport = (reportId: string) => {
     setSelectedReportIds((prev) =>
@@ -278,7 +381,7 @@ export function DoctorShareFab() {
       <button
         type="button"
         onClick={handleOpen}
-        className="fixed bottom-24 right-5 z-30 inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-[0_18px_40px_rgba(37,99,235,0.32)]"
+        className="fixed bottom-24 right-5 z-30 inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-[0_18px_40px_rgba(37,99,235,0.32)] transition hover:scale-105 hover:bg-blue-700"
         aria-label="Scan QR"
       >
         <QrCode className="h-6 w-6" />
@@ -311,38 +414,65 @@ export function DoctorShareFab() {
 
                   <div className="mt-5 overflow-hidden rounded-[28px] border border-white/15 bg-black shadow-[0_24px_70px_rgba(15,23,42,0.45)]">
                     <div className="relative aspect-square w-full">
-                      {scanning && (
+                      {scanning ? (
                         <>
-                          <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
+                          <style>{`
+                            @keyframes clinilocker-qr-laser {
+                              0% { transform: translateY(0); opacity: 0.35; }
+                              50% { transform: translateY(210px); opacity: 1; }
+                              100% { transform: translateY(0); opacity: 0.35; }
+                            }
+                          `}</style>
+                          <video ref={videoRef} className="h-full w-full object-cover" autoPlay muted playsInline />
                           <div className="pointer-events-none absolute inset-0">
                             <div className="absolute inset-5 rounded-[30px] border-2 border-white/80 shadow-[0_0_0_9999px_rgba(2,6,23,0.38)]" />
-                            <div className="absolute left-10 right-10 top-1/2 h-0.5 -translate-y-1/2 bg-emerald-300/90 shadow-[0_0_18px_rgba(110,231,183,0.95)]" />
+                            <div className="absolute inset-x-10 bottom-10 top-10 overflow-hidden rounded-[24px]">
+                              <div
+                                className="absolute left-0 right-0 h-0.5 bg-emerald-300/95 shadow-[0_0_20px_rgba(110,231,183,0.95)]"
+                                style={{ animation: "clinilocker-qr-laser 2.2s ease-in-out infinite" }}
+                              />
+                            </div>
+                            <div className="absolute inset-x-7 bottom-6 flex items-center justify-between gap-3">
+                              <div className="rounded-full bg-black/45 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur">
+                                {startingCamera ? "Starting camera..." : "Scanning automatically"}
+                              </div>
+                              {torchSupported ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleTorchToggle()}
+                                  className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/14 text-white backdrop-blur transition hover:bg-white/20"
+                                  aria-label={torchEnabled ? "Turn flashlight off" : "Turn flashlight on"}
+                                >
+                                  {torchEnabled ? <FlashlightOff className="h-5 w-5" /> : <Flashlight className="h-5 w-5" />}
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
                         </>
-                      )}
-
-                      {!scanning && (
+                      ) : (
                         <div className="flex h-full flex-col items-center justify-center px-6 text-center">
                           {scanError ? (
                             <>
                               <p className="text-base font-semibold text-white">{scanError}</p>
-                              {cameraSupported && (
+                              {cameraSupported ? (
                                 <Button
                                   type="button"
                                   className="mt-4 rounded-full bg-white text-slate-900 hover:bg-slate-100"
                                   onClick={() => {
                                     setScanError(null);
+                                    setPermissionDialogOpen(false);
+                                    setStartingCamera(true);
                                     setScanning(true);
                                   }}
                                 >
                                   Try Camera Again
                                 </Button>
-                              )}
+                              ) : null}
                             </>
                           ) : (
                             <>
                               <Loader2 className="h-8 w-8 animate-spin text-blue-200" />
-                              <p className="mt-3 text-sm text-slate-300">Starting camera…</p>
+                              <p className="mt-3 text-sm text-slate-300">Starting camera...</p>
                             </>
                           )}
                         </div>
@@ -368,7 +498,7 @@ export function DoctorShareFab() {
                   </button>
                 </div>
 
-                {doctorProfile && (
+                {doctorProfile ? (
                   <div className="mt-4 rounded-[24px] border border-blue-100 bg-blue-50/70 p-4">
                     <div className="flex items-center gap-2">
                       <UserRoundSearch className="h-4 w-4 text-blue-700" />
@@ -381,7 +511,7 @@ export function DoctorShareFab() {
                       </Badge>
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 <div className="mt-5 max-h-[52vh] space-y-3 overflow-y-auto pr-1">
                   {reports.map((report) => {
@@ -391,18 +521,25 @@ export function DoctorShareFab() {
                         key={report.id}
                         type="button"
                         onClick={() => toggleReport(report.id)}
-                        className={`w-full rounded-[24px] border px-4 py-4 text-left ${
-                          selected ? "border-blue-200 bg-blue-50" : "border-slate-200 bg-white"
+                        className={`w-full rounded-[24px] border px-4 py-4 text-left transition ${
+                          selected
+                            ? "border-blue-200 bg-blue-50"
+                            : "border-slate-200 bg-white hover:bg-slate-50"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <p className="font-bold text-slate-900">{report.test_name}</p>
                             <p className="mt-1 text-sm text-slate-500">
-                              {report.labs?.name || "CliniLocker"} • {report.uploaded_at ? new Date(report.uploaded_at).toLocaleDateString("en-IN") : ""}
+                              {report.labs?.name || "CliniLocker"}{" "}
+                              {report.uploaded_at
+                                ? `• ${new Date(report.uploaded_at).toLocaleDateString("en-IN")}`
+                                : ""}
                             </p>
                           </div>
-                          <Badge variant={selected ? "default" : "outline"}>{selected ? "Selected" : "Tap to select"}</Badge>
+                          <Badge variant={selected ? "default" : "outline"}>
+                            {selected ? "Selected" : "Tap to select"}
+                          </Badge>
                         </div>
                       </button>
                     );
@@ -439,7 +576,7 @@ export function DoctorShareFab() {
                 {bundleLoading ? (
                   <div className="mt-6 flex items-center justify-center rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-10 text-slate-500">
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Loading patient QR…
+                    Loading patient QR...
                   </div>
                 ) : patientBundle ? (
                   <>
@@ -447,7 +584,7 @@ export function DoctorShareFab() {
                       <p className="text-lg font-bold text-slate-950">{patientBundle.name || "CliniLocker Patient"}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Badge variant="outline">Health ID: {patientBundle.health_id}</Badge>
-                        <Badge variant="outline">Blood Group: {patientBundle.blood_group || "—"}</Badge>
+                        <Badge variant="outline">Blood Group: {patientBundle.blood_group || "-"}</Badge>
                         <Badge variant="secondary">{patientBundle.reports.length} reports linked</Badge>
                       </div>
                       <Button
@@ -460,7 +597,7 @@ export function DoctorShareFab() {
                       </Button>
                     </div>
 
-                    {showPatientReports && (
+                    {showPatientReports ? (
                       <div className="mt-5 max-h-[52vh] space-y-3 overflow-y-auto pr-1">
                         {patientBundle.reports.length === 0 ? (
                           <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
@@ -473,7 +610,10 @@ export function DoctorShareFab() {
                                 <div className="min-w-0 flex-1">
                                   <p className="font-bold text-slate-900">{report.test_name}</p>
                                   <p className="mt-1 text-sm text-slate-500">
-                                    {report.labs?.name || "CliniLocker"} • {report.uploaded_at ? new Date(report.uploaded_at).toLocaleDateString("en-IN") : ""}
+                                    {report.labs?.name || "CliniLocker"}{" "}
+                                    {report.uploaded_at
+                                      ? `• ${new Date(report.uploaded_at).toLocaleDateString("en-IN")}`
+                                      : ""}
                                   </p>
                                 </div>
                                 {patientReportUrls[report.id] ? (
@@ -488,7 +628,7 @@ export function DoctorShareFab() {
                                   </a>
                                 ) : (
                                   <span className="inline-flex h-10 shrink-0 items-center rounded-full border border-slate-200 px-3 text-sm text-slate-400">
-                                    Preparing…
+                                    Preparing...
                                   </span>
                                 )}
                               </div>
@@ -496,7 +636,7 @@ export function DoctorShareFab() {
                           ))
                         )}
                       </div>
-                    )}
+                    ) : null}
                   </>
                 ) : (
                   <div className="mt-6 rounded-[24px] border border-red-100 bg-red-50 px-4 py-6 text-center text-sm text-red-600">
@@ -508,6 +648,30 @@ export function DoctorShareFab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={permissionDialogOpen} onOpenChange={setPermissionDialogOpen}>
+        <AlertDialogContent className="rounded-[28px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Allow camera access to scan QR codes</AlertDialogTitle>
+            <AlertDialogDescription className="text-left leading-6">
+              CliniLocker needs camera access to scan doctor and patient QR codes inside the app. Please allow camera
+              permission in your browser or device settings, then return here and try again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:justify-end">
+            <AlertDialogAction
+              onClick={() => {
+                setPermissionDialogOpen(false);
+                setScanError(null);
+                setStartingCamera(true);
+                setScanning(true);
+              }}
+            >
+              Try Again
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

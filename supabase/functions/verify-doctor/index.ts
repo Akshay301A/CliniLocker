@@ -19,6 +19,9 @@ const corsHeaders = {
 
 const IMR_URL = "https://www.nmc.org.in/information-desk/indian-medical-register/";
 const DEFAULT_BROWSERLESS_ENDPOINT = "wss://production-sfo.browserless.io";
+const IMR_NAVIGATION_TIMEOUT_MS = 45000;
+const IMR_STEP_TIMEOUT_MS = 8000;
+const IMR_RESULTS_TIMEOUT_MS = 12000;
 
 type VerificationRequest = {
   registration_number?: string;
@@ -61,6 +64,14 @@ function jsonResponse(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function logStep(step: string, details?: Record<string, unknown>) {
+  try {
+    console.log(JSON.stringify({ scope: "verify-doctor", step, ...(details || {}) }));
+  } catch {
+    console.log(`[verify-doctor] ${step}`);
+  }
 }
 
 function verificationResponse(body: {
@@ -246,6 +257,7 @@ function normalizeLookupValue(value: string) {
 }
 
 async function selectBootstrapMultiselect(page: Page, selectId: string, labelText: string) {
+  logStep("select_multiselect_start", { selectId, labelText });
   const wrapper = page.locator(`#${selectId} + div.btn-group`).first();
   const toggle = wrapper.locator("button.multiselect").first();
   const optionLabel = wrapper.locator("label.radio", { hasText: labelText }).first();
@@ -256,6 +268,7 @@ async function selectBootstrapMultiselect(page: Page, selectId: string, labelTex
 
   await toggle.click({ timeout: 5000 });
   await optionLabel.click({ timeout: 5000 });
+  logStep("select_multiselect_done", { selectId, labelText });
   try {
     await page.waitForTimeout(300);
   } catch {
@@ -442,25 +455,33 @@ async function fillAdvancedSearchForm(
 async function waitForSearchResults(page: Page) {
   const resultsTable = page.locator("table tbody tr").first();
   const noResults = page.getByText(/no matching|no records|not found|no data/i).first();
+  logStep("wait_for_results_start");
 
   try {
     await Promise.race([
-      resultsTable.waitFor({ state: "visible", timeout: 20000 }),
-      noResults.waitFor({ state: "visible", timeout: 20000 }),
+      resultsTable.waitFor({ state: "visible", timeout: IMR_RESULTS_TIMEOUT_MS }),
+      noResults.waitFor({ state: "visible", timeout: IMR_RESULTS_TIMEOUT_MS }),
     ]);
   } catch {
     throw new Error("IMR search did not finish in time.");
   }
 
   if (await noResults.isVisible().catch(() => false)) {
+    logStep("wait_for_results_no_match");
     throw new Error("No IMR record matched the submitted registration details.");
   }
+
+  logStep("wait_for_results_done");
 }
 
 async function extractBestResultRow(
   page: Page,
   payload: ResultSearchPayload
 ): Promise<ScrapedDoctorRecord> {
+  logStep("extract_best_result_start", {
+    registrationNumber: payload.registrationNumber,
+    stateCouncil: payload.stateCouncil,
+  });
   const record = await page.evaluate((searchPayload: ResultSearchPayload) => {
     const normalize = (value: string | null | undefined) => (value || "").replace(/\s+/g, " ").trim();
     const normalizeLookup = (value: string | null | undefined) =>
@@ -525,6 +546,11 @@ async function extractBestResultRow(
     throw new Error("Unable to read the doctor name from the IMR search results.");
   }
 
+  logStep("extract_best_result_done", {
+    doctorName: record.doctorName,
+    registrationNumber: record.registrationNumber,
+    stateCouncil: record.stateCouncil,
+  });
   return record;
 }
 
@@ -590,11 +616,19 @@ async function lookupDoctorInImr(payload: {
   doctorName?: string;
   yearOfRegistration?: string;
 }) {
+  logStep("lookup_start", {
+    registrationNumber: payload.registrationNumber,
+    stateCouncil: payload.stateCouncil,
+    hasDoctorName: Boolean(payload.doctorName?.trim()),
+    yearOfRegistration: payload.yearOfRegistration || null,
+  });
   // Load Playwright lazily so CORS preflight and non-browser requests do not fail
   // during cold start if the runtime cannot initialize Playwright immediately.
   // @ts-ignore Supabase Edge Functions support npm: imports at runtime.
   const { chromium } = await import("npm:playwright-core@1.53.0");
+  logStep("browserless_connect_start");
   const browser: any = await chromium.connectOverCDP(buildBrowserlessEndpoint());
+  logStep("browserless_connect_done");
 
   try {
     const context: any = await browser.newContext({
@@ -603,9 +637,11 @@ async function lookupDoctorInImr(payload: {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     });
     const page: Page = await context.newPage();
+    page.setDefaultTimeout?.(IMR_STEP_TIMEOUT_MS);
 
-    await page.goto(IMR_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+    logStep("page_open_start", { url: IMR_URL });
+    await page.goto(IMR_URL, { waitUntil: "domcontentloaded", timeout: IMR_NAVIGATION_TIMEOUT_MS });
+    logStep("page_open_done");
 
     const advancedRegistration = page.locator("#doctorRegdNo").first();
     const advancedCouncil = page.locator("#advsmcId").first();
@@ -613,23 +649,29 @@ async function lookupDoctorInImr(payload: {
     const advancedSubmit = page.locator("#doctor_advance_Details").first();
 
     if (await advancedRegistration.count()) {
+      logStep("advanced_form_detected");
       await advancedRegistration.fill(payload.registrationNumber);
+      logStep("advanced_registration_filled");
 
       if (payload.doctorName?.trim()) {
         const advancedDoctorName = page.locator("#doctorName").first();
         if (await advancedDoctorName.count()) {
           await advancedDoctorName.fill(payload.doctorName.trim());
+          logStep("advanced_doctor_name_filled");
         }
       }
 
       if (payload.yearOfRegistration?.trim() && await advancedYear.count()) {
         try {
           await selectBootstrapMultiselect(page, "doctorYear", payload.yearOfRegistration.trim());
+          logStep("advanced_year_selected_visible");
         } catch {
           try {
             await advancedYear.selectOption({ label: payload.yearOfRegistration.trim() });
+            logStep("advanced_year_selected_label_fallback");
           } catch {
             await advancedYear.selectOption(payload.yearOfRegistration.trim()).catch(() => {});
+            logStep("advanced_year_selected_value_fallback");
           }
         }
       }
@@ -637,6 +679,7 @@ async function lookupDoctorInImr(payload: {
       if (await advancedCouncil.count()) {
         try {
           await selectBootstrapMultiselect(page, "advsmcId", payload.stateCouncil);
+          logStep("advanced_council_selected_visible");
         } catch {
           await advancedCouncil.evaluate((node: unknown, label: string) => {
             const select = node as {
@@ -663,15 +706,18 @@ async function lookupDoctorInImr(payload: {
             select.dispatchEvent(new Event("input", { bubbles: true }));
             select.dispatchEvent(new Event("change", { bubbles: true }));
           }, payload.stateCouncil);
+          logStep("advanced_council_selected_value_fallback");
         }
       }
 
       if (await advancedSubmit.count()) {
+        logStep("advanced_submit_click");
         await advancedSubmit.click({ timeout: 5000 });
       } else {
         throw new Error("Unable to find the IMR advanced search submit button.");
       }
     } else {
+      logStep("advanced_form_missing_use_registration_only");
       await clickFirstAvailable([
         () => page.getByRole("tab", { name: /registration number/i }).first().click({ timeout: 4000 }),
         () => page.getByRole("link", { name: /registration number/i }).first().click({ timeout: 4000 }),
@@ -699,8 +745,10 @@ async function lookupDoctorInImr(payload: {
 
     await waitForSearchResults(page);
     const rowRecord = await extractBestResultRow(page, payload);
+    logStep("lookup_done", { doctorName: rowRecord.doctorName });
     return rowRecord;
   } finally {
+    logStep("browser_close");
     await browser.close().catch(() => {});
   }
 }
@@ -755,6 +803,13 @@ Deno.serve(async (req: Request) => {
   });
 
   try {
+    logStep("request_received", {
+      userId,
+      registrationNumber,
+      stateCouncil,
+      hasDoctorName: Boolean(doctorName),
+      yearOfRegistration: yearOfRegistration || null,
+    });
     const scraped = await lookupDoctorInImr({
       registrationNumber,
       stateCouncil,
@@ -763,6 +818,7 @@ Deno.serve(async (req: Request) => {
     });
 
     const similarity = nameSimilarity(scraped.doctorName, doctorName);
+    logStep("similarity_computed", { similarity, scrapedName: scraped.doctorName });
 
     if (similarity < 0.9) {
       await adminClient
@@ -830,6 +886,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({
       verified: true,
       status: "verified",
+      title: "Verification completed",
+      message: "Your registration details were confirmed successfully.",
       details: {
         doctor_name: scraped.doctorName,
         qualification: scraped.qualification,
@@ -838,6 +896,7 @@ Deno.serve(async (req: Request) => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Doctor verification failed.";
+    logStep("request_failed", { message });
     return mapVerificationFailure(message);
   }
 });
