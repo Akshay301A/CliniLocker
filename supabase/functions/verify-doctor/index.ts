@@ -1,7 +1,5 @@
 // @ts-ignore Supabase Edge Functions support npm: imports at runtime.
 import { createClient } from "npm:@supabase/supabase-js@2";
-// @ts-ignore Supabase Edge Functions support npm: imports at runtime.
-import { chromium } from "npm:playwright-core@1.53.0";
 
 declare const Deno: {
   serve: (handler: (req: Request) => Promise<Response> | Response) => void;
@@ -14,7 +12,9 @@ declare const document: {
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Max-Age": "86400",
 };
 
 const IMR_URL = "https://www.nmc.org.in/information-desk/indian-medical-register/";
@@ -309,6 +309,10 @@ async function lookupDoctorInImr(payload: {
   stateCouncil: string;
   yearOfRegistration?: string;
 }) {
+  // Load Playwright lazily so CORS preflight and non-browser requests do not fail
+  // during cold start if the runtime cannot initialize Playwright immediately.
+  // @ts-ignore Supabase Edge Functions support npm: imports at runtime.
+  const { chromium } = await import("npm:playwright-core@1.53.0");
   const browser: any = await chromium.connectOverCDP(buildBrowserlessEndpoint());
 
   try {
@@ -364,7 +368,7 @@ async function lookupDoctorInImr(payload: {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
