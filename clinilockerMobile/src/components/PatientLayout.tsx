@@ -99,10 +99,7 @@ export function PatientLayout({ children }: { children: ReactNode }) {
       {/* Main */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Mobile Header - Logo Left, Profile Right */}
-        <header
-          className="flex items-center justify-between border-b border-border/30 bg-card px-4 pb-3 pt-3 md:hidden"
-          style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
-        >
+        <header className="flex items-center justify-between gap-3 border-b border-border/30 bg-card px-3.5 py-2.5 md:hidden sm:px-4 sm:py-3">
           <Link
             to="/patient/dashboard"
             className="flex items-center"
@@ -111,14 +108,13 @@ export function PatientLayout({ children }: { children: ReactNode }) {
             <img
               src="/logo%20(2).png"
               alt="CliniLocker"
-              style={{ height: '150px', width: 'auto', maxWidth: 'none' }}
-              className="object-contain"
+              className="h-11 w-auto max-w-[9.5rem] object-contain sm:h-12 sm:max-w-[10.5rem]"
             />
           </Link>
           <div className="flex items-center gap-2">
             <Link
               to="/patient/health-card"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-muted/60 text-foreground transition-colors hover:bg-muted"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/60 text-foreground transition-colors hover:bg-muted"
               aria-label={t("Digital Health Card")}
             >
               <CreditCard className="h-4 w-4" />
@@ -128,7 +124,7 @@ export function PatientLayout({ children }: { children: ReactNode }) {
               className="flex items-center justify-center rounded-full transition-opacity hover:opacity-80"
               aria-label={t("Profile")}
             >
-              <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
+              <Avatar className="h-9 w-9 shrink-0 sm:h-10 sm:w-10">
                 {avatarUrl && <AvatarImage src={avatarUrl} alt={profileName ?? t("Profile")} />}
                 <AvatarFallback className="bg-primary/10 text-primary text-xs">
                   {profileName ? profileName.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
@@ -184,8 +180,8 @@ export function PatientLayout({ children }: { children: ReactNode }) {
         
         {/* Main Content - Add bottom padding for mobile nav */}
         <main
-          className="flex-1 flex flex-col overflow-x-hidden bg-background p-4 md:p-6"
-          style={{ paddingBottom: "calc(6.5rem + env(safe-area-inset-bottom))" }}
+          className="flex-1 flex flex-col overflow-x-hidden bg-background px-3.5 py-3 sm:px-4 sm:py-4 md:p-6"
+          style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
         >
           <div className="flex-1 min-h-0">{children}</div>
           <AppFooter />

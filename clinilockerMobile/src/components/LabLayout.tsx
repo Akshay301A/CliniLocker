@@ -4,7 +4,6 @@ import { LayoutDashboard, Upload, Users, FileText, Settings, LogOut, Menu, X } f
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { Capacitor } from "@capacitor/core";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/lab/dashboard", iconColor: "text-blue-600" },
@@ -82,10 +81,7 @@ export function LabLayout({ children }: { children: ReactNode }) {
 
       {/* Main */}
       <div className="flex flex-1 flex-col min-w-0">
-        <header
-          className="flex min-h-[3.5rem] items-center gap-2 border-b border-border bg-card px-3 pb-3 pt-3 sm:h-16 sm:px-4 md:px-6"
-          style={Capacitor.isNativePlatform() ? { paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" } : undefined}
-        >
+        <header className="flex min-h-[3.5rem] items-center gap-2 border-b border-border bg-card px-3 py-2.5 sm:h-16 sm:px-4 sm:py-3 md:px-6">
           <button
             type="button"
             className="touch-target flex shrink-0 md:hidden -ml-1 items-center justify-center rounded-md text-foreground hover:bg-muted/80"
@@ -98,7 +94,12 @@ export function LabLayout({ children }: { children: ReactNode }) {
             {navItems.find((i) => i.to === location.pathname)?.label || "Dashboard"}
           </h2>
         </header>
-        <main className="flex-1 overflow-x-hidden p-3 sm:p-4 md:p-6" style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}>{children}</main>
+        <main
+          className="flex-1 overflow-x-hidden px-3 py-3 sm:px-4 sm:py-4 md:p-6"
+          style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );
