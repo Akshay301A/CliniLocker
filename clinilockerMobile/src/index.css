@@ -161,3 +161,17 @@
     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04) !important;
   }
 }
+
+.scanner-video {
+  background: #000;
+}
+
+.scanner-video::-webkit-media-controls,
+.scanner-video::-webkit-media-controls-enclosure,
+.scanner-video::-webkit-media-controls-panel,
+.scanner-video::-webkit-media-controls-play-button,
+.scanner-video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  -webkit-appearance: none;
+  opacity: 0 !important;
+}

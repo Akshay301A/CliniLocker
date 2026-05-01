@@ -10,7 +10,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   createDoctorShare,
@@ -266,10 +265,24 @@ export function DoctorShareFab() {
         video.srcObject = stream;
         video.muted = true;
         video.autoplay = true;
+        video.controls = false;
+        video.playsInline = true;
+        video.disablePictureInPicture = true;
         video.setAttribute("autoplay", "true");
         video.setAttribute("muted", "true");
         video.setAttribute("playsinline", "true");
         video.setAttribute("webkit-playsinline", "true");
+        await new Promise<void>((resolve) => {
+          if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+            resolve();
+            return;
+          }
+          const onLoadedMetadata = () => {
+            video.removeEventListener("loadedmetadata", onLoadedMetadata);
+            resolve();
+          };
+          video.addEventListener("loadedmetadata", onLoadedMetadata, { once: true });
+        });
         await video.play();
 
         setStartingCamera(false);
@@ -387,101 +400,73 @@ export function DoctorShareFab() {
         <QrCode className="h-6 w-6" />
       </button>
 
-      <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? resetShareFlow() : setOpen(nextOpen))}>
-        <DialogContent className="max-w-[calc(100vw-1rem)] overflow-hidden rounded-[28px] border-0 p-0 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="sr-only">QR Scanner</DialogTitle>
-          </DialogHeader>
-
-          <div className="bg-white">
-            {!scannedTarget ? (
-              <section className="relative bg-slate-950 text-white">
-                <button
-                  type="button"
-                  onClick={resetShareFlow}
-                  className="absolute right-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur"
-                  aria-label="Close scanner"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-
-                <div className="px-4 pb-6 pt-14">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-200">Scan QR</p>
-                  <h2 className="mt-2 text-2xl font-bold">Point your camera at a doctor or patient QR</h2>
-                  <p className="mt-2 text-sm text-slate-300">
-                    Doctor QR opens report sharing. Patient QR opens the patient card and linked reports.
-                  </p>
-
-                  <div className="mt-5 overflow-hidden rounded-[28px] border border-white/15 bg-black shadow-[0_24px_70px_rgba(15,23,42,0.45)]">
-                    <div className="relative aspect-square w-full">
-                      {scanning ? (
-                        <>
-                          <style>{`
-                            @keyframes clinilocker-qr-laser {
-                              0% { transform: translateY(0); opacity: 0.35; }
-                              50% { transform: translateY(210px); opacity: 1; }
-                              100% { transform: translateY(0); opacity: 0.35; }
-                            }
-                          `}</style>
-                          <video ref={videoRef} className="h-full w-full object-cover" autoPlay muted playsInline />
-                          <div className="pointer-events-none absolute inset-0">
-                            <div className="absolute inset-5 rounded-[30px] border-2 border-white/80 shadow-[0_0_0_9999px_rgba(2,6,23,0.38)]" />
-                            <div className="absolute inset-x-10 bottom-10 top-10 overflow-hidden rounded-[24px]">
-                              <div
-                                className="absolute left-0 right-0 h-0.5 bg-emerald-300/95 shadow-[0_0_20px_rgba(110,231,183,0.95)]"
-                                style={{ animation: "clinilocker-qr-laser 2.2s ease-in-out infinite" }}
-                              />
-                            </div>
-                            <div className="absolute inset-x-7 bottom-6 flex items-center justify-between gap-3">
-                              <div className="rounded-full bg-black/45 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur">
-                                {startingCamera ? "Starting camera..." : "Scanning automatically"}
-                              </div>
-                              {torchSupported ? (
-                                <button
-                                  type="button"
-                                  onClick={() => void handleTorchToggle()}
-                                  className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/14 text-white backdrop-blur transition hover:bg-white/20"
-                                  aria-label={torchEnabled ? "Turn flashlight off" : "Turn flashlight on"}
-                                >
-                                  {torchEnabled ? <FlashlightOff className="h-5 w-5" /> : <Flashlight className="h-5 w-5" />}
-                                </button>
-                              ) : null}
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-                          {scanError ? (
-                            <>
-                              <p className="text-base font-semibold text-white">{scanError}</p>
-                              {cameraSupported ? (
-                                <Button
-                                  type="button"
-                                  className="mt-4 rounded-full bg-white text-slate-900 hover:bg-slate-100"
-                                  onClick={() => {
-                                    setScanError(null);
-                                    setPermissionDialogOpen(false);
-                                    setStartingCamera(true);
-                                    setScanning(true);
-                                  }}
-                                >
-                                  Try Camera Again
-                                </Button>
-                              ) : null}
-                            </>
-                          ) : (
-                            <>
-                              <Loader2 className="h-8 w-8 animate-spin text-blue-200" />
-                              <p className="mt-3 text-sm text-slate-300">Starting camera...</p>
-                            </>
-                          )}
-                        </div>
-                      )}
+      {open ? (
+        <div className="fixed inset-0 z-50 bg-black">
+          {!scannedTarget ? (
+            <section className="relative h-full w-full overflow-hidden bg-black text-white">
+              <button
+                type="button"
+                onClick={resetShareFlow}
+                className="absolute left-4 top-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur"
+                aria-label="Close scanner"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              {scanning ? (
+                <>
+                  <style>{`
+                    @keyframes clinilocker-qr-laser {
+                      0% { transform: translateY(0); opacity: 0.35; }
+                      50% { transform: translateY(240px); opacity: 1; }
+                      100% { transform: translateY(0); opacity: 0.35; }
+                    }
+                  `}</style>
+                  <video
+                    ref={videoRef}
+                    className="scanner-video h-full w-full object-cover"
+                    autoPlay
+                    muted
+                    playsInline
+                    poster="data:image/gif;base64,R0lGODlhAQABAAAAACw="
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-black/28" />
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-8">
+                    <div className="relative h-[min(44vh,22rem)] w-[min(70vw,22rem)] max-w-full">
+                      <div className="absolute left-0 top-0 h-14 w-14 rounded-tl-[28px] border-l-4 border-t-4 border-white" />
+                      <div className="absolute right-0 top-0 h-14 w-14 rounded-tr-[28px] border-r-4 border-t-4 border-white" />
+                      <div className="absolute bottom-0 left-0 h-14 w-14 rounded-bl-[28px] border-b-4 border-l-4 border-white" />
+                      <div className="absolute bottom-0 right-0 h-14 w-14 rounded-br-[28px] border-b-4 border-r-4 border-white" />
+                      <div className="absolute inset-x-5 top-5 bottom-5 overflow-hidden rounded-[24px]">
+                        <div
+                          className="absolute left-0 right-0 h-0.5 bg-emerald-300 shadow-[0_0_22px_rgba(110,231,183,0.95)]"
+                          style={{ animation: "clinilocker-qr-laser 2s ease-in-out infinite" }}
+                        />
+                      </div>
                     </div>
                   </div>
+                  {torchSupported ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleTorchToggle()}
+                      className="absolute bottom-8 right-6 z-20 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur"
+                      aria-label={torchEnabled ? "Turn flashlight off" : "Turn flashlight on"}
+                    >
+                      {torchEnabled ? <FlashlightOff className="h-5 w-5" /> : <Flashlight className="h-5 w-5" />}
+                    </button>
+                  ) : null}
+                  {startingCamera ? (
+                    <div className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1.5 text-xs font-medium text-white backdrop-blur">
+                      Starting camera...
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-200" />
                 </div>
-              </section>
-            ) : showDoctorFlow ? (
+              )}
+            </section>
+          ) : showDoctorFlow ? (
               <section className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -556,7 +541,7 @@ export function DoctorShareFab() {
                   {loading ? "Sending..." : "Send to Doctor"}
                 </Button>
               </section>
-            ) : (
+          ) : (
               <section className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -644,10 +629,9 @@ export function DoctorShareFab() {
                   </div>
                 )}
               </section>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+          )}
+        </div>
+      ) : null}
 
       <AlertDialog open={permissionDialogOpen} onOpenChange={setPermissionDialogOpen}>
         <AlertDialogContent className="rounded-[28px]">

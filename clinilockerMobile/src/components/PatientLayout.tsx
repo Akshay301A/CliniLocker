@@ -99,7 +99,10 @@ export function PatientLayout({ children }: { children: ReactNode }) {
       {/* Main */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Mobile Header - Logo Left, Profile Right */}
-        <header className="flex items-center justify-between gap-3 border-b border-border/30 bg-card px-3.5 py-2.5 md:hidden sm:px-4 sm:py-3">
+        <header
+          className="flex items-center justify-between gap-3 border-b border-border/30 bg-card px-3.5 pb-2.5 pt-2 md:hidden sm:px-4 sm:pb-3"
+          style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.4rem)" }}
+        >
           <Link
             to="/patient/dashboard"
             className="flex items-center"
