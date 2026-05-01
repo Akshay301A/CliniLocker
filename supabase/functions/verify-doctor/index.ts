@@ -349,31 +349,69 @@ async function waitForSearchResults(page: Page) {
   }
 }
 
-async function extractResultRow(page: Page): Promise<ScrapedDoctorRecord> {
-  const record = await page.evaluate(() => {
+async function extractBestResultRow(
+  page: Page,
+  payload: { registrationNumber: string; stateCouncil: string; doctorName?: string }
+): Promise<ScrapedDoctorRecord> {
+  const record = await page.evaluate((searchPayload) => {
     const normalize = (value: string | null | undefined) => (value || "").replace(/\s+/g, " ").trim();
+    const normalizeLookup = (value: string | null | undefined) =>
+      (value || "")
+        .replace(/\s+/g, " ")
+        .replace(/[^\w\s]/g, " ")
+        .replace(/\bstate\b/g, " ")
+        .trim()
+        .toLowerCase();
     const tables: any[] = Array.from(document.querySelectorAll("table"));
-    const targetTable = tables.find((table: any) => /registration/i.test(table?.textContent || "") && /\bname\b/i.test(table?.textContent || ""));
-    if (!targetTable) return null;
+    const rows = tables.flatMap((table: any) =>
+      Array.from(table.querySelectorAll("tbody tr"))
+        .map((row: any) => {
+          const rowCells = Array.from(row.querySelectorAll("td")).map((cell: any) => normalize(cell?.textContent));
+          if (rowCells.length < 5) return null;
+          return {
+            doctorName:
+              rowCells[4] ||
+              rowCells.find((value: string, index: number) => index > 1 && /[a-z]/i.test(value) && !/^view$/i.test(value)) ||
+              "",
+            qualification: rowCells[5] && !/^view$/i.test(rowCells[5]) ? rowCells[5] : null,
+            university: rowCells[6] && !/^view$/i.test(rowCells[6]) ? rowCells[6] : null,
+            registrationNumber: rowCells[2] || rowCells[1] || null,
+            stateCouncil: rowCells[3] || null,
+            yearOfRegistration: rowCells[1] || null,
+          };
+        })
+        .filter(Boolean)
+    );
 
-    const headerCells = Array.from(targetTable.querySelectorAll("thead th, tr th")).map((cell: any) => normalize(cell?.textContent));
-    const firstRow = targetTable.querySelector("tbody tr");
-    if (!firstRow) return null;
-    const rowCells = Array.from(firstRow.querySelectorAll("td")).map((cell: any) => normalize(cell?.textContent));
-    const rowMap = headerCells.reduce((acc: Record<string, string>, header: string, index: number) => {
-      acc[header.toLowerCase()] = rowCells[index] || "";
-      return acc;
-    }, {} as Record<string, string>);
+    if (rows.length === 0) return null;
 
-    return {
-      doctorName: rowMap["name"] || rowMap["doctor name"] || "",
-      qualification: rowMap["qualification"] || null,
-      university: rowMap["university"] || rowMap["university name"] || null,
-      registrationNumber: rowMap["registration number"] || rowMap["registration no"] || null,
-      stateCouncil: rowMap["state medical councils"] || rowMap["registered council"] || null,
-      yearOfRegistration: rowMap["year of registration"] || rowMap["year of info"] || null,
-    };
-  });
+    const targetRegistration = normalizeLookup(searchPayload.registrationNumber);
+    const targetCouncil = normalizeLookup(searchPayload.stateCouncil);
+    const targetDoctorName = normalizeLookup(searchPayload.doctorName || "");
+
+    const scoredRows = rows.map((row: any) => {
+      let score = 0;
+      const rowRegistration = normalizeLookup(row.registrationNumber || "");
+      const rowCouncil = normalizeLookup(row.stateCouncil || "");
+      const rowDoctorName = normalizeLookup(row.doctorName || "");
+
+      if (rowRegistration === targetRegistration) score += 10;
+      else if (rowRegistration.includes(targetRegistration) || targetRegistration.includes(rowRegistration)) score += 6;
+
+      if (targetCouncil && (rowCouncil === targetCouncil || rowCouncil.includes(targetCouncil) || targetCouncil.includes(rowCouncil))) {
+        score += 5;
+      }
+
+      if (targetDoctorName && (rowDoctorName === targetDoctorName || rowDoctorName.includes(targetDoctorName) || targetDoctorName.includes(rowDoctorName))) {
+        score += 3;
+      }
+
+      return { row, score };
+    });
+
+    scoredRows.sort((left: any, right: any) => right.score - left.score);
+    return scoredRows[0]?.row || null;
+  }, payload);
 
   if (!record?.doctorName) {
     throw new Error("Unable to read the doctor name from the IMR search results.");
@@ -441,6 +479,7 @@ async function enrichFromDoctorDetailsPage(page: Page, fallback: ScrapedDoctorRe
 async function lookupDoctorInImr(payload: {
   registrationNumber: string;
   stateCouncil: string;
+  doctorName?: string;
   yearOfRegistration?: string;
 }) {
   // Load Playwright lazily so CORS preflight and non-browser requests do not fail
@@ -461,14 +500,19 @@ async function lookupDoctorInImr(payload: {
     await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
     await clickFirstAvailable([
-      () => page.getByRole("tab", { name: /advance search|any details/i }).first().click({ timeout: 4000 }),
-      () => page.getByRole("link", { name: /advance search|any details/i }).first().click({ timeout: 4000 }),
-      () => page.getByRole("button", { name: /advance search|any details/i }).first().click({ timeout: 4000 }),
-      () => page.getByText(/browse by any details/i).first().click({ timeout: 4000 }),
-      () => page.getByText(/advance search/i).first().click({ timeout: 4000 }),
+      () => page.getByRole("tab", { name: /registration number/i }).first().click({ timeout: 4000 }),
+      () => page.getByRole("link", { name: /registration number/i }).first().click({ timeout: 4000 }),
+      () => page.getByRole("button", { name: /registration number/i }).first().click({ timeout: 4000 }),
+      () => page.getByText(/browse by registration number/i).first().click({ timeout: 4000 }),
+      () => page.getByText(/registration number/i).first().click({ timeout: 4000 }),
     ]);
 
-    await fillAdvancedSearchForm(page, payload);
+    await fillFirstMatchingInput(page, [
+      "input[placeholder*='Registration' i]",
+      "input[name*='registration' i]",
+      "input[id*='registration' i]",
+      "input[type='text']",
+    ], payload.registrationNumber);
 
     await clickFirstAvailable([
       () => page.getByRole("button", { name: /^submit$/i }).first().click({ timeout: 4000 }),
@@ -478,8 +522,8 @@ async function lookupDoctorInImr(payload: {
     ]);
 
     await waitForSearchResults(page);
-    const rowRecord = await extractResultRow(page);
-    return await enrichFromDoctorDetailsPage(page, rowRecord);
+    const rowRecord = await extractBestResultRow(page, payload);
+    return rowRecord;
   } finally {
     await browser.close().catch(() => {});
   }
@@ -538,6 +582,7 @@ Deno.serve(async (req: Request) => {
     const scraped = await lookupDoctorInImr({
       registrationNumber,
       stateCouncil,
+      doctorName,
       yearOfRegistration: yearOfRegistration || undefined,
     });
 
