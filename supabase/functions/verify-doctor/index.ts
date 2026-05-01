@@ -260,14 +260,22 @@ async function fillAdvancedSearchForm(
     registrationInput.dispatchEvent(new Event("input", { bubbles: true }));
     registrationInput.dispatchEvent(new Event("change", { bubbles: true }));
 
-    const councilSelect = selects.find((select: any) => {
+    let councilSelect = selects.find((select: any) => {
       const text = normalize(
         [select?.name, select?.id, select?.getAttribute?.("aria-label"), select?.closest("label")?.textContent]
           .filter(Boolean)
           .join(" ")
       );
       return text.includes("council") || text.includes("medical");
-    });
+    }) || null;
+
+    if (!councilSelect) {
+      if (selects.length >= 2) {
+        councilSelect = selects[selects.length - 1];
+      } else if (selects.length === 1) {
+        councilSelect = selects[0];
+      }
+    }
 
     if (!councilSelect) {
       return { ok: false, reason: "council-select-not-found" };
@@ -289,7 +297,18 @@ async function fillAdvancedSearchForm(
 
     if (formPayload.yearOfRegistration) {
       const yearTarget = normalize(formPayload.yearOfRegistration);
-      const yearSelect = selects.find((select: any) => select !== councilSelect);
+      const yearSelect =
+        selects.find((select: any) => {
+          if (select === councilSelect) return false;
+          const text = normalize(
+            [select?.name, select?.id, select?.getAttribute?.("aria-label"), select?.closest("label")?.textContent]
+              .filter(Boolean)
+              .join(" ")
+          );
+          return text.includes("year");
+        }) ||
+        selects.find((select: any) => select !== councilSelect) ||
+        null;
       if (yearSelect) {
         const matchingYear = Array.from(yearSelect.options || []).find((option: any) => {
           const optionText = normalize(option?.textContent || option?.label || "");
