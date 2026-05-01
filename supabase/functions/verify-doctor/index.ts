@@ -42,12 +42,44 @@ type ScrapedDoctorRecord = {
   yearOfRegistration: string | null;
 };
 
+type AdvancedSearchPayload = {
+  registrationNumber: string;
+  stateCouncil: string;
+  yearOfRegistration?: string;
+};
+
+type ResultSearchPayload = {
+  registrationNumber: string;
+  stateCouncil: string;
+  doctorName?: string;
+};
+
 type Page = any;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function verificationResponse(body: {
+  status: string;
+  message: string;
+  title?: string;
+  guidance?: string;
+  verified?: boolean;
+  details?: {
+    doctor_name: string;
+    qualification: string | null;
+    university: string | null;
+  };
+  similarity?: number;
+  scraped_name?: string;
+}) {
+  return jsonResponse({
+    verified: body.verified ?? false,
+    ...body,
   });
 }
 
@@ -134,6 +166,64 @@ function buildBrowserlessEndpoint() {
   return `${rawEndpoint}${separator}token=${encodeURIComponent(token)}`;
 }
 
+function mapVerificationFailure(message: string) {
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    normalizedMessage.includes("no imr record matched") ||
+    normalizedMessage.includes("no data available")
+  ) {
+    return verificationResponse({
+      status: "not_found",
+      title: "Please review your registration details",
+      message:
+        "We could not confirm these details in the Indian Medical Register yet.",
+      guidance:
+        "Check the registration number, state medical council, and registration year, then try again.",
+    });
+  }
+
+  if (normalizedMessage.includes("unable to read the doctor name")) {
+    return verificationResponse({
+      status: "temporarily_unavailable",
+      title: "Verification is taking a little longer",
+      message:
+        "We reached the Indian Medical Register, but could not complete the result check just now.",
+      guidance:
+        "Please try again in a few minutes. If your details are correct and this continues, we can review it another way.",
+    });
+  }
+
+  if (
+    normalizedMessage.includes("search did not finish in time") ||
+    normalizedMessage.includes("advanced search form") ||
+    normalizedMessage.includes("submit button") ||
+    normalizedMessage.includes("search tab") ||
+    normalizedMessage.includes("multiselect") ||
+    normalizedMessage.includes("council option not found")
+  ) {
+    return verificationResponse({
+      status: "temporarily_unavailable",
+      title: "Verification is temporarily unavailable",
+      message:
+        "We could not complete the NMC verification right now.",
+      guidance:
+        "Please try again shortly. Your details have not been lost.",
+    });
+  }
+
+  return jsonResponse(
+    {
+      error: "Doctor verification is temporarily unavailable. Please try again shortly.",
+      status: "temporarily_unavailable",
+      title: "Verification is temporarily unavailable",
+      guidance:
+        "Please try again shortly. If the issue continues, we can review the details another way.",
+    },
+    503
+  );
+}
+
 async function clickFirstAvailable(actions: Array<() => Promise<void>>) {
   for (const action of actions) {
     try {
@@ -153,6 +243,24 @@ function normalizeLookupValue(value: string) {
     .replace(/\bstate\b/g, " ")
     .trim()
     .toLowerCase();
+}
+
+async function selectBootstrapMultiselect(page: Page, selectId: string, labelText: string) {
+  const wrapper = page.locator(`#${selectId} + div.btn-group`).first();
+  const toggle = wrapper.locator("button.multiselect").first();
+  const optionLabel = wrapper.locator("label.radio", { hasText: labelText }).first();
+
+  if (!(await toggle.count())) {
+    throw new Error(`Multiselect toggle not found for ${selectId}`);
+  }
+
+  await toggle.click({ timeout: 5000 });
+  await optionLabel.click({ timeout: 5000 });
+  try {
+    await page.waitForTimeout(300);
+  } catch {
+    // ignore minor UI wait issues
+  }
 }
 
 async function fillFirstMatchingInput(page: Page, selectors: string[], value: string) {
@@ -217,9 +325,9 @@ async function selectCouncil(page: Page, stateCouncil: string) {
 
 async function fillAdvancedSearchForm(
   page: Page,
-  payload: { registrationNumber: string; stateCouncil: string; yearOfRegistration?: string }
+  payload: AdvancedSearchPayload
 ) {
-  const filled = await page.evaluate((formPayload) => {
+  const filled = await page.evaluate((formPayload: AdvancedSearchPayload) => {
     const normalize = (value: string | null | undefined) =>
       (value || "")
         .replace(/\s+/g, " ")
@@ -285,7 +393,7 @@ async function fillAdvancedSearchForm(
     const matchingCouncil = Array.from(councilSelect.options || []).find((option: any) => {
       const optionText = normalize(option?.textContent || option?.label || "");
       return optionText === targetCouncil || optionText.includes(targetCouncil) || targetCouncil.includes(optionText);
-    });
+    }) as { value?: string } | undefined;
 
     if (!matchingCouncil) {
       return { ok: false, reason: `council-option-not-found:${formPayload.stateCouncil}` };
@@ -315,7 +423,7 @@ async function fillAdvancedSearchForm(
           return optionText === yearTarget || optionText.includes(yearTarget);
         });
         if (matchingYear) {
-          yearSelect.value = matchingYear.value;
+          yearSelect.value = (matchingYear as { value?: string }).value;
           yearSelect.dispatchEvent(new Event("input", { bubbles: true }));
           yearSelect.dispatchEvent(new Event("change", { bubbles: true }));
         }
@@ -351,9 +459,9 @@ async function waitForSearchResults(page: Page) {
 
 async function extractBestResultRow(
   page: Page,
-  payload: { registrationNumber: string; stateCouncil: string; doctorName?: string }
+  payload: ResultSearchPayload
 ): Promise<ScrapedDoctorRecord> {
-  const record = await page.evaluate((searchPayload) => {
+  const record = await page.evaluate((searchPayload: ResultSearchPayload) => {
     const normalize = (value: string | null | undefined) => (value || "").replace(/\s+/g, " ").trim();
     const normalizeLookup = (value: string | null | undefined) =>
       (value || "")
@@ -499,27 +607,95 @@ async function lookupDoctorInImr(payload: {
     await page.goto(IMR_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
     await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
-    await clickFirstAvailable([
-      () => page.getByRole("tab", { name: /registration number/i }).first().click({ timeout: 4000 }),
-      () => page.getByRole("link", { name: /registration number/i }).first().click({ timeout: 4000 }),
-      () => page.getByRole("button", { name: /registration number/i }).first().click({ timeout: 4000 }),
-      () => page.getByText(/browse by registration number/i).first().click({ timeout: 4000 }),
-      () => page.getByText(/registration number/i).first().click({ timeout: 4000 }),
-    ]);
+    const advancedRegistration = page.locator("#doctorRegdNo").first();
+    const advancedCouncil = page.locator("#advsmcId").first();
+    const advancedYear = page.locator("#doctorYear").first();
+    const advancedSubmit = page.locator("#doctor_advance_Details").first();
 
-    await fillFirstMatchingInput(page, [
-      "input[placeholder*='Registration' i]",
-      "input[name*='registration' i]",
-      "input[id*='registration' i]",
-      "input[type='text']",
-    ], payload.registrationNumber);
+    if (await advancedRegistration.count()) {
+      await advancedRegistration.fill(payload.registrationNumber);
 
-    await clickFirstAvailable([
-      () => page.getByRole("button", { name: /^submit$/i }).first().click({ timeout: 4000 }),
-      () => page.getByRole("button", { name: /search/i }).first().click({ timeout: 4000 }),
-      () => page.getByRole("link", { name: /^submit$/i }).first().click({ timeout: 4000 }),
-      () => page.getByText(/^submit$/i).first().click({ timeout: 4000 }),
-    ]);
+      if (payload.doctorName?.trim()) {
+        const advancedDoctorName = page.locator("#doctorName").first();
+        if (await advancedDoctorName.count()) {
+          await advancedDoctorName.fill(payload.doctorName.trim());
+        }
+      }
+
+      if (payload.yearOfRegistration?.trim() && await advancedYear.count()) {
+        try {
+          await selectBootstrapMultiselect(page, "doctorYear", payload.yearOfRegistration.trim());
+        } catch {
+          try {
+            await advancedYear.selectOption({ label: payload.yearOfRegistration.trim() });
+          } catch {
+            await advancedYear.selectOption(payload.yearOfRegistration.trim()).catch(() => {});
+          }
+        }
+      }
+
+      if (await advancedCouncil.count()) {
+        try {
+          await selectBootstrapMultiselect(page, "advsmcId", payload.stateCouncil);
+        } catch {
+          await advancedCouncil.evaluate((node: unknown, label: string) => {
+            const select = node as {
+              value: string;
+              options: ArrayLike<{ value: string; textContent?: string | null }>;
+              dispatchEvent: (event: Event) => void;
+            };
+            const normalize = (value: string) =>
+              value
+                .replace(/\s+/g, " ")
+                .replace(/[^\w\s]/g, " ")
+                .replace(/\bstate\b/g, " ")
+                .trim()
+                .toLowerCase();
+            const target = normalize(label);
+            const option = Array.from(select.options).find((entry) => {
+              const optionLabel = normalize(entry.textContent || "");
+              return optionLabel === target || optionLabel.includes(target) || target.includes(optionLabel);
+            }) as { value?: string } | undefined;
+            if (!option?.value) {
+              throw new Error(`Council option not found: ${label}`);
+            }
+            select.value = option.value;
+            select.dispatchEvent(new Event("input", { bubbles: true }));
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+          }, payload.stateCouncil);
+        }
+      }
+
+      if (await advancedSubmit.count()) {
+        await advancedSubmit.click({ timeout: 5000 });
+      } else {
+        throw new Error("Unable to find the IMR advanced search submit button.");
+      }
+    } else {
+      await clickFirstAvailable([
+        () => page.getByRole("tab", { name: /registration number/i }).first().click({ timeout: 4000 }),
+        () => page.getByRole("link", { name: /registration number/i }).first().click({ timeout: 4000 }),
+        () => page.getByRole("button", { name: /registration number/i }).first().click({ timeout: 4000 }),
+        () => page.getByText(/browse by registration number/i).first().click({ timeout: 4000 }),
+        () => page.getByText(/registration number/i).first().click({ timeout: 4000 }),
+      ]);
+
+      await fillFirstMatchingInput(page, [
+        "#doct_regdNo",
+        "input[placeholder*='Registration' i]",
+        "input[name*='registration' i]",
+        "input[id*='registration' i]",
+        "input[type='text']",
+      ], payload.registrationNumber);
+
+      await clickFirstAvailable([
+        () => page.locator("#doctor_regdno_details").first().click({ timeout: 4000 }),
+        () => page.getByRole("button", { name: /^submit$/i }).first().click({ timeout: 4000 }),
+        () => page.getByRole("button", { name: /search/i }).first().click({ timeout: 4000 }),
+        () => page.getByRole("link", { name: /^submit$/i }).first().click({ timeout: 4000 }),
+        () => page.getByText(/^submit$/i).first().click({ timeout: 4000 }),
+      ]);
+    }
 
     await waitForSearchResults(page);
     const rowRecord = await extractBestResultRow(page, payload);
@@ -611,7 +787,11 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({
         verified: false,
         status: "mismatch",
-        message: "Verification Failed: Details do not match NMC records",
+        title: "We could not confirm these details yet",
+        message:
+          "We found a close result in the Indian Medical Register, but the name did not match closely enough.",
+        guidance:
+          "Please review your name, registration number, state medical council, and registration year before trying again.",
         similarity,
         scraped_name: scraped.doctorName,
       }, 200);
@@ -658,6 +838,6 @@ Deno.serve(async (req: Request) => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Doctor verification failed.";
-    return jsonResponse({ error: message }, 500);
+    return mapVerificationFailure(message);
   }
 });

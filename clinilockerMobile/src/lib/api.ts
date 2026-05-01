@@ -164,18 +164,32 @@ export type DoctorVerificationPayload = {
   yearOfRegistration?: string;
 };
 
-export async function verifyDoctorProfile(
-  payload: DoctorVerificationPayload
-): Promise<{
+export type DoctorVerificationResult = {
   verified: boolean;
   status: string;
-  message?: string;
+  title?: string;
+  message: string;
+  guidance?: string;
   details?: {
     doctor_name: string;
     qualification: string | null;
     university: string | null;
   };
-} | { error: string }> {
+};
+
+async function getFunctionInvokeErrorPayload(error: unknown): Promise<Record<string, unknown> | null> {
+  const e = error as { context?: { json?: () => Promise<unknown> } };
+  try {
+    const json = await e?.context?.json?.();
+    return json && typeof json === "object" ? (json as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function verifyDoctorProfile(
+  payload: DoctorVerificationPayload
+): Promise<DoctorVerificationResult | { error: string }> {
   const { data: authData } = await supabase.auth.getSession();
   const accessToken = authData?.session?.access_token;
   if (!accessToken) return { error: "Not authenticated. Please sign in again." };
@@ -192,16 +206,39 @@ export async function verifyDoctorProfile(
     },
   });
 
-  if (error) return { error: await getFunctionInvokeErrorMessage(error) };
-  return data as {
-    verified: boolean;
-    status: string;
-    message?: string;
-    details?: {
-      doctor_name: string;
-      qualification: string | null;
-      university: string | null;
+  if (error) {
+    const payload = await getFunctionInvokeErrorPayload(error);
+    if (payload?.status && payload?.message) {
+      return {
+        verified: false,
+        status: String(payload.status),
+        title: typeof payload.title === "string" ? payload.title : undefined,
+        message: String(payload.message),
+        guidance: typeof payload.guidance === "string" ? payload.guidance : undefined,
+      };
+    }
+    return {
+      verified: false,
+      status: "temporarily_unavailable",
+      title: "Verification is temporarily unavailable",
+      message: "We could not complete the NMC verification right now.",
+      guidance: "Please try again shortly. If the issue continues, review the details and try again later.",
     };
+  }
+
+  const parsed = (data ?? {}) as Partial<DoctorVerificationResult>;
+  return {
+    verified: parsed.verified === true,
+    status: typeof parsed.status === "string" ? parsed.status : "verified",
+    title: typeof parsed.title === "string" ? parsed.title : undefined,
+    message:
+      typeof parsed.message === "string"
+        ? parsed.message
+        : parsed.verified
+          ? "Your details were verified successfully."
+          : "We could not confirm these details yet.",
+    guidance: typeof parsed.guidance === "string" ? parsed.guidance : undefined,
+    details: parsed.details,
   };
 }
 

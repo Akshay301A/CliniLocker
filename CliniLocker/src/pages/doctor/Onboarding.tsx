@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { BadgeCheck, LoaderCircle, ShieldCheck, Stethoscope } from "lucide-react";
+import { BadgeCheck, CircleAlert, LoaderCircle, ShieldCheck, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,7 +50,11 @@ export default function DoctorOnboarding() {
   const [medicalCouncil, setMedicalCouncil] = useState("");
   const [registrationYear, setRegistrationYear] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    title: string;
+    message: string;
+    guidance?: string;
+  } | null>(null);
 
   useEffect(() => {
     getProfile().then((profile) => {
@@ -65,7 +69,17 @@ export default function DoctorOnboarding() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
-    setMessage(null);
+    setFeedback(null);
+
+    if (!fullName.trim() || !registrationNumber.trim() || !medicalCouncil.trim()) {
+      setSubmitting(false);
+      setFeedback({
+        title: "Please complete the required details",
+        message: "Your full name, medical registration number, and state medical council are needed to continue.",
+        guidance: "Review the form and try again.",
+      });
+      return;
+    }
 
     const result = await verifyDoctorProfile({
       doctorName: fullName,
@@ -76,12 +90,19 @@ export default function DoctorOnboarding() {
 
     setSubmitting(false);
     if ("error" in result) {
-      setMessage(result.error);
+      setFeedback({
+        title: "Please sign in again",
+        message: result.error,
+      });
       return;
     }
 
     if (!result.verified) {
-      setMessage(result.message || "Verification Failed: Details do not match NMC records");
+      setFeedback({
+        title: result.title || "We could not confirm these details yet",
+        message: result.message,
+        guidance: result.guidance,
+      });
       return;
     }
 
@@ -162,9 +183,20 @@ export default function DoctorOnboarding() {
                 inputMode="numeric"
               />
             </div>
-            {message && (
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {message}
+            {feedback && (
+              <div className="rounded-[24px] border border-amber-200 bg-[linear-gradient(180deg,#fff9eb_0%,#fffdf6_100%)] px-5 py-4 text-left shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                    <CircleAlert className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-900">{feedback.title}</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-700">{feedback.message}</p>
+                    {feedback.guidance ? (
+                      <p className="mt-2 text-sm leading-6 text-slate-500">{feedback.guidance}</p>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             )}
             <Button type="submit" className="h-12 rounded-full bg-blue-600 px-8 hover:bg-blue-700" disabled={submitting}>
