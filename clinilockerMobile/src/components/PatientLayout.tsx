@@ -109,9 +109,9 @@ export function PatientLayout({ children }: { children: ReactNode }) {
             aria-label="Home"
           >
             <img
-              src="/logo%20(2).png"
+              src="/favicon.png"
               alt="CliniLocker"
-              className="h-[3.35rem] w-auto max-w-[12rem] object-contain sm:h-[3.5rem] sm:max-w-[12.5rem]"
+              className="h-[3.1rem] w-[3.1rem] shrink-0 object-contain sm:h-[3.25rem] sm:w-[3.25rem]"
             />
           </Link>
           <div className="flex items-center gap-2">
