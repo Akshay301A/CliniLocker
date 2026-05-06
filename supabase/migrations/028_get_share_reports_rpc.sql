@@ -5,6 +5,10 @@
 -- always resolves the value as a share id and returns the reports attached to
 -- that share for the signed-in patient or doctor only.
 
+drop function if exists public.get_share_reports(uuid);
+drop function if exists public.get_share_reports(uuid, uuid, uuid, uuid, uuid, uuid, uuid, uuid, uuid);
+drop function if exists public.get_share_reports(uuid, uuid, uuid, uuid, uuid, uuid, uuid, uuid, uuid, uuid, uuid, uuid);
+
 create or replace function public.get_share_reports(
   share_id uuid default null,
   p_share_id uuid default null,
@@ -64,7 +68,7 @@ as $$
     r.viewed_at,
     r.test_date,
     r.notes,
-    r.is_handwritten,
+    null::boolean as is_handwritten,
     l.name as lab_name,
     s.created_at as shared_at,
     s.patient_id as granted_by
