@@ -498,14 +498,34 @@ export async function createReportShareToken(reportId: string): Promise<string |
   return data as string;
 }
 
+function getStorageObjectPath(fileUrl: string, bucket: string): string {
+  const raw = (fileUrl ?? "").trim();
+  if (!raw) return "";
+  if (!raw.startsWith("http")) return raw.replace(/^\/+/, "");
+
+  try {
+    const url = new URL(raw);
+    const marker = `/${bucket}/`;
+    const bucketIndex = url.pathname.indexOf(marker);
+    if (bucketIndex >= 0) {
+      return decodeURIComponent(url.pathname.slice(bucketIndex + marker.length));
+    }
+  } catch {
+    return raw;
+  }
+
+  return raw;
+}
+
 /** Get a signed URL for viewing a report file. Pass the path segment (e.g. from file_url). */
 export async function getSignedUrl(path: string): Promise<string | null> {
-  const { data, error } = await supabase.storage.from("reports").createSignedUrl(path, 604800);
+  const normalizedPath = getStorageObjectPath(path, "reports");
+  if (!normalizedPath) return null;
+  const { data, error } = await supabase.storage.from("reports").createSignedUrl(normalizedPath, 604800);
   if (error || !data?.signedUrl) return null;
   try {
     const url = new URL(data.signedUrl);
     url.searchParams.set("response-content-disposition", "inline");
-    url.searchParams.set("response-content-type", "application/pdf");
     return url.toString();
   } catch {
     return data.signedUrl;
