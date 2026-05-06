@@ -66,8 +66,11 @@ export default function DoctorShareViewer() {
     [reports, selectedReportId]
   );
 
-  const viewerUrl = selectedReport ? reportUrls[selectedReport.id] || selectedReport.file_url : null;
+  const viewerUrl = selectedReport
+    ? reportUrls[selectedReport.id] || (selectedReport.file_url?.startsWith("http") ? selectedReport.file_url : null)
+    : null;
   const isPdf = viewerUrl?.toLowerCase().includes(".pdf");
+  const selectedReportMissingPreview = Boolean(selectedReport) && !reportsLoading && !viewerUrl;
 
   const handleSave = async () => {
     setSaving(true);
@@ -114,12 +117,16 @@ export default function DoctorShareViewer() {
                 <FileText className="mr-2 h-5 w-5" />
                 Loading report preview...
               </div>
-            ) : previewError ? (
+            ) : previewError || selectedReportMissingPreview ? (
               <div className="flex h-[540px] items-center justify-center px-6 text-center text-slate-500">
                 <div>
                   <FileText className="mx-auto h-6 w-6 text-slate-400" />
-                  <p className="mt-3 font-medium text-slate-700">{previewError}</p>
-                  <p className="mt-1 text-sm text-slate-500">Please reopen the share after the report access sync finishes.</p>
+                  <p className="mt-3 font-medium text-slate-700">
+                    {previewError || "We couldn't open this shared file preview right now."}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Please reopen the share after the report access sync finishes, or ask the patient to reshare it once.
+                  </p>
                 </div>
               </div>
             ) : reports.length === 0 ? (
