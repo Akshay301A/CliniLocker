@@ -2,10 +2,9 @@ import { motion, useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 
 const stats = [
-  { value: 1200, suffix: "+", label: "Active Users", prefix: "" },
-  { value: 18000, suffix: "+", label: "Reports Stored", prefix: "" },
-  { value: 99.5, suffix: "%", label: "Uptime", prefix: "" },
-  { value: 24, suffix: "+", label: "Partner Labs", prefix: "" },
+  { value: 3, suffix: "", label: "Clinic LOIs", prefix: "" },
+  { value: 500, suffix: "+", label: "Users", prefix: "" },
+  { value: 1000, suffix: "+", label: "Reports Digitised", prefix: "" },
 ];
 
 const AnimatedCounter = ({ value, suffix, prefix }: { value: number; suffix: string; prefix: string }) => {
@@ -57,7 +56,7 @@ const StatsSection = () => {
           </h2>
         </motion.div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-6">
           {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
