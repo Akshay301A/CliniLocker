@@ -91,6 +91,11 @@ const RatingsSection = () => {
       return;
     }
 
+    if (contactName.trim().length < 2) {
+      toast.error("Please enter your name so we know who shared this feedback.");
+      return;
+    }
+
     if (selectedStars <= 3 && comment.trim().length < 8) {
       toast.error("Please tell us a little more so we can improve this experience.");
       return;
@@ -285,7 +290,8 @@ const RatingsSection = () => {
                 <Input
                   value={contactName}
                   onChange={(event) => setContactName(event.target.value)}
-                  placeholder="Your name (optional)"
+                  placeholder="Your name"
+                  required
                   className="h-12 rounded-2xl border-slate-200 bg-slate-50/70 px-4"
                 />
                 <Input

@@ -5,7 +5,7 @@ create table if not exists public.user_ratings (
   emoji text not null,
   sentiment text not null check (sentiment in ('negative', 'neutral', 'positive')),
   comment text,
-  contact_name text,
+  contact_name text not null,
   contact_email text,
   source text not null default 'website' check (source in ('website', 'mobile')),
   page_path text,
@@ -29,7 +29,7 @@ create policy "Allow public rating inserts"
     stars between 1 and 5
     and length(emoji) between 1 and 16
     and (comment is null or char_length(comment) <= 2000)
-    and (contact_name is null or char_length(contact_name) <= 120)
+    and char_length(trim(contact_name)) between 2 and 120
     and (contact_email is null or char_length(contact_email) <= 160)
   );
 
