@@ -1,5 +1,5 @@
 ﻿import { supabase } from "./supabase";
-import type { Profile, Report, FamilyMember, Lab, HealthCardRow, ShareRow } from "./supabase";
+import type { Profile, Report, FamilyMember, Lab, HealthCardRow, ShareRow, UserRating } from "./supabase";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -1274,6 +1274,76 @@ export async function getShowAds(): Promise<boolean> {
     .maybeSingle();
   if (error || !data?.value) return false;
   return data.value === true || data.value === "true";
+}
+
+export async function getPublicAppConfigValue(key: string): Promise<string | null> {
+  const trimmedKey = key.trim();
+  if (!trimmedKey) return null;
+
+  const { data, error } = await supabase
+    .from("app_config")
+    .select("value")
+    .eq("key", trimmedKey)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const value = data.value;
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  return null;
+}
+
+export type SubmitUserRatingPayload = {
+  stars: number;
+  emoji: string;
+  sentiment: "negative" | "neutral" | "positive";
+  comment?: string;
+  contactName?: string;
+  contactEmail?: string;
+  source?: "website" | "mobile";
+  pagePath?: string;
+  googleReviewPrompted?: boolean;
+};
+
+export type PublicUserRating = Pick<UserRating, "id" | "stars" | "emoji" | "comment" | "contact_name" | "created_at">;
+
+export async function getPublicUserRatings(limit = 3): Promise<PublicUserRating[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 6);
+  const { data, error } = await supabase
+    .from("user_ratings")
+    .select("id, stars, emoji, comment, contact_name, created_at")
+    .gte("stars", 4)
+    .not("comment", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(safeLimit);
+
+  if (error) return [];
+
+  return ((data ?? []) as PublicUserRating[]).filter((item) => (item.comment ?? "").trim().length >= 12);
+}
+
+export async function submitUserRating(payload: SubmitUserRatingPayload): Promise<{ error?: string }> {
+  const { data: authData } = await supabase.auth.getUser();
+  const userId = authData.user?.id ?? null;
+  const { error } = await supabase.from("user_ratings").insert({
+    user_id: userId,
+    stars: payload.stars,
+    emoji: payload.emoji,
+    sentiment: payload.sentiment,
+    comment: payload.comment?.trim() || null,
+    contact_name: payload.contactName?.trim() || null,
+    contact_email: payload.contactEmail?.trim() || null,
+    source: payload.source ?? "website",
+    page_path: payload.pagePath?.trim() || null,
+    google_review_prompted: payload.googleReviewPrompted ?? false,
+  });
+
+  if (error) return { error: error.message };
+  return {};
 }
 
 /** Check if a phone number already has a patient account (profile). Used to show Login vs Create account. */

@@ -154,4 +154,15 @@ export type HospitalAccessRequest = {
   created_at?: string;
 };
 
+export type UserRating = {
+  id: string;
+  stars: number;
+  emoji: string;
+  sentiment: "negative" | "neutral" | "positive";
+  comment?: string | null;
+  contact_name?: string | null;
+  source?: "website" | "mobile";
+  created_at?: string;
+};
+
 

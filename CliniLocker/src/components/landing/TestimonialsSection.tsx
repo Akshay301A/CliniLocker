@@ -1,31 +1,75 @@
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
-import { Star } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MessageSquareQuote, Star } from "lucide-react";
 
-const testimonials = [
+import { getPublicUserRatings, type PublicUserRating } from "@/lib/api";
+
+const fallbackTestimonials = [
   {
-    name: "Dr. A. Menon",
-    role: "Cardiologist, Apollo Clinic",
-    quote:
+    id: "fallback-doctor",
+    stars: 5,
+    emoji: "🤩",
+    comment:
       "CliniLocker makes patient records instantly accessible. Sharing reports with families and specialists is now effortless.",
+    contact_name: "Dr. A. Menon",
   },
   {
-    name: "Priya R.",
-    role: "Patient & Caregiver",
-    quote:
-      "I keep all my parents’ reports in one place. Reminders are timely and the sharing link is super convenient.",
+    id: "fallback-patient",
+    stars: 5,
+    emoji: "😊",
+    comment:
+      "I keep all my parents' reports in one place. Reminders are timely and the sharing flow feels genuinely easy to use.",
+    contact_name: "Priya R.",
   },
   {
-    name: "Rohit K.",
-    role: "Lab Manager",
-    quote:
-      "We reduced follow-ups dramatically. The secure vault and quick share links have transformed our workflow.",
+    id: "fallback-lab",
+    stars: 5,
+    emoji: "💙",
+    comment:
+      "We reduced follow-ups dramatically. The secure vault and quick report sharing have transformed our workflow.",
+    contact_name: "Rohit K.",
   },
-];
+] as const;
+
+const RATING_CREATED_EVENT = "clinilocker-rating-created";
+
+function normalizeDisplayName(name?: string | null): string {
+  const trimmed = (name ?? "").trim();
+  return trimmed.length > 0 ? trimmed : "CliniLocker user";
+}
 
 const TestimonialsSection = () => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const [userTestimonials, setUserTestimonials] = useState<PublicUserRating[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    getPublicUserRatings(3).then((rows) => {
+      if (!mounted) return;
+      setUserTestimonials(rows);
+    });
+
+    const handleRatingCreated = (event: Event) => {
+      const detail = (event as CustomEvent<PublicUserRating>).detail;
+      if (!detail || !detail.comment) return;
+      setUserTestimonials((current) => {
+        const next = [detail, ...current.filter((item) => item.id !== detail.id)];
+        return next.slice(0, 3);
+      });
+    };
+
+    window.addEventListener(RATING_CREATED_EVENT, handleRatingCreated);
+    return () => {
+      mounted = false;
+      window.removeEventListener(RATING_CREATED_EVENT, handleRatingCreated);
+    };
+  }, []);
+
+  const testimonials = useMemo(
+    () => (userTestimonials.length > 0 ? userTestimonials : [...fallbackTestimonials]),
+    [userTestimonials]
+  );
 
   return (
     <section id="testimonials" className="py-16 sm:py-20 lg:py-24 bg-background relative">
@@ -38,33 +82,45 @@ const TestimonialsSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center max-w-2xl mx-auto mb-16"
         >
-          <span className="text-primary font-semibold text-sm uppercase tracking-widest">Testimonials</span>
+          <span className="text-primary font-semibold text-sm uppercase tracking-widest">User Reviews</span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mt-4 mb-6">
-            Patients, Labs, and Doctors Trust CliniLocker
+            Strong experiences from people using CliniLocker
           </h2>
           <p className="text-base sm:text-lg text-muted-foreground">
-            CliniLocker helps people manage health records, store medical reports online, and share securely.
+            Reviews shown here are pulled from high-rated CliniLocker feedback shared through the website.
           </p>
         </motion.div>
 
         <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {testimonials.map((t, index) => (
+          {testimonials.map((testimonial, index) => (
             <motion.div
-              key={t.name}
+              key={testimonial.id}
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="glass-card rounded-2xl p-6 sm:p-8 hover:shadow-lg transition-all duration-300"
+              className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_40px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_rgba(37,99,235,0.10)] sm:p-8"
             >
-              <div className="flex items-center gap-1 text-yellow-400 mb-4">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-yellow-400" />
-                ))}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-1 text-yellow-400">
+                  {Array.from({ length: testimonial.stars }).map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-yellow-400" />
+                  ))}
+                </div>
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-2xl">
+                  {testimonial.emoji}
+                </div>
               </div>
-              <p className="text-muted-foreground leading-relaxed mb-6">“{t.quote}”</p>
-              <div>
-                <p className="font-bold text-foreground">{t.name}</p>
-                <p className="text-sm text-muted-foreground">{t.role}</p>
+
+              <div className="mt-5 flex items-start gap-3">
+                <MessageSquareQuote className="mt-1 h-5 w-5 text-blue-500" />
+                <p className="text-sm leading-7 text-slate-600 sm:text-base">
+                  "{testimonial.comment?.trim()}"
+                </p>
+              </div>
+
+              <div className="mt-6 border-t border-slate-100 pt-5">
+                <p className="font-bold text-slate-950">{normalizeDisplayName(testimonial.contact_name)}</p>
+                <p className="mt-1 text-sm text-slate-500">CliniLocker review</p>
               </div>
             </motion.div>
           ))}
