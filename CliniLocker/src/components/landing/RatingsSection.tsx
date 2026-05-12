@@ -334,7 +334,7 @@ const RatingsSection = () => {
                 ) : null}
                 {showGooglePrompt ? (
                   <p>
-                    Google ratings only update when users submit their review on your Google Business Profile review page.
+                    Give us rating on Google to help others trust CliniLocker and to boost our motivation to keep improving the product! By clicking the Google review button!
                   </p>
                 ) : null}
               </div>
