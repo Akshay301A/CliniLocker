@@ -123,7 +123,12 @@ const TestimonialsSection = () => {
   }, []);
 
   const testimonials = useMemo(
-    () => (userTestimonials.length > 0 ? userTestimonials : [...fallbackTestimonials]),
+    () => {
+      const fallbackPool = fallbackTestimonials.filter(
+        (item) => !userTestimonials.some((review) => review.contact_name === item.contact_name)
+      );
+      return [...userTestimonials, ...fallbackPool].slice(0, 10);
+    },
     [userTestimonials]
   );
 
