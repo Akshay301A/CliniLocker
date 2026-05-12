@@ -6,7 +6,7 @@ import { getPublicUserRatings, type PublicUserRating } from "@/lib/api";
 
 const fallbackTestimonials = [
   {
-    id: "fallback-doctor",
+    id: "fallback-doctor-1",
     stars: 5,
     emoji: "🤩",
     comment:
@@ -14,7 +14,7 @@ const fallbackTestimonials = [
     contact_name: "Dr. A. Menon",
   },
   {
-    id: "fallback-patient",
+    id: "fallback-patient-1",
     stars: 5,
     emoji: "😊",
     comment:
@@ -22,12 +22,68 @@ const fallbackTestimonials = [
     contact_name: "Priya R.",
   },
   {
-    id: "fallback-lab",
+    id: "fallback-doctor-2",
     stars: 5,
     emoji: "💙",
     comment:
-      "We reduced follow-ups dramatically. The secure vault and quick report sharing have transformed our workflow.",
-    contact_name: "Rohit K.",
+      "The doctor share inbox is smooth and practical. Patients can send reports quickly and I can review them without confusion.",
+    contact_name: "Dr. Rohit K.",
+  },
+  {
+    id: "fallback-patient-2",
+    stars: 4,
+    emoji: "🙂",
+    comment:
+      "I used to search old chats and files for prescriptions. Now everything is in one place and much easier to manage.",
+    contact_name: "Sneha P.",
+  },
+  {
+    id: "fallback-doctor-3",
+    stars: 5,
+    emoji: "👏",
+    comment:
+      "For follow-ups, having reports arrive in a clean dashboard saves time. It feels focused and practical for real clinic use.",
+    contact_name: "Dr. Vivek S.",
+  },
+  {
+    id: "fallback-patient-3",
+    stars: 5,
+    emoji: "😍",
+    comment:
+      "The family records part is what helped me most. I can keep my mother's and father's reports organized without stress.",
+    contact_name: "Anjali M.",
+  },
+  {
+    id: "fallback-patient-4",
+    stars: 4,
+    emoji: "😊",
+    comment:
+      "Uploading reports and opening them later on my phone is simple. It feels much better than keeping screenshots everywhere.",
+    contact_name: "Kiran T.",
+  },
+  {
+    id: "fallback-doctor-4",
+    stars: 5,
+    emoji: "💯",
+    comment:
+      "Verification plus direct patient sharing gives this product a serious edge. It feels trustworthy and useful from day one.",
+    contact_name: "Dr. Neha R.",
+  },
+  {
+    id: "fallback-patient-5",
+    stars: 5,
+    emoji: "✨",
+    comment:
+      "The QR flow is surprisingly convenient. I can pull up my details fast and share reports when needed without extra steps.",
+    contact_name: "Harish G.",
+  },
+  {
+    id: "fallback-doctor-5",
+    stars: 4,
+    emoji: "👍",
+    comment:
+      "CliniLocker keeps the report-sharing process clean. The interface is simple enough that patients can use it without much guidance.",
+    contact_name: "Dr. Farah I.",
   },
 ] as const;
 
@@ -91,7 +147,7 @@ const TestimonialsSection = () => {
           </p>
         </motion.div>
 
-        <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
           {testimonials.map((testimonial, index) => (
             <motion.div
               key={testimonial.id}
