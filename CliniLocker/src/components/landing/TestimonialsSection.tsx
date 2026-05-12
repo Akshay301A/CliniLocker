@@ -3,6 +3,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageSquareQuote, Star } from "lucide-react";
 
 import { getPublicUserRatings, type PublicUserRating } from "@/lib/api";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from "@/components/ui/carousel";
 
 const fallbackTestimonials = [
   {
@@ -98,6 +106,7 @@ const TestimonialsSection = () => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [userTestimonials, setUserTestimonials] = useState<PublicUserRating[]>([]);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
 
   useEffect(() => {
     let mounted = true;
@@ -132,6 +141,20 @@ const TestimonialsSection = () => {
     [userTestimonials]
   );
 
+  useEffect(() => {
+    if (!carouselApi) return;
+
+    const autoplay = window.setInterval(() => {
+      if (carouselApi.canScrollNext()) {
+        carouselApi.scrollNext();
+      } else {
+        carouselApi.scrollTo(0);
+      }
+    }, 3200);
+
+    return () => window.clearInterval(autoplay);
+  }, [carouselApi]);
+
   return (
     <section id="testimonials" className="py-16 sm:py-20 lg:py-24 bg-background relative">
       <div className="absolute inset-x-0 top-0 h-64 bg-primary/5 blur-3xl" />
@@ -152,40 +175,54 @@ const TestimonialsSection = () => {
           </p>
         </motion.div>
 
-        <div className="grid gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {testimonials.map((testimonial, index) => (
-            <motion.div
-              key={testimonial.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_40px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_rgba(37,99,235,0.10)] sm:p-8"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-1 text-yellow-400">
-                  {Array.from({ length: testimonial.stars }).map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-yellow-400" />
-                  ))}
-                </div>
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-2xl">
-                  {testimonial.emoji}
-                </div>
-              </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative"
+        >
+          <Carousel
+            setApi={setCarouselApi}
+            opts={{ loop: true, align: "start" }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-4">
+              {testimonials.map((testimonial) => (
+                <CarouselItem
+                  key={testimonial.id}
+                  className="pl-4 md:basis-1/2 xl:basis-1/3"
+                >
+                  <div className="h-full rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_40px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_55px_rgba(37,99,235,0.10)] sm:p-8">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-1 text-yellow-400">
+                        {Array.from({ length: testimonial.stars }).map((_, i) => (
+                          <Star key={i} className="h-4 w-4 fill-yellow-400" />
+                        ))}
+                      </div>
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-2xl">
+                        {testimonial.emoji}
+                      </div>
+                    </div>
 
-              <div className="mt-5 flex items-start gap-3">
-                <MessageSquareQuote className="mt-1 h-5 w-5 text-blue-500" />
-                <p className="text-sm leading-7 text-slate-600 sm:text-base">
-                  "{testimonial.comment?.trim()}"
-                </p>
-              </div>
+                    <div className="mt-5 flex items-start gap-3">
+                      <MessageSquareQuote className="mt-1 h-5 w-5 text-blue-500" />
+                      <p className="text-sm leading-7 text-slate-600 sm:text-base">
+                        "{testimonial.comment?.trim()}"
+                      </p>
+                    </div>
 
-              <div className="mt-6 border-t border-slate-100 pt-5">
-                <p className="font-bold text-slate-950">{normalizeDisplayName(testimonial.contact_name)}</p>
-                <p className="mt-1 text-sm text-slate-500">CliniLocker review</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+                    <div className="mt-6 border-t border-slate-100 pt-5">
+                      <p className="font-bold text-slate-950">{normalizeDisplayName(testimonial.contact_name)}</p>
+                      <p className="mt-1 text-sm text-slate-500">CliniLocker review</p>
+                    </div>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="left-2 top-[42%] hidden h-11 w-11 border-slate-200 bg-white text-slate-700 shadow-md hover:bg-slate-50 xl:flex" />
+            <CarouselNext className="right-2 top-[42%] hidden h-11 w-11 border-slate-200 bg-white text-slate-700 shadow-md hover:bg-slate-50 xl:flex" />
+          </Carousel>
+        </motion.div>
       </div>
     </section>
   );
