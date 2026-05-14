@@ -12,6 +12,7 @@ import type { ReportWithLab } from "@/lib/api";
 import { toast } from "sonner";
 import { DoctorShareFab } from "@/components/patient/DoctorShareFab";
 import { AbhaStatusCard } from "@/components/abha/AbhaStatusCard";
+import { ABHA_FEATURE_ENABLED } from "@/lib/featureFlags";
 
 function formatDate(s: string | undefined) {
   if (!s) return "—";
@@ -177,7 +178,7 @@ const PatientDashboard = () => {
           <Preloader />
         ) : (
           <>
-        <AbhaStatusCard />
+        {ABHA_FEATURE_ENABLED && <AbhaStatusCard />}
 
         {/* Quick Stats */}
         <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">

@@ -1,6 +1,7 @@
 import QRCode from "qrcode.react";
 import type { HealthCardRow } from "@/lib/supabase";
 import { useAbhaStore } from "@/lib/abhaStore";
+import { ABHA_FEATURE_ENABLED } from "@/lib/featureFlags";
 
 type Props = {
   card: HealthCardRow;
@@ -10,7 +11,7 @@ type Props = {
 export default function HealthCardDisplay({ card, containerRef }: Props) {
   const { isAbhaLinked, abhaProfile } = useAbhaStore();
   const qrUrl = `${window.location.origin}/user/${card.health_id}`;
-  const prefersAbha = isAbhaLinked && !!abhaProfile;
+  const prefersAbha = ABHA_FEATURE_ENABLED && isAbhaLinked && !!abhaProfile;
   const displayName = prefersAbha ? abhaProfile.name : card.name || "CliniLocker User";
   const primaryLabel = prefersAbha ? "ABHA Number" : "Health ID";
   const primaryValue = prefersAbha ? abhaProfile.abhaNumber : card.health_id;

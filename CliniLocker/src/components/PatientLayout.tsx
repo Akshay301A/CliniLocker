@@ -12,6 +12,7 @@ import HealthCardDisplay from "@/components/patient/HealthCardDisplay";
 import type { Profile } from "@/lib/supabase";
 import { toPng } from "html-to-image";
 import { useAbhaStore } from "@/lib/abhaStore";
+import { ABHA_FEATURE_ENABLED } from "@/lib/featureFlags";
 
 const navItems = [
   { icon: LayoutDashboard, labelKey: "Dashboard", to: "/patient/dashboard", iconColor: "text-blue-600" },
@@ -39,6 +40,7 @@ export function PatientLayout({ children }: { children: ReactNode }) {
   const [healthCardDownloading, setHealthCardDownloading] = useState(false);
   const healthCardRef = useRef<HTMLDivElement | null>(null);
   const { isAbhaLinked, abhaProfile } = useAbhaStore();
+  const abhaVisible = ABHA_FEATURE_ENABLED && isAbhaLinked && !!abhaProfile;
 
   useEffect(() => {
     getProfile().then((p) => {
@@ -88,7 +90,7 @@ export function PatientLayout({ children }: { children: ReactNode }) {
       const link = document.createElement("a");
       link.href = dataUrl;
       const cardLabel =
-        isAbhaLinked && abhaProfile?.abhaNumber
+        abhaVisible && abhaProfile?.abhaNumber
           ? abhaProfile.abhaNumber.replace(/\s+/g, "-")
           : healthCardData.health_id;
       link.download = `CliniLocker-Health-Card-${cardLabel}.png`;
@@ -105,7 +107,7 @@ export function PatientLayout({ children }: { children: ReactNode }) {
     const shareUrl = `${window.location.origin}/user/${healthCardData.health_id}`;
     const shareTitle = t("Digital Health Card");
     const shareText =
-      isAbhaLinked && abhaProfile
+      abhaVisible && abhaProfile
         ? `ABHA: ${abhaProfile.abhaNumber} • ${abhaProfile.abhaAddress}`
         : `${t("Health ID")}: ${healthCardData.health_id}`;
     try {
