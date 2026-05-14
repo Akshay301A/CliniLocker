@@ -1,27 +1,31 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Upload, FileText, Users, Share2, Settings, LogOut, Menu, X, User, CreditCard, Download } from "lucide-react";
+import {
+  CreditCard,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  Upload,
+  User,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ensureHealthCardExists, getProfile } from "@/lib/api";
+import type { HealthCardRow, Profile } from "@/lib/supabase";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AppFooter } from "@/components/AppFooter";
+import { BottomNav } from "@/components/BottomNav";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import HealthCardDisplay from "@/components/patient/HealthCardDisplay";
-import type { Profile } from "@/lib/supabase";
-import { toPng } from "html-to-image";
-import { useAbhaStore } from "@/lib/abhaStore";
-import { ABHA_FEATURE_ENABLED } from "@/lib/featureFlags";
 
 const navItems = [
-  { icon: LayoutDashboard, labelKey: "Dashboard", to: "/patient/dashboard", iconColor: "text-blue-600" },
-  { icon: FileText, labelKey: "My Reports", to: "/patient/reports", iconColor: "text-emerald-600" },
-  { icon: Share2, labelKey: "Family Reports", to: "/patient/family-reports", iconColor: "text-indigo-600" },
-  { icon: Upload, labelKey: "Upload Reports", to: "/patient/upload", iconColor: "text-amber-600" },
-  { icon: Users, labelKey: "Family Members", to: "/patient/family", iconColor: "text-violet-600" },
-  { icon: User, labelKey: "My Profile", to: "/patient/profile", iconColor: "text-teal-600" },
-  { icon: Settings, labelKey: "Settings", to: "/patient/settings", iconColor: "text-slate-600" },
+  { icon: LayoutDashboard, label: "Dashboard", to: "/patient/dashboard" },
+  { icon: FileText, label: "My Reports", to: "/patient/reports" },
+  { icon: Users, label: "Family Members", to: "/patient/family" },
+  { icon: Upload, label: "Upload Reports", to: "/patient/upload" },
+  { icon: Settings, label: "Settings", to: "/patient/settings" },
 ];
 
 export function PatientLayout({ children }: { children: ReactNode }) {
@@ -29,18 +33,14 @@ export function PatientLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { t } = useLanguage();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [healthCardOpen, setHealthCardOpen] = useState(false);
   const [healthCardLoading, setHealthCardLoading] = useState(false);
   const [healthCardError, setHealthCardError] = useState<string | null>(null);
-  const [healthCardData, setHealthCardData] = useState<null | import("@/lib/supabase").HealthCardRow>(null);
-  const [healthCardDownloading, setHealthCardDownloading] = useState(false);
+  const [healthCardData, setHealthCardData] = useState<HealthCardRow | null>(null);
   const healthCardRef = useRef<HTMLDivElement | null>(null);
-  const { isAbhaLinked, abhaProfile } = useAbhaStore();
-  const abhaVisible = ABHA_FEATURE_ENABLED && isAbhaLinked && !!abhaProfile;
 
   useEffect(() => {
     getProfile().then((p) => {
@@ -78,52 +78,10 @@ export function PatientLayout({ children }: { children: ReactNode }) {
     };
   }, [healthCardOpen, profile, t]);
 
-  const handleDownloadHealthCard = async () => {
-    if (!healthCardRef.current || !healthCardData) return;
-    try {
-      setHealthCardDownloading(true);
-      const dataUrl = await toPng(healthCardRef.current, {
-        cacheBust: true,
-        backgroundColor: "#0B0F1A",
-        pixelRatio: 2,
-      });
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      const cardLabel =
-        abhaVisible && abhaProfile?.abhaNumber
-          ? abhaProfile.abhaNumber.replace(/\s+/g, "-")
-          : healthCardData.health_id;
-      link.download = `CliniLocker-Health-Card-${cardLabel}.png`;
-      link.click();
-    } catch {
-      toast.error(t("Download failed"));
-    } finally {
-      setHealthCardDownloading(false);
-    }
-  };
-
-  const handleShareHealthCard = async () => {
-    if (!healthCardData) return;
-    const shareUrl = `${window.location.origin}/user/${healthCardData.health_id}`;
-    const shareTitle = t("Digital Health Card");
-    const shareText =
-      abhaVisible && abhaProfile
-        ? `ABHA: ${abhaProfile.abhaNumber} • ${abhaProfile.abhaAddress}`
-        : `${t("Health ID")}: ${healthCardData.health_id}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: shareTitle,
-          text: shareText,
-          url: shareUrl,
-        });
-      } else {
-        await navigator.clipboard.writeText(shareUrl);
-        toast.success(t("Link copied"));
-      }
-    } catch {
-      toast.error(t("Share failed"));
-    }
+  const isActive = (to: string) => {
+    if (to === "/patient/reports") return location.pathname === to || location.pathname.startsWith("/patient/report/");
+    if (to === "/patient/family") return location.pathname === to || location.pathname === "/patient/family-reports";
+    return location.pathname === to;
   };
 
   const handleLogout = async () => {
@@ -133,138 +91,105 @@ export function PatientLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar transition-transform md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-6">
-          <img
-            src="/logo%20(2).png"
-            alt="CliniLocker"
-            className="h-[150px] w-auto shrink-0 object-contain object-left"
-          />
-          <button className="ml-auto md:hidden" onClick={() => setSidebarOpen(false)}>
-            <X className="h-5 w-5 text-sidebar-foreground" />
-          </button>
-        </div>
-        <nav className="flex-1 overflow-y-auto space-y-1 p-3">
-          {navItems.map((item) => {
-            const active = location.pathname === item.to;
-            return (
+    <div className="min-h-screen bg-[#f6f8fc] lg:h-screen lg:overflow-hidden">
+      <div className="flex min-h-screen lg:h-screen">
+        <aside className="hidden h-screen w-[274px] shrink-0 border-r border-slate-200 bg-white px-5 py-6 lg:flex lg:flex-col lg:overflow-hidden">
+          <Link
+            to="/patient/dashboard"
+            className="mb-8 flex h-[132px] items-center rounded-[22px] border border-slate-200 bg-white px-4 shadow-sm"
+          >
+            <img src="/logo%20(2).png" alt="CliniLocker" className="h-40 w-auto object-contain object-left" />
+          </Link>
+
+          <div className="mb-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <div className="flex flex-col items-center text-center">
+              <Avatar className="h-20 w-20 border-4 border-white shadow-md">
+                {avatarUrl && <AvatarImage src={avatarUrl} alt={profileName ?? t("Profile")} />}
+                <AvatarFallback className="bg-blue-100 text-lg font-semibold text-blue-700">
+                  {profileName ? profileName.charAt(0).toUpperCase() : <User className="h-5 w-5" />}
+                </AvatarFallback>
+              </Avatar>
+              <p className="mt-4 font-display text-lg font-semibold text-slate-900">{profileName ?? "CliniLocker User"}</p>
+              <p className="text-sm text-slate-500">{t("Secure health records")}</p>
+            </div>
+          </div>
+
+          <nav className="space-y-2.5">
+            {navItems.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-sidebar-accent text-sidebar-primary"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent"
+                className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 transition-all ${
+                  isActive(item.to)
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }`}
               >
-                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? "bg-primary/15" : "bg-muted/80"}`}>
-                  <item.icon className={`h-4 w-4 ${item.iconColor || "text-sidebar-foreground"}`} />
-                </span>
-                {t(item.labelKey)}
+                <item.icon className="h-5 w-5" />
+                <span className="text-sm font-medium">{t(item.label)}</span>
               </Link>
-            );
-          })}
-        </nav>
-      </aside>
+            ))}
+          </nav>
 
-      {/* Overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-30 bg-foreground/20 md:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
+        </aside>
 
-      {/* Main */}
-      <div className="flex min-h-screen flex-col min-w-0 md:pl-64">
-        <header className="flex h-14 min-h-[3.5rem] sm:h-16 items-center border-b border-border bg-card px-3 sm:px-4 md:px-6 gap-2">
-          <button
-            type="button"
-            className="touch-target flex shrink-0 md:hidden -ml-1 items-center justify-center rounded-md text-foreground hover:bg-muted/80"
-            onClick={() => setSidebarOpen(true)}
-            aria-label={t("Open menu")}
+        <div className="flex min-w-0 flex-1 flex-col lg:h-screen lg:overflow-hidden">
+          <header
+            className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-3.5 pb-2 pt-2 sm:px-4 md:px-8 md:py-5"
+            style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.14rem)" }}
           >
-            <Menu className="h-5 w-5" />
-          </button>
-          <Link
-            to="/patient/dashboard"
-            className="font-display text-lg font-bold text-foreground shrink-0 hidden sm:inline hover:opacity-90"
-          >
-            CliniLocker
-          </Link>
-          <h2 className="font-display text-base sm:text-lg font-semibold text-foreground truncate">
-            {location.pathname.match(/^\/patient\/report\/[^/]+$/)
-              ? t("View Report")
-              : t(navItems.find((i) => i.to === location.pathname)?.labelKey || "Dashboard")}
-          </h2>
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setHealthCardOpen(true)}
-              aria-label={t("Digital Health Card")}
-              className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />
-            </button>
-            <Link
-              to="/patient/profile"
-              className="flex shrink-0 items-center justify-center rounded-full ring-offset-background transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              aria-label={t("My Profile")}
-            >
-              <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
-                {avatarUrl && <AvatarImage src={avatarUrl} alt={profileName ?? t("Profile")} />}
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  <User className="h-4 w-4 sm:h-5 sm:w-5" />
-                </AvatarFallback>
-              </Avatar>
-            </Link>
-            <button
-              type="button"
-              onClick={handleLogout}
-              aria-label={t("Logout")}
-              className="group flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-end overflow-hidden rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-all duration-300 hover:w-28 sm:hover:w-32 hover:bg-destructive/10 hover:text-destructive focus-visible:w-28 sm:focus-visible:w-32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <span className="absolute mr-10 sm:mr-11 whitespace-nowrap text-xs sm:text-sm font-medium opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0">
-                {t("Logout")}
-              </span>
-              <span className="mr-[9px] sm:mr-[10px]">
+            <div className="flex items-center gap-3">
+              <Link to="/patient/dashboard" className="flex items-center lg:hidden" aria-label="Home">
+                <img src="/favicon.png" alt="CliniLocker" className="h-[3rem] w-[3rem] object-contain" />
+              </Link>
+            </div>
+
+            <div className="flex items-center gap-2 md:gap-3">
+              <button
+                type="button"
+                onClick={() => setHealthCardOpen(true)}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 md:h-11 md:w-11"
+                aria-label={t("Digital Health Card")}
+              >
+                <CreditCard className="h-4 w-4 md:h-5 md:w-5" />
+              </button>
+
+              <Link
+                to="/patient/profile"
+                className="flex items-center justify-center rounded-full transition-opacity hover:opacity-80"
+                aria-label={t("Profile")}
+              >
+                <Avatar className="h-10 w-10 border-2 border-slate-100 md:h-11 md:w-11">
+                  {avatarUrl && <AvatarImage src={avatarUrl} alt={profileName ?? t("Profile")} />}
+                  <AvatarFallback className="bg-blue-100 text-xs text-blue-700">
+                    {profileName ? profileName.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                aria-label={t("Logout")}
+              >
                 <LogOut className="h-4 w-4" />
-              </span>
-            </button>
-          </div>
-        </header>
-        <main className="flex-1 flex flex-col p-3 sm:p-4 md:p-6 overflow-x-hidden">
-          <div className="flex-1 min-h-0">{children}</div>
-          <AppFooter />
-        </main>
+              </button>
+            </div>
+          </header>
+
+          <main className="flex-1 overflow-x-hidden px-3.5 py-3 pb-24 sm:px-4 sm:py-4 md:px-8 md:py-8 md:pb-8 lg:overflow-y-auto xl:px-10">
+            <div className="min-h-0">{children}</div>
+          </main>
+        </div>
       </div>
 
+      <BottomNav />
+
       <Dialog open={healthCardOpen} onOpenChange={setHealthCardOpen}>
-        <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
+        <DialogContent className="w-[95vw] max-w-2xl">
           <DialogHeader>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <DialogTitle className="text-lg font-semibold">{t("Digital Health Card")}</DialogTitle>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleShareHealthCard}
-                  disabled={!healthCardData || healthCardLoading}
-                  aria-label={t("Share")}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-primary/10 hover:text-primary disabled:pointer-events-none disabled:opacity-60"
-                >
-                  <Share2 className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadHealthCard}
-                  disabled={!healthCardData || healthCardDownloading || healthCardLoading}
-                  aria-label={t("Download")}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-primary/10 hover:text-primary disabled:pointer-events-none disabled:opacity-60"
-                >
-                  <Download className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+            <DialogTitle className="text-lg font-semibold">{t("Digital Health Card")}</DialogTitle>
           </DialogHeader>
           <div className="pt-2">
             {healthCardLoading && (

@@ -1,349 +1,439 @@
-﻿import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { FileText, Upload, Users, Share2, TrendingUp, Calendar, Shield, Sparkles, Heart, Utensils } from "lucide-react";
-import { Preloader } from "@/components/Preloader";
+import {
+  Bell,
+  Calendar,
+  Clock,
+  FileText,
+  Heart,
+  Shield,
+  Sparkles,
+  Upload,
+  Users,
+  Utensils,
+} from "lucide-react";
+import { toast } from "sonner";
 import { PatientLayout } from "@/components/PatientLayout";
-import { AdSense } from "@/components/AdSense";
+import { Preloader } from "@/components/Preloader";
+import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { getPatientReports, getFamilyMembers, getProfile, getShowAds } from "@/lib/api";
+import { getFamilyMembers, getMedicationReminders, getPatientReports, getProfile } from "@/lib/api";
 import { fetchHealthQuotes } from "@/lib/healthQuotes";
+import { supabase } from "@/lib/supabase";
 import type { ReportWithLab } from "@/lib/api";
-import { toast } from "sonner";
 import { DoctorShareFab } from "@/components/patient/DoctorShareFab";
-import { AbhaStatusCard } from "@/components/abha/AbhaStatusCard";
-import { ABHA_FEATURE_ENABLED } from "@/lib/featureFlags";
 
-function formatDate(s: string | undefined) {
-  if (!s) return "—";
-  return new Date(s).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
-}
+type ReminderPreview = {
+  id: string;
+  medication_name: string;
+  dosage: string;
+  frequency: string;
+  times?: string[] | null;
+};
 
-/** First name from full_name, or full name, or fallback. */
+type DietPlanPreview = {
+  reportId: string;
+  title: string;
+  updatedAt: string | null;
+  goal: string | null;
+};
+
+const HEALTH_TIPS = [
+  "Stay hydrated and keep your latest reports organised in one place.",
+  "Regular health checks and medication reminders reduce missed care moments.",
+  "Keep family records updated so every consultation is faster and clearer.",
+  "Good sleep, simple movement, and consistent tracking build better long-term health.",
+];
+
 function displayName(fullName: string | null | undefined): string {
   if (!fullName?.trim()) return "there";
-  const parts = fullName.trim().split(/\s+/);
-  return parts[0] ?? "there";
+  return fullName.trim().split(/\s+/)[0] ?? "there";
 }
 
-/** Real health tips everyone should follow, shown in rotation at bottom of dashboard. */
-const REAL_HEALTH_TIPS = [
-  "Get 7–8 hours of sleep each night for better focus and immunity.",
-  "Drink at least 8 glasses of water daily to stay hydrated.",
-  "Wash your hands before meals and after using the restroom.",
-  "Get an annual health check-up and keep your vaccination records up to date.",
-  "Eat a balanced diet with plenty of fruits and vegetables.",
-  "Aim for at least 30 minutes of physical activity most days.",
-  "Limit screen time before bed for better sleep quality.",
-  "Don’t skip breakfast – it helps energy and concentration.",
-  "Use sunscreen with SPF 30+ when you’re outdoors.",
-  "Brush your teeth twice daily and floss once a day.",
-  "Take short breaks from sitting every hour if you work at a desk.",
-  "Manage stress with relaxation, exercise, or talking to someone.",
-  "Avoid smoking and limit alcohol for long-term health.",
-  "Know your numbers: blood pressure, weight, and blood sugar when advised.",
-  "Store and take medicines as prescribed; don’t share them.",
-];
-
-const FALLBACK_HEALTH_QUOTES = [
-  "Small daily steps build strong long-term health.",
-  "Your future self will thank you for today's healthy choices.",
-  "Consistency in sleep, food, and movement is powerful medicine.",
-  "Track your health reports regularly to stay one step ahead.",
-  "A calm mind and active body are a strong combination.",
-  "Prevention is always better than emergency treatment.",
-];
-
-const TIP_ROTATE_MS = 30 * 1000;
-const TODAY_WELLNESS = "Today";
+function formatDate(value?: string | null) {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
 
 const PatientDashboard = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState<ReportWithLab[]>([]);
   const [familyCount, setFamilyCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [showAds, setShowAds] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
   const [bloodPressure, setBloodPressure] = useState<string | null>(null);
   const [weight, setWeight] = useState<number | null>(null);
-  const [healthQuotes, setHealthQuotes] = useState<string[]>([]);
-  const [healthQuoteIndex, setHealthQuoteIndex] = useState(0);
-  const [healthTipIndex, setHealthTipIndex] = useState(0);
+  const [tipIndex, setTipIndex] = useState(0);
+  const [quoteIndex, setQuoteIndex] = useState(0);
+  const [quotes, setQuotes] = useState<string[]>([]);
+  const [reminders, setReminders] = useState<ReminderPreview[]>([]);
+  const [dietPlans, setDietPlans] = useState<DietPlanPreview[]>([]);
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([getPatientReports(), getFamilyMembers(), getProfile()]).then(([r, f, p]) => {
-      if (mounted) {
-        setReports(r);
-        setFamilyCount(f.length);
-        setUserName(p?.full_name ?? null);
-        setBloodPressure(p?.blood_pressure ?? null);
-        setWeight(p?.weight ?? null);
+
+    Promise.all([getPatientReports(), getFamilyMembers(), getProfile(), getMedicationReminders({ activeOnly: true })]).then(
+      ([reportRows, familyRows, profile, reminderRows]) => {
+        if (!mounted) return;
+        setReports(reportRows);
+        setFamilyCount(familyRows.length);
+        setUserName(profile?.full_name ?? null);
+        setBloodPressure(profile?.blood_pressure ?? null);
+        setWeight(profile?.weight ?? null);
+        setReminders((reminderRows || []) as ReminderPreview[]);
         setLoading(false);
-      }
-    });
-    return () => { mounted = false; };
+      },
+    );
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchHealthQuotes().then((data) => {
+      if (mounted) setQuotes(data);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadDietPlans = async () => {
+      if (!reports.length) {
+        if (mounted) setDietPlans([]);
+        return;
+      }
+
+      const reportIds = reports.map((report) => report.id);
+      const reportMap = new Map(reports.map((report) => [report.id, report]));
+      const { data, error } = await supabase
+        .from("report_ai")
+        .select("report_id, diet_plan, updated_at")
+        .in("report_id", reportIds)
+        .not("diet_plan", "is", null);
+
+      if (!mounted || error || !data) {
+        if (mounted) setDietPlans([]);
+        return;
+      }
+
+      const planRows = data as Array<{
+        report_id: string;
+        updated_at?: string | null;
+        diet_plan?: { goal?: string | null } | null;
+      }>;
+
+      const items = planRows
+        .map((row) => {
+          const report = reportMap.get(row.report_id);
+          if (!report) return null;
+          return {
+            reportId: row.report_id,
+            title: report.test_name || "Diet plan",
+            updatedAt: row.updated_at ?? report.uploaded_at ?? null,
+            goal: row.diet_plan?.goal ?? null,
+          };
+        })
+        .filter((item): item is DietPlanPreview => item !== null)
+        .sort((a, b) => new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime())
+        .slice(0, 3);
+
+      setDietPlans(items);
+    };
+
+    void loadDietPlans();
+
+    return () => {
+      mounted = false;
+    };
+  }, [reports]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTipIndex((current) => (current + 1) % HEALTH_TIPS.length);
+      setQuoteIndex((current) => (current + 1) % Math.max(quotes.length, 1));
+    }, 30000);
+    return () => clearInterval(id);
+  }, [quotes.length]);
 
   useEffect(() => {
     if (loading || !user?.id) return;
     const key = `welcome_dashboard_patient_${user.id}`;
     if (sessionStorage.getItem(key) === "1") return;
-    const name = displayName(userName ?? user.user_metadata?.full_name);
-    toast.success(`Welcome ${name}!`, {
-      description: "Your health vault is ready. Stay healthy and keep going!",
+    toast.success(`Welcome ${displayName(userName ?? user.user_metadata?.full_name)}!`, {
+      description: "Your health records are ready.",
     });
     sessionStorage.setItem(key, "1");
-  }, [loading, user?.id, userName]);
+  }, [loading, user?.id, user?.user_metadata?.full_name, userName]);
 
-  useEffect(() => {
-    let mounted = true;
-    fetchHealthQuotes().then((quotes) => {
-      if (mounted) setHealthQuotes(quotes);
-    });
-    return () => { mounted = false; };
-  }, []);
+  if (loading) {
+    return (
+      <PatientLayout>
+        <Preloader />
+      </PatientLayout>
+    );
+  }
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setHealthQuoteIndex((i) => {
-        const quoteCount = (healthQuotes.length > 0 ? healthQuotes : FALLBACK_HEALTH_QUOTES).length;
-        return (i + 1) % quoteCount;
-      });
-      setHealthTipIndex((i) => (i + 1) % REAL_HEALTH_TIPS.length);
-    }, TIP_ROTATE_MS);
-    return () => clearInterval(interval);
-  }, [healthQuotes]);
-
-  useEffect(() => {
-    let mounted = true;
-    getShowAds().then((v) => {
-      if (mounted) setShowAds(v);
-    });
-    return () => { mounted = false; };
-  }, []);
-
-  const recentReports = reports.slice(0, 3);
   const lastReport = reports[0];
-  const lastCheckup = lastReport?.uploaded_at ? formatDate(lastReport.uploaded_at) : "—";
-  const dietPlanHref = lastReport ? `/patient/report/${lastReport.id}/diet` : "/patient/reports";
-  const activeQuotes = healthQuotes.length > 0 ? healthQuotes : FALLBACK_HEALTH_QUOTES;
-  const activeQuote = activeQuotes[healthQuoteIndex % activeQuotes.length];
+  const latestReports = reports.slice(0, 3);
+  const latestReminders = reminders.slice(0, 3);
+  const quote =
+    quotes.length > 0
+      ? quotes[quoteIndex % quotes.length]
+      : "Everything you need for reports, family records, and care follow-ups is in one place.";
 
   return (
     <PatientLayout>
-      <div className="animate-fade-in space-y-4 sm:space-y-6">
-        <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card">
-          <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground">
-            {t("Welcome back")}, {displayName(userName ?? undefined)}!
-          </h1>
-          <p className="mt-1 text-sm sm:text-base text-muted-foreground">{t("Your health reports are safe and accessible anytime.")}</p>
-          <div className="mt-4 pt-4 border-t border-border">
-            <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-primary mb-2">
-              <Sparkles className="h-3.5 w-3.5" /> {t(TODAY_WELLNESS)}
-            </p>
-            <p className="text-sm text-muted-foreground pl-1 border-l-2 border-primary/30 transition-all duration-500">
-              {activeQuote}
-            </p>
-          </div>
-        </div>
-
-        {/* Ad Space - shown only when show_ads is true in app_config (after AdSense verification) */}
-        {showAds && (
-        <div className="rounded-xl border border-border/40 bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50 p-3 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
-              <span className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Health & Wellness
-              </span>
-            </div>
-            <span className="text-[9px] text-muted-foreground/60 px-1.5 py-0.5 rounded bg-muted/50 font-medium">Ad</span>
-          </div>
-          <div className="w-full min-h-[50px] max-h-[120px] overflow-hidden">
-            <AdSense
-              publisherId={import.meta.env.VITE_ADSENSE_PUBLISHER_ID}
-              adSlot={import.meta.env.VITE_ADSENSE_AD_SLOT}
-              format="auto"
-              minHeight={50}
-              showPlaceholder={true}
-              className="w-full rounded-lg"
-            />
-          </div>
-        </div>
-        )}
-
-        {loading ? (
-          <Preloader />
-        ) : (
-          <>
-        {ABHA_FEATURE_ENABLED && <AbhaStatusCard />}
-
-        {/* Quick Stats */}
-        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <FileText className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-2xl font-bold text-foreground">{reports.length}</p>
-                <p className="text-xs text-muted-foreground">{t("Total Reports")}</p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
-                <Heart className="h-5 w-5" />
-              </div>
-              <div className="min-w-0 flex-1 grid grid-cols-2 gap-x-3 gap-y-0.5">
-                <div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">{t("BP")}</p>
-                  <p className="text-base font-bold text-foreground leading-tight">{bloodPressure ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">{t("Weight")}</p>
-                  <p className="text-base font-bold text-foreground leading-tight">{weight != null ? `${weight} kg` : "—"}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-500">
-                <Users className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-2xl font-bold text-foreground">{familyCount}</p>
-                <p className="text-xs text-muted-foreground">{t("Family Members")}</p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
-                <Calendar className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-2xl font-bold text-foreground">{lastCheckup}</p>
-                <p className="text-xs text-muted-foreground">{t("Last Checkup")}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Reports */}
-        <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card">
-            <h2 className="font-display text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">{t("Recent Reports")}</h2>
-          <div className="space-y-3">
-            {recentReports.map((r) => (
-              <Link key={r.id} to={`/patient/report/${r.id}`} className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-muted/50">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">{r.test_name}</p>
-                    <p className="text-xs text-muted-foreground">{r.labs?.name ?? "—"}</p>
-                  </div>
-                </div>
-                <span className="text-xs text-muted-foreground">{formatDate(r.uploaded_at)}</span>
-              </Link>
-            ))}
-          </div>
-            <Link to="/patient/reports" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
-              {t("View all reports")} →
-            </Link>
-        </div>
-
-        {/* Ad Space - shown only when show_ads is true in app_config (after AdSense verification) */}
-        {showAds && (
-        <div className="rounded-xl border border-border/40 bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50 p-3 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
-              <span className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Health & Wellness
-              </span>
-            </div>
-            <span className="text-[9px] text-muted-foreground/60 px-1.5 py-0.5 rounded bg-muted/50 font-medium">Ad</span>
-          </div>
-          <div className="w-full min-h-[50px] max-h-[120px] overflow-hidden">
-            <AdSense
-              publisherId={import.meta.env.VITE_ADSENSE_PUBLISHER_ID}
-              adSlot={import.meta.env.VITE_ADSENSE_AD_SLOT}
-              format="auto"
-              minHeight={50}
-              showPlaceholder={true}
-              className="w-full rounded-lg"
-            />
-          </div>
-        </div>
-        )}
-
-        {/* Quick Actions */}
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
-          <Link to="/patient/reports" className="group flex min-h-[44px] gap-3 rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card transition-all hover:shadow-hover hover:border-primary/30">
-            <FileText className="h-7 w-7 sm:h-8 sm:w-8 text-primary shrink-0" />
-            <div className="min-w-0">
-              <h3 className="font-display font-semibold text-foreground">{t("My Reports")}</h3>
-              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{t("View and download all your health reports.")}</p>
-            </div>
-          </Link>
-          <Link to={dietPlanHref} className="group flex min-h-[44px] gap-3 rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card transition-all hover:shadow-hover hover:border-primary/30">
-            <Utensils className="h-7 w-7 sm:h-8 sm:w-8 text-primary shrink-0" />
-            <div className="min-w-0">
-              <h3 className="font-display font-semibold text-foreground">{t("Diet Plan")}</h3>
-              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-                {lastReport ? t("Generate a plan from your latest report.") : t("Upload a report to create a diet plan.")}
+      <div className="space-y-5 animate-fade-in md:space-y-6">
+        <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,_#1d4ed8_0%,_#2563eb_52%,_#4f46e5_100%)] p-5 text-white shadow-[0_22px_55px_rgba(37,99,235,0.18)] md:p-7">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-2xl">
+              <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
+                {t("Welcome back")}, {displayName(userName)}.
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-7 text-blue-50 md:text-base">
+                {t("Track reports, manage family records, reminders, and diet plans from one clean dashboard.")}
               </p>
             </div>
-          </Link>
-          <Link to="/patient/upload" className="group flex min-h-[44px] gap-3 rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card transition-all hover:shadow-hover hover:border-primary/30">
-            <Upload className="h-7 w-7 sm:h-8 sm:w-8 text-primary shrink-0" />
-            <div className="min-w-0">
-              <h3 className="font-display font-semibold text-foreground">{t("Upload Report")}</h3>
-              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{t("Add reports from other labs or clinics.")}</p>
+
+            <div className="grid grid-cols-2 gap-3 sm:min-w-[360px]">
+              <Link to="/patient/upload" className="min-w-0">
+                <Button className="h-12 w-full rounded-2xl bg-white px-4 text-blue-700 shadow-sm hover:bg-blue-50">
+                  <Upload className="mr-2 h-4 w-4" />
+                  {t("Upload report")}
+                </Button>
+              </Link>
+              <Link to="/patient/reports" className="min-w-0">
+                <Button variant="outline" className="h-12 w-full rounded-2xl border-white/30 bg-white/10 px-4 text-white hover:bg-white/15">
+                  <FileText className="mr-2 h-4 w-4" />
+                  {t("Browse reports")}
+                </Button>
+              </Link>
+              <Link to={lastReport ? `/patient/report/${lastReport.id}/diet` : "/patient/reports"} className="col-span-2 min-w-0">
+                <Button variant="outline" className="h-12 w-full rounded-2xl border-white/30 bg-white/10 px-4 text-white hover:bg-white/15">
+                  <Utensils className="mr-2 h-4 w-4" />
+                  {t("Diet planner")}
+                </Button>
+              </Link>
             </div>
-          </Link>
-          <Link to="/patient/family-reports" className="group flex min-h-[44px] gap-3 rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card transition-all hover:shadow-hover hover:border-primary/30">
-            <Share2 className="h-7 w-7 sm:h-8 sm:w-8 text-primary shrink-0" />
-            <div className="min-w-0">
-              <h3 className="font-display font-semibold text-foreground">{t("Family Reports")}</h3>
-              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{t("Reports shared with you by family.")}</p>
+          </div>
+
+          <div className="mt-6 rounded-[24px] border border-white/15 bg-white/10 p-4 backdrop-blur">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-blue-100">
+              <Sparkles className="h-3.5 w-3.5" />
+              {t("Today")}
+            </p>
+            <p className="mt-2 text-sm leading-7 text-white/95 md:text-base">{quote}</p>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
+          <div className="overflow-hidden rounded-[24px] border border-blue-200/60 bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-md md:p-5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md md:h-12 md:w-12">
+              <FileText className="h-5 w-5 md:h-6 md:w-6" />
             </div>
-          </Link>
-          <Link to="/patient/family" className="group flex min-h-[44px] gap-3 rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card transition-all hover:shadow-hover hover:border-primary/30">
-            <Users className="h-7 w-7 sm:h-8 sm:w-8 text-primary shrink-0" />
-            <div className="min-w-0">
-              <h3 className="font-display font-semibold text-foreground">{t("Family Members")}</h3>
-              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{t("Manage health records for your family.")}</p>
+            <p className="mt-4 text-3xl font-bold text-blue-700 md:mt-5 md:text-4xl">{reports.length}</p>
+            <p className="mt-2 text-sm font-semibold text-blue-600">{t("Total reports")}</p>
+          </div>
+
+          <div className="overflow-hidden rounded-[24px] border border-rose-200/60 bg-gradient-to-br from-rose-50 to-pink-100 p-4 shadow-md md:p-5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md md:h-12 md:w-12">
+              <Heart className="h-5 w-5 md:h-6 md:w-6" />
             </div>
-          </Link>
+            <p className="mt-4 text-[2rem] font-bold leading-none text-slate-900 md:mt-5 md:text-4xl">{bloodPressure ?? "—"}</p>
+            <p className="mt-2 text-sm font-semibold text-rose-600">{t("Blood pressure")}</p>
+            {weight != null && <p className="mt-2 text-xs font-medium text-rose-500">{t("Weight")}: {weight} kg</p>}
+          </div>
+
+          <div className="overflow-hidden rounded-[24px] border border-amber-200/60 bg-gradient-to-br from-amber-50 to-orange-100 p-4 shadow-md md:p-5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-md md:h-12 md:w-12">
+              <Calendar className="h-5 w-5 md:h-6 md:w-6" />
+            </div>
+            <p className="mt-4 text-xl font-bold leading-tight text-amber-700 md:mt-5 md:text-3xl">{formatDate(lastReport?.uploaded_at)}</p>
+            <p className="mt-2 text-sm font-semibold text-amber-600">{t("Last upload")}</p>
+          </div>
+
+          <div className="overflow-hidden rounded-[24px] border border-violet-200/60 bg-gradient-to-br from-violet-50 to-purple-100 p-4 shadow-md md:p-5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-md md:h-12 md:w-12">
+              <Users className="h-5 w-5 md:h-6 md:w-6" />
+            </div>
+            <p className="mt-4 text-3xl font-bold text-violet-700 md:mt-5 md:text-4xl">{familyCount}</p>
+            <p className="mt-2 text-sm font-semibold text-violet-600">{t("Family linked")}</p>
+          </div>
         </div>
 
-        {/* Health inspiration, real tips rotate every 30s */}
-        <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card">
-          <div className="flex items-center gap-2 mb-3 sm:mb-4">
-            <TrendingUp className="h-5 w-5 text-primary shrink-0" />
-              <h2 className="font-display text-base sm:text-lg font-semibold text-foreground">{t("Health inspiration")}</h2>
-          </div>
-          <div className="flex gap-3 rounded-lg bg-muted/50 p-3">
-            <Shield className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-            <p className="text-sm text-muted-foreground">
-              {t(REAL_HEALTH_TIPS[healthTipIndex])}
-            </p>
-          </div>
+        <div className="grid gap-5 xl:grid-cols-[1.1fr,0.9fr]">
+          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">{t("Reports")}</p>
+                <h2 className="mt-1 font-display text-2xl font-semibold text-slate-900">{t("Recent reports")}</h2>
+              </div>
+              <Link to="/patient/reports" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                {t("View all")}
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {latestReports.length > 0 ? (
+                latestReports.map((report) => (
+                  <Link
+                    key={report.id}
+                    to={`/patient/report/${report.id}`}
+                    className="flex items-start gap-3 rounded-[22px] border border-slate-200 bg-slate-50/70 p-4 transition hover:bg-white hover:shadow-md"
+                  >
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-slate-900">{report.test_name}</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {(report.labs?.name ?? "CliniLocker")} • {formatDate(report.uploaded_at)}
+                      </p>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500">
+                  {t("Your latest uploaded reports will appear here.")}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-500 text-white shadow-sm">
+                  <Bell className="h-5 w-5" />
+                </div>
+                <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">{t("Reminders")}</p>
+                <h2 className="mt-1 font-display text-2xl font-semibold text-slate-900">{t("Latest reminders")}</h2>
+                </div>
+              </div>
+              <Link to="/patient/reminders" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                {t("Manage")}
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {latestReminders.length > 0 ? (
+                latestReminders.map((reminder) => (
+                  <Link
+                    key={reminder.id}
+                    to="/patient/reminders"
+                    className="flex items-start gap-3 rounded-[22px] border border-slate-200 bg-slate-50/70 p-4 transition hover:bg-white hover:shadow-md"
+                  >
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-500 text-white shadow-sm">
+                      <Bell className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-slate-900">{reminder.medication_name}</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {reminder.dosage} • {reminder.frequency}
+                      </p>
+                      {reminder.times?.[0] && (
+                        <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                          <Clock className="h-3.5 w-3.5 text-blue-600" />
+                          {reminder.times[0]}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500">
+                  {t("Create a reminder to keep your medicines on track.")}
+                </div>
+              )}
+            </div>
+          </section>
         </div>
-          </>
-        )}
+
+        <div className="grid gap-5 xl:grid-cols-[0.95fr,1.05fr]">
+          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-sm">
+                  <Utensils className="h-5 w-5" />
+                </div>
+                <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">{t("Diet plans")}</p>
+                <h2 className="mt-1 font-display text-2xl font-semibold text-slate-900">{t("Recent diet plans")}</h2>
+                </div>
+              </div>
+              <Link to={lastReport ? `/patient/report/${lastReport.id}/diet` : "/patient/reports"} className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                {t("Open planner")}
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {dietPlans.length > 0 ? (
+                dietPlans.map((plan) => (
+                  <Link
+                    key={plan.reportId}
+                    to={`/patient/report/${plan.reportId}/diet`}
+                    className="flex items-start gap-3 rounded-[22px] border border-slate-200 bg-slate-50/70 p-4 transition hover:bg-white hover:shadow-md"
+                  >
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-sm">
+                      <Utensils className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-slate-900">{plan.title}</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {plan.goal ? `${t(plan.goal)} • ` : ""}
+                        {formatDate(plan.updatedAt)}
+                      </p>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500">
+                  {t("Generate a diet plan from any report and it will appear here.")}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
+                <Shield className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">{t("Health inspiration")}</p>
+                <h2 className="mt-1 font-display text-2xl font-semibold text-slate-900">{t("Daily motivation")}</h2>
+              </div>
+            </div>
+
+            <div className="rounded-[22px] bg-slate-50 p-5">
+              <div className="flex items-start gap-3">
+                <Shield className="mt-1 h-5 w-5 shrink-0 text-blue-600" />
+                <p className="text-base leading-7 text-slate-700">{t(HEALTH_TIPS[tipIndex])}</p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50/70 p-5">
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+                <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                {t("Quote")}
+              </p>
+              <p className="mt-3 text-sm leading-7 text-slate-600 md:text-base">{quote}</p>
+            </div>
+          </section>
+        </div>
       </div>
-      <DoctorShareFab />
+      <DoctorShareFab variant="fab" />
     </PatientLayout>
   );
 };
 
 export default PatientDashboard;
-

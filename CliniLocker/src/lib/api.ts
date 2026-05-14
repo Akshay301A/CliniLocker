@@ -1265,6 +1265,106 @@ export async function insertPrescription(prescription: {
   return { id: presc.id };
 }
 
+type MedicationReminderRow = {
+  id: string;
+  prescription_id?: string | null;
+  patient_id: string;
+  medication_name: string;
+  dosage: string;
+  frequency: string;
+  duration_days?: number | null;
+  start_date: string;
+  times?: string[] | null;
+  notes?: string | null;
+  is_active?: boolean;
+  prescriptions?: {
+    file_url?: string | null;
+    doctor_name?: string | null;
+    prescription_date?: string | null;
+  } | null;
+};
+
+export async function getMedicationReminders(options?: { activeOnly?: boolean }): Promise<MedicationReminderRow[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  let query = supabase
+    .from("medication_reminders")
+    .select("*, prescriptions(file_url, doctor_name, prescription_date)")
+    .eq("patient_id", user.id)
+    .order("start_date", { ascending: true });
+  if (options?.activeOnly) {
+    query = query.eq("is_active", true);
+  }
+  const { data } = await query;
+  return (data ?? []) as MedicationReminderRow[];
+}
+
+export async function createMedicationReminder(reminder: {
+  prescription_id?: string | null;
+  medication_name: string;
+  dosage: string;
+  frequency: string;
+  duration_days?: number | null;
+  start_date?: string | null;
+  times?: string[] | null;
+  notes?: string | null;
+  is_active?: boolean;
+}): Promise<{ id: string } | { error: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const { data, error } = await supabase
+    .from("medication_reminders")
+    .insert({
+      prescription_id: reminder.prescription_id ?? null,
+      patient_id: user.id,
+      medication_name: reminder.medication_name.trim(),
+      dosage: reminder.dosage.trim(),
+      frequency: reminder.frequency.trim(),
+      duration_days: reminder.duration_days ?? null,
+      start_date: reminder.start_date || new Date().toISOString().split("T")[0],
+      times: reminder.times ?? null,
+      notes: reminder.notes?.trim() || null,
+      is_active: reminder.is_active ?? true,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) return { error: error?.message ?? "Failed to create reminder" };
+  return { id: data.id as string };
+}
+
+export async function updateMedicationReminder(
+  reminderId: string,
+  updates: Partial<MedicationReminder & { is_active?: boolean }>
+): Promise<{ error?: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const { error } = await supabase
+    .from("medication_reminders")
+    .update(updates)
+    .eq("id", reminderId)
+    .eq("patient_id", user.id);
+
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function deleteMedicationReminder(reminderId: string): Promise<{ error?: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const { error } = await supabase
+    .from("medication_reminders")
+    .delete()
+    .eq("id", reminderId)
+    .eq("patient_id", user.id);
+
+  if (error) return { error: error.message };
+  return {};
+}
+
 /** Remote flag: show ads section (set to true in Supabase app_config after AdSense verification). */
 export async function getShowAds(): Promise<boolean> {
   const { data, error } = await supabase

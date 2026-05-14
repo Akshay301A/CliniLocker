@@ -64,7 +64,13 @@ function getReportPath(fileUrl?: string | null): string {
   return fileUrl;
 }
 
-export function DoctorShareFab() {
+export function DoctorShareFab({
+  variant = "fab",
+  label = "Scan QR",
+}: {
+  variant?: "fab" | "inline";
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [reports, setReports] = useState<ReportWithLab[]>([]);
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
@@ -409,14 +415,26 @@ export function DoctorShareFab() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleOpen}
-        className="fixed bottom-6 right-6 z-30 inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-[0_18px_40px_rgba(37,99,235,0.32)] transition hover:scale-105 hover:bg-blue-700"
-        aria-label="Scan QR"
-      >
-        <QrCode className="h-6 w-6" />
-      </button>
+      {variant === "fab" ? (
+        <button
+          type="button"
+          onClick={handleOpen}
+          className="fixed right-4 z-[60] inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-[0_18px_40px_rgba(37,99,235,0.32)] transition hover:scale-105 hover:bg-blue-700 md:right-6 md:bottom-6"
+          style={{ bottom: "calc(env(safe-area-inset-bottom) + 6.25rem)" }}
+          aria-label={label}
+        >
+          <QrCode className="h-6 w-6" />
+        </button>
+      ) : (
+        <Button
+          type="button"
+          onClick={handleOpen}
+          className="h-12 rounded-2xl bg-white px-5 text-blue-700 shadow-sm hover:bg-blue-50"
+        >
+          <QrCode className="mr-2 h-4 w-4" />
+          {label}
+        </Button>
+      )}
 
       {open ? (
         <div className={`fixed inset-0 z-50 ${scannedTarget ? "bg-white" : "bg-black"}`}>

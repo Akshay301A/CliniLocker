@@ -39,6 +39,7 @@ import PatientFamilyReports from "./pages/patient/FamilyReports";
 import AcceptInvite from "./pages/patient/AcceptInvite";
 import PatientSettings from "./pages/patient/Settings";
 import PatientMyProfile from "./pages/patient/MyProfile";
+import PatientReminders from "./pages/patient/Reminders";
 import PatientHealthCard from "./pages/patient/HealthCard";
 import AbhaActivationFlow from "./pages/patient/AbhaActivationFlow";
 import AbhaConsentDashboard from "./pages/patient/AbhaConsentDashboard";
@@ -140,6 +141,7 @@ function AppRoutes() {
           <Route path="/patient/family-reports" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientFamilyReports /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/family" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientFamilyMembers /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/profile" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientMyProfile /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
+          <Route path="/patient/reminders" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientReminders /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/health-card" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientHealthCard /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           {ABHA_FEATURE_ENABLED && (
             <>
