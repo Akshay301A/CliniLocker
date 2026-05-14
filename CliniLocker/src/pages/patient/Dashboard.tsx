@@ -11,6 +11,7 @@ import { fetchHealthQuotes } from "@/lib/healthQuotes";
 import type { ReportWithLab } from "@/lib/api";
 import { toast } from "sonner";
 import { DoctorShareFab } from "@/components/patient/DoctorShareFab";
+import { AbhaStatusCard } from "@/components/abha/AbhaStatusCard";
 
 function formatDate(s: string | undefined) {
   if (!s) return "—";
@@ -176,6 +177,8 @@ const PatientDashboard = () => {
           <Preloader />
         ) : (
           <>
+        <AbhaStatusCard />
+
         {/* Quick Stats */}
         <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-border bg-card p-3 sm:p-5 shadow-card">
