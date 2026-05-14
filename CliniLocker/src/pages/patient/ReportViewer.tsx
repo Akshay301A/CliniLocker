@@ -503,15 +503,21 @@ const ReportViewer = () => {
 
           {/* Card 3: AI Report Summary - below PDF viewer */}
           <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-border bg-muted/20">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-4 border-b border-border bg-muted/20 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
                   <Sparkles className="h-5 w-5 text-primary" />
                 </div>
-                <h2 className="font-display text-lg font-semibold text-foreground">{t("AI Report Summary")}</h2>
+                <h2 className="min-w-0 font-display text-lg font-semibold text-foreground">{t("AI Report Summary")}</h2>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleGenerateSummary} disabled={!pdfUrl || analysisLoading || isHandwritten}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  onClick={handleGenerateSummary}
+                  disabled={!pdfUrl || analysisLoading || isHandwritten}
+                >
                   {analysisLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                   <span className="ml-2">{analysis ? t("Regenerate") : t("Generate Summary")}</span>
                 </Button>
@@ -519,14 +525,16 @@ const ReportViewer = () => {
                   variant="default"
                   size="sm"
                   asChild
-                  className="gap-2"
+                  className="w-full gap-2 sm:w-auto"
                 >
                   <Link to={`/patient/report/${id}/diet`}>
                     <Utensils className="h-4 w-4" />
                     {dietPlan ? t("View Diet Plan") : t("Create Diet Plan")}
                   </Link>
                 </Button>
-                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{t("AI On-demand")}</span>
+                <span className="inline-flex items-center justify-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary sm:w-auto">
+                  {t("AI On-demand")}
+                </span>
               </div>
             </div>
             <div className="p-6 space-y-6">
@@ -664,19 +672,19 @@ const ReportViewer = () => {
       )}
 
       <Drawer open={mobilePdfOpen} onOpenChange={setMobilePdfOpen}>
-        <DrawerContent className="md:hidden max-h-[88vh] px-0">
+        <DrawerContent className="md:hidden flex h-[92dvh] max-h-[92dvh] flex-col px-0">
           <DrawerHeader className="border-b border-border px-4 pb-3 pt-2 text-left">
             <DrawerTitle className="truncate text-base font-semibold">
               {report?.test_name ?? t("Report PDF")}
             </DrawerTitle>
           </DrawerHeader>
-          <div className="h-[72vh] overflow-hidden bg-white">
+          <div className="flex-1 min-h-0 overflow-auto overscroll-contain bg-white">
             {pdfUrl ? (
               <iframe
                 src={`${pdfUrl}#toolbar=0&navpanes=0`}
                 title={t("Report PDF")}
-                style={{ width: "calc(100% + 14px)", height: "100%", border: "none" }}
-                className="block"
+                style={{ width: "100%", height: "100%", border: "none" }}
+                className="block min-h-[80dvh]"
               />
             ) : (
               <div className="flex h-full items-center justify-center p-6 text-center text-muted-foreground">
