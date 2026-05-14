@@ -1,5 +1,9 @@
 import { json, createGatewaySession, getRequiredEnv, maskToken } from "./_lib/gateway.js";
 
+export const config = {
+  runtime: "nodejs",
+};
+
 export default async function handler(req, res) {
   if (req.method !== "GET" && req.method !== "POST") {
     res.setHeader("Allow", "GET, POST");
@@ -31,6 +35,8 @@ export default async function handler(req, res) {
       authenticated: Boolean(accessToken),
       tokenPreview: maskToken(accessToken),
       expiresIn,
+      sessionPath: env.sessionPath,
+      xCmId: env.xCmId,
       rawKeys: parsed && typeof parsed === "object" ? Object.keys(parsed) : [],
       timestamp: new Date().toISOString(),
     });

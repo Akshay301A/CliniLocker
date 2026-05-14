@@ -15,6 +15,7 @@ export default async function handler(req, res) {
     configured: env.isConfigured,
     gatewayBaseUrl: env.gatewayBaseUrl,
     xCmId: env.xCmId,
+    sessionPath: env.sessionPath,
     bridgeBaseUrl: `${baseUrl}/api/abdm`,
     endpoints: {
       health: `${baseUrl}/api/abdm/health`,

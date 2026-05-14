@@ -1,5 +1,6 @@
 export const DEFAULT_GATEWAY_BASE_URL = "https://dev.abdm.gov.in";
 export const DEFAULT_X_CM_ID = "sbx";
+export const DEFAULT_SESSION_PATH = "/gateway/v0.5/sessions";
 
 export function json(res, statusCode, body) {
   res.status(statusCode).setHeader("Content-Type", "application/json");
@@ -11,13 +12,25 @@ export function getRequiredEnv() {
   const clientSecret = process.env.ABDM_CLIENT_SECRET?.trim();
   const gatewayBaseUrl = (process.env.ABDM_GATEWAY_BASE_URL || DEFAULT_GATEWAY_BASE_URL).trim().replace(/\/+$/, "");
   const xCmId = (process.env.ABDM_X_CM_ID || DEFAULT_X_CM_ID).trim();
+  const sessionPath = (process.env.ABDM_SESSION_PATH || DEFAULT_SESSION_PATH).trim();
 
   return {
     clientId,
     clientSecret,
     gatewayBaseUrl,
     xCmId,
+    sessionPath,
     isConfigured: Boolean(clientId && clientSecret),
+  };
+}
+
+export function createGatewayRequestHeaders(extraHeaders = {}) {
+  return {
+    "Content-Type": "application/json",
+    accept: "application/json",
+    "REQUEST-ID": crypto.randomUUID(),
+    TIMESTAMP: new Date().toISOString(),
+    ...extraHeaders,
   };
 }
 
@@ -40,13 +53,11 @@ export async function createGatewaySession() {
     throw new Error("ABDM credentials are not configured.");
   }
 
-  const response = await fetch(`${env.gatewayBaseUrl}/gateway/v0.5/sessions`, {
+  const response = await fetch(`${env.gatewayBaseUrl}${env.sessionPath}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      accept: "application/json",
+    headers: createGatewayRequestHeaders({
       "X-CM-ID": env.xCmId,
-    },
+    }),
     body: JSON.stringify({
       clientId: env.clientId,
       clientSecret: env.clientSecret,
@@ -91,12 +102,11 @@ export async function callGateway(path, init = {}) {
 
   const response = await fetch(`${env.gatewayBaseUrl}${path}`, {
     ...init,
-    headers: {
-      accept: "application/json",
+    headers: createGatewayRequestHeaders({
       "X-CM-ID": env.xCmId,
       Authorization: `Bearer ${accessToken}`,
       ...(init.headers || {}),
-    },
+    }),
   });
 
   const rawText = await response.text();
