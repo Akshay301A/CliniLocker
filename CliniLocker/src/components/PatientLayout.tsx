@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import HealthCardDisplay from "@/components/patient/HealthCardDisplay";
 import type { Profile } from "@/lib/supabase";
 import { toPng } from "html-to-image";
+import { useAbhaStore } from "@/lib/abhaStore";
 
 const navItems = [
   { icon: LayoutDashboard, labelKey: "Dashboard", to: "/patient/dashboard", iconColor: "text-blue-600" },
@@ -37,6 +38,7 @@ export function PatientLayout({ children }: { children: ReactNode }) {
   const [healthCardData, setHealthCardData] = useState<null | import("@/lib/supabase").HealthCardRow>(null);
   const [healthCardDownloading, setHealthCardDownloading] = useState(false);
   const healthCardRef = useRef<HTMLDivElement | null>(null);
+  const { isAbhaLinked, abhaProfile } = useAbhaStore();
 
   useEffect(() => {
     getProfile().then((p) => {
@@ -85,7 +87,11 @@ export function PatientLayout({ children }: { children: ReactNode }) {
       });
       const link = document.createElement("a");
       link.href = dataUrl;
-      link.download = `CliniLocker-Health-Card-${healthCardData.health_id}.png`;
+      const cardLabel =
+        isAbhaLinked && abhaProfile?.abhaNumber
+          ? abhaProfile.abhaNumber.replace(/\s+/g, "-")
+          : healthCardData.health_id;
+      link.download = `CliniLocker-Health-Card-${cardLabel}.png`;
       link.click();
     } catch {
       toast.error(t("Download failed"));
@@ -98,7 +104,10 @@ export function PatientLayout({ children }: { children: ReactNode }) {
     if (!healthCardData) return;
     const shareUrl = `${window.location.origin}/user/${healthCardData.health_id}`;
     const shareTitle = t("Digital Health Card");
-    const shareText = `${t("Health ID")}: ${healthCardData.health_id}`;
+    const shareText =
+      isAbhaLinked && abhaProfile
+        ? `ABHA: ${abhaProfile.abhaNumber} • ${abhaProfile.abhaAddress}`
+        : `${t("Health ID")}: ${healthCardData.health_id}`;
     try {
       if (navigator.share) {
         await navigator.share({

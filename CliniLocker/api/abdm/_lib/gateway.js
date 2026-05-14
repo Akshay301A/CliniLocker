@@ -21,6 +21,18 @@ export function getRequiredEnv() {
   };
 }
 
+export function extractAccessToken(parsed) {
+  if (!parsed || typeof parsed !== "object") return null;
+  return (
+    parsed.accessToken ||
+    parsed.access_token ||
+    parsed.token ||
+    parsed?.data?.accessToken ||
+    parsed?.data?.access_token ||
+    null
+  );
+}
+
 export async function createGatewaySession() {
   const env = getRequiredEnv();
 
@@ -65,6 +77,53 @@ export async function createGatewaySession() {
     response,
     parsed,
     rawText,
+  };
+}
+
+export async function callGateway(path, init = {}) {
+  const env = getRequiredEnv();
+  const { parsed } = await createGatewaySession();
+  const accessToken = extractAccessToken(parsed);
+
+  if (!accessToken) {
+    throw new Error("ABDM gateway session succeeded but no access token was returned.");
+  }
+
+  const response = await fetch(`${env.gatewayBaseUrl}${path}`, {
+    ...init,
+    headers: {
+      accept: "application/json",
+      "X-CM-ID": env.xCmId,
+      Authorization: `Bearer ${accessToken}`,
+      ...(init.headers || {}),
+    },
+  });
+
+  const rawText = await response.text();
+  let parsedBody;
+  try {
+    parsedBody = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    parsedBody = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      parsedBody?.error?.message ||
+      parsedBody?.message ||
+      rawText ||
+      `ABDM gateway call failed with status ${response.status}`;
+    const error = new Error(message);
+    error.statusCode = response.status;
+    error.details = parsedBody || rawText || null;
+    throw error;
+  }
+
+  return {
+    response,
+    parsed: parsedBody,
+    rawText,
+    accessToken,
   };
 }
 
