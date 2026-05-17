@@ -212,6 +212,10 @@ export async function verifyFounding500Otp(phone: string, otp: string): Promise<
   return invokeFounding500("verify_otp", { phone, otp });
 }
 
+export async function markFounding500PhoneVerified(phone: string): Promise<{ ok: boolean; verifiedAt: string }> {
+  return invokeFounding500("mark_phone_verified", { phone });
+}
+
 export async function markEmergencyQrGenerated(): Promise<{ ok: boolean; at: string }> {
   return invokeFounding500("mark_qr_generated");
 }

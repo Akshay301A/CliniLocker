@@ -144,11 +144,30 @@ async function getProgressState(adminClient: ReturnType<typeof createClient>, us
   const campaign = await getCampaign(adminClient);
   const activation = await getActivation(adminClient, userId);
   const { data: profile } = await adminClient.from("profiles").select("*").eq("id", userId).maybeSingle();
-  const { count: reportCount } = await adminClient
+  const { data: directReports } = await adminClient
     .from("reports")
-    .select("id", { count: "exact", head: true })
-    .eq("patient_id", userId)
-    .eq("activation_declaration_accepted", true);
+    .select("id")
+    .eq("patient_id", userId);
+  const matchedReportIds = new Set(
+    ((directReports ?? []) as Array<{ id: string }>).map((row) => String(row.id)),
+  );
+
+  const phone = String(profile?.phone ?? "").trim();
+  const last10 = digitsPhone(phone).slice(-10);
+  if (last10.length === 10) {
+    const { data: phoneReports } = await adminClient
+      .from("reports")
+      .select("id, patient_phone")
+      .ilike("patient_phone", `%${last10}%`);
+
+    for (const row of phoneReports ?? []) {
+      const candidate = String((row as { patient_phone?: string | null }).patient_phone ?? "");
+      if (digitsPhone(candidate).slice(-10) === last10) {
+        matchedReportIds.add(String((row as { id: string }).id));
+      }
+    }
+  }
+  const reportCount = matchedReportIds.size;
 
   const latestOrderQuery = await adminClient
     .from("founding500_orders")
@@ -217,6 +236,17 @@ async function getProgressState(adminClient: ReturnType<typeof createClient>, us
   const completedSteps = steps.filter((step) => step.completed).length;
   const progressPercent = Math.round((completedSteps / steps.length) * 100);
   const campaignClosed = kitsClaimed >= maxClaims;
+
+  const now = new Date().toISOString();
+  const activationPatch: Record<string, unknown> = {};
+  if (phoneVerified && !activation.phone_verified_at) activationPatch.phone_verified_at = now;
+  if (medicalRecordsComplete) activationPatch.medical_records_count = Number(reportCount ?? 0);
+  if (emergencyProfileComplete && !activation.emergency_profile_completed_at) activationPatch.emergency_profile_completed_at = now;
+  if (qrGenerated && !activation.qr_generated_at) activationPatch.qr_generated_at = now;
+  if (qrSaved && !activation.qr_saved_at) activationPatch.qr_saved_at = now;
+  if (Object.keys(activationPatch).length) {
+    await adminClient.from("emergency_identity_activations").update(activationPatch).eq("user_id", userId);
+  }
 
   const pricingMode =
     activation.eligibility_status === "approved" && !campaignClosed ? "founding500" : "launch_offer";
@@ -407,6 +437,31 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true, verifiedAt });
     }
 
+    if (action === "mark_phone_verified") {
+      if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
+      const phone = normalizePhone(String(body.phone ?? "").trim());
+      if (!/^\+\d{12,14}$/.test(phone)) {
+        return jsonResponse({ error: "Enter a valid phone number." }, 400);
+      }
+
+      const verifiedAt = new Date().toISOString();
+      await adminClient
+        .from("profiles")
+        .update({ phone, phone_verified: true })
+        .eq("id", user.id);
+
+      await adminClient
+        .from("emergency_identity_activations")
+        .upsert({
+          user_id: user.id,
+          campaign_slug: CAMPAIGN_SLUG,
+          phone,
+          phone_verified_at: verifiedAt,
+        });
+
+      return jsonResponse({ ok: true, verifiedAt });
+    }
+
     if (action === "mark_qr_generated" || action === "mark_qr_saved") {
       if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
       const now = new Date().toISOString();
@@ -433,7 +488,10 @@ Deno.serve(async (req) => {
         .from("emergency_identity_activations")
         .update({
           medical_records_count: state.medicalRecordsCount,
-          emergency_profile_completed_at: state.profile?.blood_group && state.profile?.emergency_contact_phone ? now : state.activation.emergency_profile_completed_at,
+          emergency_profile_completed_at:
+            state.profile?.blood_group && state.profile?.emergency_contact_name && state.profile?.emergency_contact_phone
+              ? now
+              : state.activation.emergency_profile_completed_at,
           validation_started_at: now,
           eligibility_status: "under_validation",
         })
@@ -465,7 +523,10 @@ Deno.serve(async (req) => {
         .from("emergency_identity_activations")
         .update({
           medical_records_count: state.medicalRecordsCount,
-          emergency_profile_completed_at: state.profile?.blood_group && state.profile?.emergency_contact_phone ? now : state.activation.emergency_profile_completed_at,
+          emergency_profile_completed_at:
+            state.profile?.blood_group && state.profile?.emergency_contact_name && state.profile?.emergency_contact_phone
+              ? now
+              : state.activation.emergency_profile_completed_at,
           validation_started_at: state.activation.validation_started_at ?? now,
           validation_completed_at: now,
           eligibility_status: eligibilityStatus,
