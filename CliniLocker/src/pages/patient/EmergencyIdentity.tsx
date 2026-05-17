@@ -71,6 +71,7 @@ export default function EmergencyIdentity() {
   const [searchParams] = useSearchParams();
   const [state, setState] = useState<EmergencyCampaignState | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otp, setOtp] = useState("");
@@ -117,7 +118,11 @@ export default function EmergencyIdentity() {
     let mounted = true;
     refreshState()
       .catch((error) => {
-        if (mounted) toast.error(error instanceof Error ? error.message : "Unable to load Emergency Identity rollout.");
+        if (mounted) {
+          const message = error instanceof Error ? error.message : "Unable to load Emergency Identity rollout.";
+          setLoadError(message);
+          toast.error(message);
+        }
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -172,10 +177,33 @@ export default function EmergencyIdentity() {
     return messages[index];
   }, [state, validationSecondsLeft]);
 
-  if (loading || !state) {
+  if (loading) {
     return (
       <PatientLayout>
         <Preloader />
+      </PatientLayout>
+    );
+  }
+
+  if (!state) {
+    return (
+      <PatientLayout>
+        <div className="mx-auto max-w-3xl animate-fade-in">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+              Founding500 Emergency Identity Rollout
+            </p>
+            <h1 className="mt-3 font-display text-3xl font-semibold text-slate-950">
+              Emergency Identity activation is not available yet.
+            </h1>
+            <p className="mt-4 text-sm leading-7 text-slate-600 md:text-base">
+              {loadError || "The rollout configuration could not be loaded from the backend yet."}
+            </p>
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              Check that the latest web deploy is live and the `founding500-hub` Supabase function is deployed with its secrets.
+            </div>
+          </div>
+        </div>
       </PatientLayout>
     );
   }
