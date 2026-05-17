@@ -1,8 +1,46 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowRight, ShieldCheck, Siren, Sparkles } from "lucide-react";
+import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
 import { getFounding500State, type EmergencyCampaignState } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+
+function BannerShell({
+  headline,
+  subline,
+  cta,
+}: {
+  headline: string;
+  subline: string;
+  cta: string;
+}) {
+  return (
+    <section className="border-b border-slate-200 bg-[linear-gradient(90deg,_#081225_0%,_#0f2748_40%,_#122f53_100%)] px-3.5 py-3.5 text-white sm:px-4 md:px-8 xl:px-10">
+      <div className="mx-auto flex max-w-[1400px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-100/80">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Emergency Identity Rollout
+          </div>
+          <p className="mt-1 text-sm font-semibold tracking-tight text-white md:text-base">{headline}</p>
+          <p className="mt-1 text-sm text-cyan-50/80">{subline}</p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-xs font-medium text-cyan-50 lg:inline-flex">
+            <Sparkles className="h-3.5 w-3.5" />
+            Identity-driven access
+          </div>
+          <Button asChild className="h-10 rounded-2xl bg-white px-4 text-slate-950 hover:bg-cyan-50">
+            <Link to="/patient/emergency-identity">
+              {cta}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function EmergencyIdentityBanner() {
   const location = useLocation();
@@ -33,86 +71,28 @@ export function EmergencyIdentityBanner() {
 
   if (!state && !available) {
     return (
-      <section className="border-b border-slate-200 bg-[linear-gradient(135deg,_#081225_0%,_#0f2748_42%,_#164e63_100%)] px-3.5 py-3 text-white sm:px-4 md:px-8 xl:px-10">
-        <div className="mx-auto flex max-w-[1400px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-100/90">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Founding500 Emergency Identity Rollout
-            </div>
-            <h2 className="mt-2 text-base font-semibold tracking-tight text-white md:text-lg">
-              Secure your medical history to activate your Emergency Medical Identity.
-            </h2>
-            <p className="mt-2 text-sm text-cyan-50/90">
-              Emergency Identity rollout is available. Open the activation center to continue secure onboarding.
-            </p>
-          </div>
-          <Button
-            asChild
-            className="h-11 rounded-2xl bg-white px-4 text-slate-900 hover:bg-cyan-50"
-          >
-            <Link to="/patient/emergency-identity">
-              Open Emergency Identity
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-      </section>
+      <BannerShell
+        headline="Activate your Emergency Medical Identity."
+        subline="Open the activation center to continue secure onboarding."
+        cta="Open rollout"
+      />
     );
   }
 
   if (!state) return null;
 
-  const progressLabel =
-    state.activation?.eligibility_status === "approved"
-      ? "Emergency Identity activated"
-      : `${state.completedSteps} of ${state.steps.length} Emergency Identity steps completed`;
+  const approved = state.activation?.eligibility_status === "approved";
+  const closed = state.activation?.eligibility_status === "launch_offer" || state.campaignClosed;
 
-  return (
-    <section className="border-b border-slate-200 bg-[linear-gradient(135deg,_#081225_0%,_#0f2748_42%,_#164e63_100%)] px-3.5 py-3 text-white sm:px-4 md:px-8 xl:px-10">
-      <div className="mx-auto flex max-w-[1400px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-100/90">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Founding500 Emergency Identity Rollout
-          </div>
-          <h2 className="mt-2 text-base font-semibold tracking-tight text-white md:text-lg">
-            Secure your medical history to activate your Emergency Medical Identity.
-          </h2>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-cyan-50/90">
-            <span>{progressLabel}</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-medium text-cyan-50">
-              <Siren className="h-3.5 w-3.5" />
-              {state.counts.kitsRemaining} kits remaining
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-medium text-cyan-50">
-              <Sparkles className="h-3.5 w-3.5" />
-              Identity-driven early access
-            </span>
-          </div>
-        </div>
+  const headline = approved
+    ? `Emergency Identity active • ${String(state.activation?.founding_member_id ?? "Founding access secured")}`
+    : closed
+      ? "Founding500 complimentary allocation is closed. Launch Offer is active."
+      : `${state.completedSteps} of ${state.steps.length} Emergency Identity checkpoints completed`;
 
-        <div className="flex shrink-0 items-center gap-3">
-          <div className="hidden min-w-[220px] lg:block">
-            <div className="h-2 overflow-hidden rounded-full bg-white/15">
-              <div
-                className="h-full rounded-full bg-cyan-300 transition-all"
-                style={{ width: `${state.progressPercent}%` }}
-              />
-            </div>
-            <p className="mt-2 text-right text-xs text-cyan-100/80">{state.progressPercent}% activation complete</p>
-          </div>
-          <Button
-            asChild
-            className="h-11 rounded-2xl bg-white px-4 text-slate-900 hover:bg-cyan-50"
-          >
-            <Link to="/patient/emergency-identity">
-              Activate Emergency Identity
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-      </div>
-    </section>
-  );
+  const subline = approved
+    ? "You can continue to secure ordering for the physical emergency kit."
+    : `${state.counts.kitsRemaining} kits remain in the current rollout. Secure your medical history to continue.`;
+
+  return <BannerShell headline={headline} subline={subline} cta={approved ? "Continue activation" : "Activate identity"} />;
 }
