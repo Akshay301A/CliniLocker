@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BottomNav } from "@/components/BottomNav";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import HealthCardDisplay from "@/components/patient/HealthCardDisplay";
+import { EmergencyIdentityBanner } from "@/components/patient/EmergencyIdentityBanner";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/patient/dashboard" },
@@ -177,6 +178,8 @@ export function PatientLayout({ children }: { children: ReactNode }) {
               </button>
             </div>
           </header>
+
+          <EmergencyIdentityBanner />
 
           <main className="flex-1 overflow-x-hidden px-3.5 py-3 pb-24 sm:px-4 sm:py-4 md:px-8 md:py-8 md:pb-8 lg:overflow-y-auto xl:px-10">
             <div className="min-h-0">{children}</div>

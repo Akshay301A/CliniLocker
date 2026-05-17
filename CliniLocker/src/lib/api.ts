@@ -126,6 +126,175 @@ export async function getAdminStats(accessToken?: string | null): Promise<{ tota
   return { totalUsers: Number(parsed?.totalUsers ?? 0) };
 }
 
+export type EmergencyActivationStep = {
+  key: string;
+  title: string;
+  description: string;
+  completed: boolean;
+  meta?: string;
+};
+
+export type EmergencyCampaignState = {
+  campaign: {
+    slug: string;
+    name: string;
+    max_free_claims: number;
+    original_price: number;
+    launch_price: number;
+    shipping_enabled: boolean;
+    shipping_price: number;
+    validation_seconds: number;
+    is_active: boolean;
+  };
+  activation: Record<string, unknown>;
+  profile: Profile | null;
+  latestOrder: Record<string, unknown> | null;
+  steps: EmergencyActivationStep[];
+  completedSteps: number;
+  progressPercent: number;
+  medicalRecordsCount: number;
+  counts: {
+    kitsRemaining: number;
+    kitsClaimed: number;
+    foundingSlotsLeft: number;
+  };
+  campaignClosed: boolean;
+  pricing: {
+    mode: "founding500" | "launch_offer";
+    originalPrice: number;
+    discountedPrice: number;
+    shippingPrice: number;
+    totalPrice: number;
+  };
+  validationMessages: string[];
+};
+
+export type Founding500ShippingAddress = {
+  shipping_name: string;
+  shipping_phone: string;
+  shipping_line1: string;
+  shipping_line2?: string;
+  shipping_city: string;
+  shipping_state: string;
+  shipping_pincode: string;
+  shipping_country?: string;
+};
+
+async function invokeFounding500<T>(action: string, body: Record<string, unknown> = {}): Promise<T> {
+  const { data: authData } = await supabase.auth.getSession();
+  const accessToken = authData?.session?.access_token;
+  if (!accessToken) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase.functions.invoke("founding500-hub", {
+    body: { action, ...body },
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (error) {
+    throw new Error(await getFunctionInvokeErrorMessage(error));
+  }
+  const parsed = data as { error?: string } | null;
+  if (parsed?.error) throw new Error(parsed.error);
+  return data as T;
+}
+
+export async function getFounding500State(): Promise<EmergencyCampaignState> {
+  return invokeFounding500<EmergencyCampaignState>("state");
+}
+
+export async function sendFounding500Otp(phone: string): Promise<{ ok: boolean; expiresAt?: string; deliveryConfigured?: boolean; error?: string }> {
+  return invokeFounding500("send_otp", { phone });
+}
+
+export async function verifyFounding500Otp(phone: string, otp: string): Promise<{ ok: boolean; verifiedAt: string }> {
+  return invokeFounding500("verify_otp", { phone, otp });
+}
+
+export async function markEmergencyQrGenerated(): Promise<{ ok: boolean; at: string }> {
+  return invokeFounding500("mark_qr_generated");
+}
+
+export async function markEmergencyQrSaved(): Promise<{ ok: boolean; at: string }> {
+  return invokeFounding500("mark_qr_saved");
+}
+
+export async function startFounding500Validation(): Promise<{ ok: boolean; startedAt: string }> {
+  return invokeFounding500("start_validation");
+}
+
+export async function completeFounding500Validation(): Promise<{
+  ok: boolean;
+  status: "approved" | "launch_offer";
+  foundingMemberId: string | null;
+  pricingMode: "founding500" | "launch_offer";
+}> {
+  return invokeFounding500("complete_validation");
+}
+
+export async function createFounding500Order(shipping: Founding500ShippingAddress): Promise<{
+  ok: boolean;
+  checkoutMode: "cashfree" | "internal";
+  paymentSessionId?: string;
+  merchantOrderId?: string;
+  order: Record<string, unknown>;
+}> {
+  return invokeFounding500("create_order", { shipping });
+}
+
+export async function syncFounding500Order(orderId: string): Promise<{
+  ok: boolean;
+  paid?: boolean;
+  orderStatus?: string;
+  orderId: string;
+}> {
+  return invokeFounding500("sync_order", { orderId });
+}
+
+export async function getFounding500AdminDashboard(): Promise<{
+  ok: boolean;
+  campaign: Record<string, unknown>;
+  analytics: {
+    remainingSlots: number;
+    kitsClaimed: number;
+    eligibleUsers: number;
+    pendingValidations: number;
+    suspiciousUsers: number;
+  };
+  activations: Array<Record<string, unknown>>;
+  orders: Array<Record<string, unknown>>;
+}> {
+  return invokeFounding500("admin_dashboard");
+}
+
+export async function updateFounding500AdminReview(userId: string, decision: "review" | "approved" | "rejected", notes?: string): Promise<{ ok: boolean }> {
+  return invokeFounding500("admin_review", { userId, decision, notes });
+}
+
+export async function sha256File(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", buffer);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+export function buildReportFingerprint(input: {
+  patientId: string;
+  testName: string;
+  testDate?: string | null;
+  fileSize: number;
+}): string {
+  const canonical = [
+    input.patientId,
+    input.testName.trim().toLowerCase(),
+    input.testDate ?? "",
+    Math.round(input.fileSize / 1024),
+  ].join("|");
+  return canonical;
+}
+
 /** Ensure a profile row exists for the current user (e.g. trigger missed). Uses RPC to avoid conflicts. */
 export async function ensureProfileExists(): Promise<void> {
   await supabase.rpc("ensure_profile_exists");
@@ -134,7 +303,7 @@ export async function ensureProfileExists(): Promise<void> {
 /** Coerce empty strings to null for optional profile fields to avoid DB/trigger issues. */
 function sanitizeProfileUpdates(updates: Partial<Profile>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  const optionalNullables = ["full_name", "phone", "email", "date_of_birth", "gender", "blood_group", "address", "emergency_contact_name", "emergency_contact_relation", "emergency_contact_phone", "avatar_url", "blood_pressure"];
+  const optionalNullables = ["full_name", "phone", "email", "date_of_birth", "gender", "blood_group", "address", "allergies", "medical_conditions", "emergency_contact_name", "emergency_contact_relation", "emergency_contact_phone", "avatar_url", "blood_pressure"];
   for (const [k, v] of Object.entries(updates)) {
     if (v === undefined) continue;
     if (k === "weight") {
@@ -559,6 +728,11 @@ export async function insertReport(row: {
   test_date?: string | null;
   status?: string;
   is_handwritten?: boolean | null;
+  file_hash?: string | null;
+  content_fingerprint?: string | null;
+  extracted_text?: string | null;
+  upload_source?: string | null;
+  activation_declaration_accepted?: boolean;
 }): Promise<{ id: string } | { error: string }> {
   const { data: { user } } = await supabase.auth.getUser();
   const { data, error } = await supabase

@@ -49,6 +49,7 @@ import PublicHealthCard from "./pages/PublicHealthCard";
 import PatientCompleteProfile from "./pages/patient/CompleteProfile";
 import ReportViewer from "./pages/patient/ReportViewer";
 import DietPlan from "./pages/patient/DietPlan";
+import EmergencyIdentity from "./pages/patient/EmergencyIdentity";
 import ChooseRole from "./pages/ChooseRole";
 import DoctorOnboarding from "./pages/doctor/Onboarding";
 import DoctorDashboard from "./pages/doctor/Dashboard";
@@ -154,6 +155,7 @@ function AppRoutes() {
           <Route path="/patient/settings" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><PatientSettings /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/report/:id" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><ReportViewer /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/patient/report/:id/diet" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><DietPlan /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
+          <Route path="/patient/emergency-identity" element={<ProtectedRoute requiredRole="patient"><PatientProfileGuard><LanguageProvider><EmergencyIdentity /></LanguageProvider></PatientProfileGuard></ProtectedRoute>} />
           <Route path="/user/:healthId" element={<PublicHealthCard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -39,6 +39,8 @@ export type Profile = {
   gender?: string | null;
   blood_group?: string | null;
   address?: string | null;
+  allergies?: string | null;
+  medical_conditions?: string | null;
   emergency_contact_name?: string | null;
   emergency_contact_relation?: string | null;
   emergency_contact_phone?: string | null;
@@ -93,6 +95,11 @@ export type Report = {
   test_date?: string | null;
   notes?: string | null;
   is_handwritten?: boolean | null;
+  file_hash?: string | null;
+  content_fingerprint?: string | null;
+  extracted_text?: string | null;
+  upload_source?: string | null;
+  activation_declaration_accepted?: boolean | null;
 };
 
 export type FamilyMember = {

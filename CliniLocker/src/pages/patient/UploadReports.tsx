@@ -16,12 +16,15 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
+  buildReportFingerprint,
   getProfile,
+  getPatientReports,
   getSelfUploadLabId,
-  uploadReportFile,
   insertReport,
   uploadPrescriptionFile,
   insertPrescription,
+  sha256File,
+  uploadReportFile,
 } from "@/lib/api";
 import { jsPDF } from "jspdf";
 
@@ -70,6 +73,7 @@ const PatientUploadReports = () => {
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [declarationAccepted, setDeclarationAccepted] = useState(false);
 
   const selectedPageCount = useMemo(() => {
     if (pageOption !== "4+") return Number(pageOption);
@@ -267,6 +271,10 @@ const PatientUploadReports = () => {
         toast.error(t("Please attach a PDF file."));
         return;
       }
+      if (!declarationAccepted) {
+        toast.error(t("Please confirm the emergency identity declaration to continue."));
+        return;
+      }
       if (uploadFile.size > MAX_PDF_BYTES) {
         toast.error(t("PDF must be under 10 MB."));
         return;
@@ -281,6 +289,26 @@ const PatientUploadReports = () => {
       }
 
       const profile = await getProfile();
+      const existingReports = await getPatientReports();
+      const fileHash = await sha256File(uploadFile);
+      const contentFingerprint = buildReportFingerprint({
+        patientId: user.id,
+        testName: category,
+        testDate: testDate || null,
+        fileSize: uploadFile.size,
+      });
+      const duplicateDetected = existingReports.some(
+        (report) =>
+          (report.file_hash && report.file_hash === fileHash) ||
+          (report.content_fingerprint && report.content_fingerprint === contentFingerprint),
+      );
+
+      if (duplicateDetected) {
+        toast.error(t("Medical records are securely validated for Emergency Identity activation."));
+        setLoading(false);
+        return;
+      }
+
       const path = `self/${user.id}/${crypto.randomUUID()}.pdf`;
       const up = await uploadReportFile(path, uploadFile);
       if ("error" in up) {
@@ -298,6 +326,10 @@ const PatientUploadReports = () => {
         file_url: path,
         test_date: testDate || null,
         is_handwritten: handwrittenFlag,
+        file_hash: fileHash,
+        content_fingerprint: contentFingerprint,
+        upload_source: "patient_web",
+        activation_declaration_accepted: declarationAccepted,
       });
       setLoading(false);
 
@@ -313,6 +345,7 @@ const PatientUploadReports = () => {
       setLabName("");
       setTestDate("");
       setIsHandwritten(false);
+      setDeclarationAccepted(false);
       if (handwrittenFlag) {
         toast.success(t("Handwritten report saved. AI summaries are disabled for safety."));
       } else {
@@ -596,7 +629,7 @@ const PatientUploadReports = () => {
                 {imageFiles.map((img, idx) => (
                   <div key={`img-slot-${idx}`} className="rounded-lg border border-dashed border-border p-2">
                     <label className="relative flex h-28 cursor-pointer items-center justify-center overflow-hidden rounded-md bg-muted/40 hover:bg-muted/60">
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageSlotChange(idx, e)} />
+                      <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageSlotChange(idx, e)} />
                       {img ? (
                         <img src={imagePreviewUrls[idx] ?? undefined} alt={`page-${idx + 1}`} className="h-full w-full object-cover" />
                       ) : (
@@ -656,10 +689,35 @@ const PatientUploadReports = () => {
             </div>
           )}
 
+          {uploadType === "report" && (
+            <div className="rounded-xl border border-border bg-card p-4 shadow-card">
+              <label className="flex items-start gap-3 text-sm leading-6 text-foreground">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 shrink-0"
+                  checked={declarationAccepted}
+                  onChange={(e) => setDeclarationAccepted(e.target.checked)}
+                />
+                <span>
+                  I confirm these medical records belong to me or my dependent and understand this emergency profile may be relied upon during medical situations.
+                </span>
+              </label>
+              <p className="mt-3 text-xs text-muted-foreground">
+                {t("Medical records are securely validated for Emergency Identity activation.")}
+              </p>
+            </div>
+          )}
+
           <Button
             type="submit"
             className="w-full min-h-[44px]"
-            disabled={loading || analyzing || converting || ((uploadType === "report" && uploadMode === "pdf") || uploadType === "prescription" ? !file : false)}
+            disabled={
+              loading ||
+              analyzing ||
+              converting ||
+              ((uploadType === "report" && uploadMode === "pdf") || uploadType === "prescription" ? !file : false) ||
+              (uploadType === "report" && !declarationAccepted)
+            }
           >
             {converting
               ? t("Converting images to PDF…")
