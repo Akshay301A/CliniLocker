@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ConfirmationResult, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 import {
   CheckCircle2,
   ChevronRight,
@@ -29,7 +28,6 @@ import {
   createFounding500Order,
   ensureHealthCardExists,
   getPatientReports,
-  markFounding500PhoneVerified,
   getProfile,
   getFounding500State,
   markEmergencyQrGenerated,
@@ -37,10 +35,19 @@ import {
   startFounding500Validation,
   syncFounding500Order,
   updateProfile,
+  verifyFounding500Msg91Phone,
   type EmergencyCampaignState,
   type Founding500ShippingAddress,
 } from "@/lib/api";
-import { getFirebaseAuth, isFirebasePhoneAuthConfigured } from "@/lib/firebase";
+import {
+  ensureMsg91Widget,
+  extractMsg91AccessToken,
+  extractMsg91ReqId,
+  isMsg91OtpConfigured,
+  retryMsg91Otp,
+  sendMsg91Otp,
+  verifyMsg91Otp,
+} from "@/lib/msg91";
 import type { HealthCardRow } from "@/lib/supabase";
 
 declare global {
@@ -91,6 +98,50 @@ function normalizePhoneForOtp(value: string) {
   if (digits.length === 10) return `+91${digits}`;
   if (digits.startsWith("91") && digits.length === 12) return `+${digits}`;
   return value.startsWith("+") ? value : `+${digits}`;
+}
+
+function clearOtpWidgetContainer() {
+  const container = document.getElementById("emergency-identity-msg91-captcha");
+  if (container) {
+    container.innerHTML = "";
+  }
+}
+
+function getOtpErrorMessage(error: unknown) {
+  const code = typeof error === "object" && error && "code" in error ? String((error as { code?: string }).code ?? "") : "";
+  const message = typeof error === "object" && error && "message" in error ? String((error as { message?: string }).message ?? "") : "";
+
+  if (message.toLowerCase().includes("otp")) {
+    return message;
+  }
+
+  if (message.includes("already been rendered in this element")) {
+    return "OTP security check was already open. Please try again once.";
+  }
+
+  switch (code) {
+    case "auth/too-many-requests":
+      return "Too many OTP requests were made recently. Wait a little and try again.";
+    case "auth/invalid-phone-number":
+      return "Enter a valid mobile number with country code.";
+    case "auth/operation-not-allowed":
+      return "SMS OTP is not enabled correctly yet.";
+    case "auth/quota-exceeded":
+      return "SMS OTP quota is currently exhausted. Try again later.";
+    case "auth/captcha-check-failed":
+    case "auth/invalid-app-credential":
+      return "Security verification failed. Refresh the page and try again.";
+    case "auth/missing-phone-number":
+      return "Enter the phone number first.";
+    case "auth/code-expired":
+      return "This OTP has expired. Request a new one.";
+    case "auth/invalid-verification-code":
+      return "The OTP entered is incorrect.";
+    case "auth/session-expired":
+      return "This OTP session expired. Request a new code.";
+    default:
+      return message || "Unable to complete OTP verification right now.";
+  }
 }
 
 function getStepCompletion(state: EmergencyCampaignState) {
@@ -158,7 +209,9 @@ export default function EmergencyIdentity() {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otp, setOtp] = useState("");
   const [phone, setPhone] = useState("");
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [otpRequested, setOtpRequested] = useState(false);
+  const [otpReqId, setOtpReqId] = useState<string | null>(null);
+  const [resendingOtp, setResendingOtp] = useState(false);
   const [visibleReportCount, setVisibleReportCount] = useState(0);
   const [profileForm, setProfileForm] = useState({
     blood_group: "",
@@ -178,7 +231,11 @@ export default function EmergencyIdentity() {
   const [shipping, setShipping] = useState<Founding500ShippingAddress>(emptyShipping);
   const [creatingOrder, setCreatingOrder] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
-  const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
+  const cleanupOtpWidget = () => {
+    clearOtpWidgetContainer();
+    setOtpRequested(false);
+    setOtpReqId(null);
+  };
 
   const refreshState = async () => {
     const [next, localProfile, localReports] = await Promise.all([
@@ -233,8 +290,7 @@ export default function EmergencyIdentity() {
 
   useEffect(() => {
     return () => {
-      recaptchaRef.current?.clear();
-      recaptchaRef.current = null;
+      cleanupOtpWidget();
     };
   }, []);
 
@@ -386,27 +442,21 @@ export default function EmergencyIdentity() {
   const handleSendOtp = async () => {
     setSendingOtp(true);
     try {
-      if (!isFirebasePhoneAuthConfigured()) {
-        throw new Error("Firebase Phone Auth is not configured yet.");
+      if (!isMsg91OtpConfigured()) {
+        throw new Error("MSG91 OTP is not configured yet.");
       }
 
-      const normalizedPhone = normalizePhoneForOtp(phone);
-      const auth = getFirebaseAuth();
-
-      if (!recaptchaRef.current) {
-        recaptchaRef.current = new RecaptchaVerifier(auth, "emergency-identity-recaptcha", {
-          size: "invisible",
-        });
-      }
-
-      const confirmation = await signInWithPhoneNumber(auth, normalizedPhone, recaptchaRef.current);
-      setConfirmationResult(confirmation);
-      setPhone(normalizedPhone);
+      await ensureMsg91Widget();
+      const normalizedPhone = normalizePhoneForOtp(phone).replace(/^\+/, "");
+      const result = await sendMsg91Otp(normalizedPhone);
+      setOtpRequested(true);
+      setOtpReqId(extractMsg91ReqId(result));
+      setOtp("");
+      setPhone(`+${normalizedPhone}`);
       toast.success("Verification code sent by SMS.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to send OTP.");
-      recaptchaRef.current?.clear();
-      recaptchaRef.current = null;
+      cleanupOtpWidget();
+      toast.error(getOtpErrorMessage(error));
     } finally {
       setSendingOtp(false);
     }
@@ -415,18 +465,37 @@ export default function EmergencyIdentity() {
   const handleVerifyOtp = async () => {
     setVerifyingOtp(true);
     try {
-      if (!confirmationResult) throw new Error("Request the verification code first.");
-      await confirmationResult.confirm(otp);
-      await markFounding500PhoneVerified(phone);
+      if (!otpRequested) throw new Error("Request the verification code first.");
+      const verification = await verifyMsg91Otp(otp, otpReqId);
+      const accessToken = extractMsg91AccessToken(verification);
+      if (!accessToken) {
+        throw new Error("OTP was verified, but MSG91 did not return the verification token.");
+      }
+      await verifyFounding500Msg91Phone(phone, accessToken);
       setOtp("");
-      setConfirmationResult(null);
+      setOtpRequested(false);
+      setOtpReqId(null);
       await refreshState();
       setActiveStep(getNextStep("verify"));
       toast.success("Phone number secured.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to verify OTP.");
+      toast.error(getOtpErrorMessage(error));
     } finally {
       setVerifyingOtp(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setResendingOtp(true);
+    try {
+      if (!otpReqId) throw new Error("Send the OTP first.");
+      const result = await retryMsg91Otp(otpReqId);
+      setOtpReqId(extractMsg91ReqId(result) ?? otpReqId);
+      toast.success("A new verification code has been sent.");
+    } catch (error) {
+      toast.error(getOtpErrorMessage(error));
+    } finally {
+      setResendingOtp(false);
     }
   };
 
@@ -611,7 +680,20 @@ export default function EmergencyIdentity() {
                     {verifyingOtp ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify"}
                   </Button>
                 </div>
-                <div id="emergency-identity-recaptcha" className="mt-3 min-h-0" />
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-auto rounded-xl px-0 text-sm text-sky-700 hover:bg-transparent hover:text-sky-800"
+                    disabled={!otpRequested || resendingOtp}
+                    onClick={handleResendOtp}
+                  >
+                    {resendingOtp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Resend OTP
+                  </Button>
+                  <p className="text-xs text-slate-500">MSG91 handles OTP delivery for this identity step.</p>
+                </div>
+                <div id="emergency-identity-msg91-captcha" className="mt-3 min-h-0" />
               </div>
               <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,_#f8fbff_0%,_#eef6ff_100%)] p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Status</p>
@@ -619,7 +701,7 @@ export default function EmergencyIdentity() {
                   {completion.verify ? "Phone secured" : "Pending verification"}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  SMS verification is handled through Firebase Phone Auth so emergency onboarding can be completed reliably.
+                  SMS verification is handled through MSG91 so emergency onboarding stays smoother on the web.
                 </p>
               </div>
             </div>
