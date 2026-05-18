@@ -163,6 +163,25 @@ function getOtpErrorMessage(error: unknown) {
   }
 }
 
+function getOrderErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : "Unable to continue with the order right now.";
+
+  if (message.includes("Emergency kit already claimed for this account")) {
+    return "This account has already secured an Emergency Kit order.";
+  }
+  if (message.includes("Cashfree payment session missing")) {
+    return "Payment session could not be prepared. Please try again.";
+  }
+  if (message.includes("Cashfree SDK not available")) {
+    return "Payment gateway could not be opened right now. Please try again once.";
+  }
+  if (message.includes("Complete the shipping address")) {
+    return "Complete the shipping address before continuing.";
+  }
+
+  return message.replace(/^Edge Function returned a non-2xx status code:\s*/i, "");
+}
+
 function getStepCompletion(state: EmergencyCampaignState) {
   return {
     verify: Boolean(state.steps[0]?.completed),
@@ -587,7 +606,7 @@ export default function EmergencyIdentity() {
         await refreshState();
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to start secure checkout.");
+      toast.error(getOrderErrorMessage(error));
     } finally {
       setCreatingOrder(false);
     }

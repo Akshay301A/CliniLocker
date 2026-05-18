@@ -733,7 +733,9 @@ Deno.serve(async (req) => {
         .eq("user_id", user.id)
         .in("status", ["paid", "fulfilled"])
         .maybeSingle();
-      if (priorPaidOrder) return jsonResponse({ error: "Emergency kit already claimed for this account." }, 409);
+      if (priorPaidOrder && !forceLaunchOffer) {
+        return jsonResponse({ error: "Emergency kit already claimed for this account." }, 409);
+      }
 
       const verifiedPhone = String(state.profile?.phone ?? "");
       if (verifiedPhone) {
@@ -1034,6 +1036,7 @@ Deno.serve(async (req) => {
         updatePayload.eligibility_status = "revoked";
         updatePayload.revoked_at = new Date().toISOString();
         updatePayload.revoked_by = user.id;
+        updatePayload.order_claimed_at = null;
       }
       if (decision === "approved") {
         updatePayload.suspicious_flag = false;
@@ -1045,6 +1048,20 @@ Deno.serve(async (req) => {
         .update(updatePayload)
         .eq("user_id", targetUserId);
       if (error) return jsonResponse({ error: error.message }, 500);
+
+      if (decision === "rejected") {
+        await adminClient
+          .from("founding500_orders")
+          .update({
+            status: "revoked",
+            suspicious_flag: false,
+            suspicious_reason: "Revoked by admin for retest or manual review.",
+          })
+          .eq("user_id", targetUserId)
+          .eq("campaign_slug", CAMPAIGN_SLUG)
+          .in("status", ["created", "awaiting_payment", "paid", "fulfilled"]);
+      }
+
       return jsonResponse({ ok: true });
     }
 

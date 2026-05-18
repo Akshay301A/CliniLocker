@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +14,10 @@ const Admin = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const refreshCampaignDashboard = async () => {
+    setCampaignData(await getFounding500AdminDashboard());
+  };
 
   useEffect(() => {
     let active = true;
@@ -144,8 +149,13 @@ const Admin = () => {
                               <button
                                 className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
                                 onClick={async () => {
-                                  await updateFounding500AdminReview(String(activation.user_id), "approved");
-                                  setCampaignData(await getFounding500AdminDashboard());
+                                  try {
+                                    await updateFounding500AdminReview(String(activation.user_id), "approved");
+                                    await refreshCampaignDashboard();
+                                    toast.success("Activation approved.");
+                                  } catch (error) {
+                                    toast.error(error instanceof Error ? error.message : "Unable to approve this activation.");
+                                  }
                                 }}
                               >
                                 Approve
@@ -153,8 +163,13 @@ const Admin = () => {
                               <button
                                 className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
                                 onClick={async () => {
-                                  await updateFounding500AdminReview(String(activation.user_id), "review");
-                                  setCampaignData(await getFounding500AdminDashboard());
+                                  try {
+                                    await updateFounding500AdminReview(String(activation.user_id), "review");
+                                    await refreshCampaignDashboard();
+                                    toast.success("Activation moved to review.");
+                                  } catch (error) {
+                                    toast.error(error instanceof Error ? error.message : "Unable to mark this activation for review.");
+                                  }
                                 }}
                               >
                                 Mark Review
@@ -162,8 +177,13 @@ const Admin = () => {
                               <button
                                 className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
                                 onClick={async () => {
-                                  await updateFounding500AdminReview(String(activation.user_id), "rejected");
-                                  setCampaignData(await getFounding500AdminDashboard());
+                                  try {
+                                    await updateFounding500AdminReview(String(activation.user_id), "rejected");
+                                    await refreshCampaignDashboard();
+                                    toast.success("Activation and related order state revoked for retest.");
+                                  } catch (error) {
+                                    toast.error(error instanceof Error ? error.message : "Unable to revoke this activation.");
+                                  }
                                 }}
                               >
                                 Revoke
