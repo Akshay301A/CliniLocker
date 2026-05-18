@@ -589,7 +589,7 @@ Deno.serve(async (req) => {
         verification["access-token"] ??
         verification.accessToken ??
         verification.access_token ??
-        ((verification.data as JsonRecord | undefined)?.["access-token"] ?? "") ??
+        (verification.data as JsonRecord | undefined)?.["access-token"] ??
         "",
       ).trim();
 
