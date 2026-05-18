@@ -74,6 +74,7 @@ import { ABHA_FEATURE_ENABLED } from "@/lib/featureFlags";
 const queryClient = new QueryClient();
 
 const PRELOADER_MIN_MS = 3000;
+const PRELOADER_SESSION_KEY = "clinilocker-preloader-seen";
 
 function AppRoutes() {
   const { user, role, loading } = useAuth();
@@ -167,18 +168,21 @@ function AppRoutes() {
 /** Shows preloader for at least 3s, then it shrinks and fades out in place at center; app shows immediately after. */
 function AppContent() {
   const { loading } = useAuth();
-  const [showPreloader, setShowPreloader] = useState(true);
+  const shouldShowInitialPreloader =
+    typeof window === "undefined" ? true : sessionStorage.getItem(PRELOADER_SESSION_KEY) !== "1";
+  const [showPreloader, setShowPreloader] = useState(shouldShowInitialPreloader);
   const [exiting, setExiting] = useState(false);
   const startTimeRef = useRef(Date.now());
 
   useEffect(() => {
+    if (!showPreloader) return;
     if (!loading) {
       const elapsed = Date.now() - startTimeRef.current;
-      const remaining = Math.max(0, PRELOADER_MIN_MS - elapsed);
+      const remaining = shouldShowInitialPreloader ? Math.max(0, PRELOADER_MIN_MS - elapsed) : 0;
       const t = setTimeout(() => setExiting(true), remaining);
       return () => clearTimeout(t);
     }
-  }, [loading]);
+  }, [loading, showPreloader, shouldShowInitialPreloader]);
 
   if (!showPreloader) {
     return <AppRoutes />;
@@ -188,7 +192,10 @@ function AppContent() {
     <Preloader
       fullScreen
       exiting={exiting}
-      onExitComplete={() => setShowPreloader(false)}
+      onExitComplete={() => {
+        sessionStorage.setItem(PRELOADER_SESSION_KEY, "1");
+        setShowPreloader(false);
+      }}
     />
   );
 }

@@ -32,6 +32,8 @@ const SCRIPT_URLS = [
 
 let scriptPromise: Promise<void> | null = null;
 let initialized = false;
+let lastSuccessPayload: Msg91CallbackData | null = null;
+let lastFailurePayload: unknown = null;
 
 function trimEnv(value: string | undefined) {
   return value?.trim() || "";
@@ -93,6 +95,17 @@ function loadScriptOnce(): Promise<void> {
   return scriptPromise;
 }
 
+async function waitForWidgetMethods(timeoutMs = 2000) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    if (typeof window.sendOtp === "function" && typeof window.verifyOtp === "function") {
+      return;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 50));
+  }
+  throw new Error("MSG91 OTP widget did not initialize properly.");
+}
+
 export async function ensureMsg91Widget() {
   if (!isMsg91OtpConfigured()) {
     throw new Error("MSG91 OTP is not configured yet.");
@@ -107,15 +120,17 @@ export async function ensureMsg91Widget() {
       tokenAuth,
       exposeMethods: true,
       captchaRenderId: "emergency-identity-msg91-captcha",
-      success: () => undefined,
-      failure: () => undefined,
+      success: (data: unknown) => {
+        lastSuccessPayload = asRecord(data);
+      },
+      failure: (error: unknown) => {
+        lastFailurePayload = error;
+      },
     });
     initialized = true;
   }
 
-  if (!window.sendOtp || !window.verifyOtp) {
-    throw new Error("MSG91 OTP widget did not initialize correctly.");
-  }
+  await waitForWidgetMethods();
 }
 
 function parseMsg91Error(error: unknown) {
@@ -140,11 +155,17 @@ function asRecord(value: unknown): Msg91CallbackData {
 
 export async function sendMsg91Otp(identifier: string): Promise<Msg91CallbackData> {
   await ensureMsg91Widget();
+  lastSuccessPayload = null;
+  lastFailurePayload = null;
 
   return new Promise<Msg91CallbackData>((resolve, reject) => {
     window.sendOtp?.(
       identifier,
-      (data) => resolve(asRecord(data)),
+      (data) => {
+        const parsed = asRecord(data);
+        lastSuccessPayload = parsed;
+        resolve(parsed);
+      },
       (error) => reject(new Error(parseMsg91Error(error))),
     );
   });
@@ -152,11 +173,17 @@ export async function sendMsg91Otp(identifier: string): Promise<Msg91CallbackDat
 
 export async function verifyMsg91Otp(otp: string, reqId?: string): Promise<Msg91CallbackData> {
   await ensureMsg91Widget();
+  lastSuccessPayload = null;
+  lastFailurePayload = null;
 
   return new Promise<Msg91CallbackData>((resolve, reject) => {
     window.verifyOtp?.(
       otp,
-      (data) => resolve(asRecord(data)),
+      (data) => {
+        const parsed = asRecord(data);
+        lastSuccessPayload = parsed;
+        resolve(parsed);
+      },
       (error) => reject(new Error(parseMsg91Error(error))),
       reqId,
     );
@@ -190,6 +217,7 @@ export function extractMsg91ReqId(data: Msg91CallbackData) {
 
 export function extractMsg91AccessToken(data: Msg91CallbackData) {
   const nested = (data.data as Record<string, unknown> | undefined) ?? {};
+  const lastSuccessNested = ((lastSuccessPayload?.data as Record<string, unknown> | undefined) ?? {});
   const candidates = [
     data.token,
     data.accessToken,
@@ -201,9 +229,18 @@ export function extractMsg91AccessToken(data: Msg91CallbackData) {
     nested.access_token,
     nested["access-token"],
     nested.jwt,
+    lastSuccessPayload?.token,
+    lastSuccessPayload?.accessToken,
+    lastSuccessPayload?.access_token,
+    lastSuccessPayload?.["access-token"],
+    lastSuccessPayload?.jwt,
+    lastSuccessNested.token,
+    lastSuccessNested.accessToken,
+    lastSuccessNested.access_token,
+    lastSuccessNested["access-token"],
+    lastSuccessNested.jwt,
   ];
 
   const match = candidates.find((value) => typeof value === "string" && value.trim());
   return typeof match === "string" ? match : null;
 }
-
