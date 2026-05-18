@@ -220,6 +220,10 @@ export async function verifyFounding500Msg91Phone(phone: string, accessToken: st
   return invokeFounding500("verify_msg91_phone", { phone, accessToken });
 }
 
+export async function verifyFounding500Msg91Otp(phone: string, otp: string, reqId: string): Promise<{ ok: boolean; verifiedAt: string }> {
+  return invokeFounding500("verify_msg91_otp", { phone, otp, reqId });
+}
+
 export async function markEmergencyQrGenerated(): Promise<{ ok: boolean; at: string }> {
   return invokeFounding500("mark_qr_generated");
 }

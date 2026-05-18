@@ -35,18 +35,16 @@ import {
   startFounding500Validation,
   syncFounding500Order,
   updateProfile,
-  verifyFounding500Msg91Phone,
+  verifyFounding500Msg91Otp,
   type EmergencyCampaignState,
   type Founding500ShippingAddress,
 } from "@/lib/api";
 import {
   ensureMsg91Widget,
-  extractMsg91AccessToken,
   extractMsg91ReqId,
   isMsg91OtpConfigured,
   retryMsg91Otp,
   sendMsg91Otp,
-  verifyMsg91Otp,
 } from "@/lib/msg91";
 import type { HealthCardRow } from "@/lib/supabase";
 
@@ -466,12 +464,8 @@ export default function EmergencyIdentity() {
     setVerifyingOtp(true);
     try {
       if (!otpRequested) throw new Error("Request the verification code first.");
-      const verification = await verifyMsg91Otp(otp, otpReqId);
-      const accessToken = extractMsg91AccessToken(verification);
-      if (!accessToken) {
-        throw new Error("OTP was verified, but MSG91 did not return the verification token.");
-      }
-      await verifyFounding500Msg91Phone(phone, accessToken);
+      if (!otpReqId) throw new Error("OTP request ID is missing. Please request a new code.");
+      await verifyFounding500Msg91Otp(phone, otp, otpReqId);
       setOtp("");
       setOtpRequested(false);
       setOtpReqId(null);

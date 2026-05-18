@@ -74,7 +74,7 @@ import { ABHA_FEATURE_ENABLED } from "@/lib/featureFlags";
 const queryClient = new QueryClient();
 
 const PRELOADER_MIN_MS = 3000;
-const PRELOADER_SESSION_KEY = "clinilocker-preloader-seen";
+const PRELOADER_STORAGE_KEY = "clinilocker-preloader-seen";
 
 function AppRoutes() {
   const { user, role, loading } = useAuth();
@@ -169,7 +169,7 @@ function AppRoutes() {
 function AppContent() {
   const { loading } = useAuth();
   const shouldShowInitialPreloader =
-    typeof window === "undefined" ? true : sessionStorage.getItem(PRELOADER_SESSION_KEY) !== "1";
+    typeof window === "undefined" ? true : localStorage.getItem(PRELOADER_STORAGE_KEY) !== "1";
   const [showPreloader, setShowPreloader] = useState(shouldShowInitialPreloader);
   const [exiting, setExiting] = useState(false);
   const startTimeRef = useRef(Date.now());
@@ -193,7 +193,7 @@ function AppContent() {
       fullScreen
       exiting={exiting}
       onExitComplete={() => {
-        sessionStorage.setItem(PRELOADER_SESSION_KEY, "1");
+        localStorage.setItem(PRELOADER_STORAGE_KEY, "1");
         setShowPreloader(false);
       }}
     />

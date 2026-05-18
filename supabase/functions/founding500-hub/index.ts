@@ -112,6 +112,32 @@ async function verifyMsg91AccessToken(accessToken: string) {
   return data as JsonRecord;
 }
 
+async function verifyMsg91OtpCode(reqId: string, otp: string) {
+  const authKey = Deno.env.get("MSG91_AUTH_KEY");
+  if (!authKey) {
+    throw new Error("MSG91 auth key is not configured in Supabase secrets.");
+  }
+
+  const response = await fetch("https://control.msg91.com/api/v5/widget/verifyOtp", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      authkey: authKey,
+      reqId,
+      otp,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(String((data as { message?: string }).message ?? "MSG91 OTP verification failed."));
+  }
+
+  return data as JsonRecord;
+}
+
 function extractMsg91VerifiedIdentifier(payload: JsonRecord): string | null {
   const nested = (payload.data && typeof payload.data === "object" ? payload.data : {}) as JsonRecord;
   const candidates = [
@@ -523,6 +549,52 @@ Deno.serve(async (req) => {
         if (actualDigits && expectedDigits !== actualDigits) {
           return jsonResponse({ error: "Verified phone number does not match the requested number." }, 400);
         }
+      }
+
+      const verifiedAt = new Date().toISOString();
+      await adminClient
+        .from("profiles")
+        .update({ phone, phone_verified: true })
+        .eq("id", user.id);
+
+      await adminClient
+        .from("emergency_identity_activations")
+        .upsert({
+          user_id: user.id,
+          campaign_slug: CAMPAIGN_SLUG,
+          phone,
+          phone_verified_at: verifiedAt,
+        });
+
+      return jsonResponse({ ok: true, verifiedAt });
+    }
+
+    if (action === "verify_msg91_otp") {
+      if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
+      const phone = normalizePhone(String(body.phone ?? "").trim());
+      const otp = String(body.otp ?? "").trim();
+      const reqId = String(body.reqId ?? "").trim();
+      if (!/^\+\d{12,14}$/.test(phone)) {
+        return jsonResponse({ error: "Enter a valid phone number." }, 400);
+      }
+      if (!/^\d{4,8}$/.test(otp)) {
+        return jsonResponse({ error: "Enter a valid OTP." }, 400);
+      }
+      if (!reqId) {
+        return jsonResponse({ error: "OTP request ID is missing." }, 400);
+      }
+
+      const verification = await verifyMsg91OtpCode(reqId, otp);
+      const accessToken = extractMsg91VerifiedIdentifier(verification) ? null : String(
+        verification["access-token"] ??
+        verification.accessToken ??
+        verification.access_token ??
+        ((verification.data as JsonRecord | undefined)?.["access-token"] ?? "") ??
+        "",
+      ).trim();
+
+      if (accessToken) {
+        await verifyMsg91AccessToken(accessToken);
       }
 
       const verifiedAt = new Date().toISOString();
