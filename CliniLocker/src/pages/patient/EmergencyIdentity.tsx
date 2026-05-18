@@ -245,11 +245,13 @@ export default function EmergencyIdentity() {
       ...(next.profile ?? {}),
       ...(localProfile ?? {}),
     };
-    setVisibleReportCount(localReports.length);
-    setState({
+    const mergedNext = {
       ...next,
       profile: mergedProfile,
-    });
+      medicalRecordsCount: Math.max(Number(next.medicalRecordsCount ?? 0), localReports.length),
+    };
+    setVisibleReportCount(localReports.length);
+    setState(mergedNext);
     setPhone(mergedProfile.phone ?? "");
     setProfileForm({
       blood_group: mergedProfile.blood_group ?? "",
@@ -264,8 +266,8 @@ export default function EmergencyIdentity() {
       shipping_name: prev.shipping_name || mergedProfile.full_name || "",
       shipping_phone: prev.shipping_phone || mergedProfile.phone || "",
     }));
-    setActiveStep((current) => (STEP_ORDER.includes(current) ? current : firstIncompleteStep(next)));
-    return next;
+    setActiveStep((current) => (STEP_ORDER.includes(current) ? current : firstIncompleteStep(mergedNext as EmergencyCampaignState)));
+    return mergedNext as EmergencyCampaignState;
   };
 
   useEffect(() => {
@@ -469,6 +471,29 @@ export default function EmergencyIdentity() {
       setOtp("");
       setOtpRequested(false);
       setOtpReqId(null);
+      setState((current) =>
+        current
+          ? {
+              ...current,
+              profile: current.profile
+                ? {
+                    ...current.profile,
+                    phone,
+                    phone_verified: true,
+                  }
+                : current.profile,
+              activation: {
+                ...current.activation,
+                phone_verified_at: new Date().toISOString(),
+              },
+              steps: current.steps.map((step, index) =>
+                index === 0 ? { ...step, completed: true } : step,
+              ),
+              completedSteps: Math.max(current.completedSteps, 1),
+              progressPercent: Math.max(current.progressPercent, Math.round((1 / current.steps.length) * 100)),
+            }
+          : current,
+      );
       await refreshState();
       setActiveStep(getNextStep("verify"));
       toast.success("Phone number secured.");
