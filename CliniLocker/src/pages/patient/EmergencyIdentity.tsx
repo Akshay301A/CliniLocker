@@ -42,6 +42,7 @@ import {
 import {
   ensureMsg91Widget,
   extractMsg91ReqId,
+  getMsg91ReqId,
   isMsg91OtpConfigured,
   retryMsg91Otp,
   sendMsg91Otp,
@@ -60,6 +61,24 @@ const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const RELATIONSHIP_OPTIONS = ["Parent", "Spouse", "Sibling", "Child", "Guardian", "Friend", "Other"];
 const STEP_ORDER = ["verify", "records", "profile", "qr", "validation", "order"] as const;
 type StepKey = (typeof STEP_ORDER)[number];
+type EmergencyIdentityCache = {
+  state: EmergencyCampaignState | null;
+  phone: string;
+  otpRequested: boolean;
+  otpReqId: string | null;
+  activeStep: StepKey;
+  visibleReportCount: number;
+  profileForm: {
+    blood_group: string;
+    emergency_contact_name: string;
+    emergency_contact_relation: string;
+    emergency_contact_phone: string;
+    allergies: string;
+    medical_conditions: string;
+  };
+};
+
+let emergencyIdentityPageCache: EmergencyIdentityCache | null = null;
 
 const emptyShipping: Founding500ShippingAddress = {
   shipping_name: "",
@@ -199,26 +218,28 @@ function SectionIntro({
 
 export default function EmergencyIdentity() {
   const [searchParams] = useSearchParams();
-  const [state, setState] = useState<EmergencyCampaignState | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<EmergencyCampaignState | null>(emergencyIdentityPageCache?.state ?? null);
+  const [loading, setLoading] = useState(!emergencyIdentityPageCache?.state);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [activeStep, setActiveStep] = useState<StepKey>("verify");
+  const [activeStep, setActiveStep] = useState<StepKey>(emergencyIdentityPageCache?.activeStep ?? "verify");
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [otp, setOtp] = useState("");
-  const [phone, setPhone] = useState("");
-  const [otpRequested, setOtpRequested] = useState(false);
-  const [otpReqId, setOtpReqId] = useState<string | null>(null);
+  const [phone, setPhone] = useState(emergencyIdentityPageCache?.phone ?? "");
+  const [otpRequested, setOtpRequested] = useState(emergencyIdentityPageCache?.otpRequested ?? false);
+  const [otpReqId, setOtpReqId] = useState<string | null>(emergencyIdentityPageCache?.otpReqId ?? null);
   const [resendingOtp, setResendingOtp] = useState(false);
-  const [visibleReportCount, setVisibleReportCount] = useState(0);
-  const [profileForm, setProfileForm] = useState({
-    blood_group: "",
-    emergency_contact_name: "",
-    emergency_contact_relation: "",
-    emergency_contact_phone: "",
-    allergies: "",
-    medical_conditions: "",
-  });
+  const [visibleReportCount, setVisibleReportCount] = useState(emergencyIdentityPageCache?.visibleReportCount ?? 0);
+  const [profileForm, setProfileForm] = useState(
+    emergencyIdentityPageCache?.profileForm ?? {
+      blood_group: "",
+      emergency_contact_name: "",
+      emergency_contact_relation: "",
+      emergency_contact_phone: "",
+      allergies: "",
+      medical_conditions: "",
+    },
+  );
   const [savingProfile, setSavingProfile] = useState(false);
   const [cardOpen, setCardOpen] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
@@ -234,6 +255,18 @@ export default function EmergencyIdentity() {
     setOtpRequested(false);
     setOtpReqId(null);
   };
+
+  useEffect(() => {
+    emergencyIdentityPageCache = {
+      state,
+      phone,
+      otpRequested,
+      otpReqId,
+      activeStep,
+      visibleReportCount,
+      profileForm,
+    };
+  }, [activeStep, otpReqId, otpRequested, phone, profileForm, state, visibleReportCount]);
 
   const refreshState = async () => {
     const [next, localProfile, localReports] = await Promise.all([
@@ -450,7 +483,7 @@ export default function EmergencyIdentity() {
       const normalizedPhone = normalizePhoneForOtp(phone).replace(/^\+/, "");
       const result = await sendMsg91Otp(normalizedPhone);
       setOtpRequested(true);
-      setOtpReqId(extractMsg91ReqId(result));
+      setOtpReqId(extractMsg91ReqId(result) ?? getMsg91ReqId());
       setOtp("");
       setPhone(`+${normalizedPhone}`);
       toast.success("Verification code sent by SMS.");
@@ -509,7 +542,7 @@ export default function EmergencyIdentity() {
     try {
       if (!otpReqId) throw new Error("Send the OTP first.");
       const result = await retryMsg91Otp(otpReqId);
-      setOtpReqId(extractMsg91ReqId(result) ?? otpReqId);
+      setOtpReqId(extractMsg91ReqId(result) ?? getMsg91ReqId() ?? otpReqId);
       toast.success("A new verification code has been sent.");
     } catch (error) {
       toast.error(getOtpErrorMessage(error));

@@ -3,6 +3,7 @@ type Msg91CallbackData = Record<string, unknown>;
 declare global {
   interface Window {
     initSendOTP?: (config: Record<string, unknown>) => void;
+    getWidgetData?: () => Msg91CallbackData;
     sendOtp?: (
       identifier: string,
       success?: (data: Msg91CallbackData) => void,
@@ -207,12 +208,23 @@ export function extractMsg91ReqId(data: Msg91CallbackData) {
   const candidates = [
     data.reqId,
     data.req_id,
+    data.requestId,
     (data.data as Record<string, unknown> | undefined)?.reqId,
     (data.data as Record<string, unknown> | undefined)?.req_id,
+    (data.data as Record<string, unknown> | undefined)?.requestId,
   ];
 
   const match = candidates.find((value) => typeof value === "string" && value.trim());
   return typeof match === "string" ? match : null;
+}
+
+export function getMsg91WidgetData() {
+  return asRecord(window.getWidgetData?.());
+}
+
+export function getMsg91ReqId() {
+  const widgetData = getMsg91WidgetData();
+  return extractMsg91ReqId(widgetData);
 }
 
 export function extractMsg91AccessToken(data: Msg91CallbackData) {
