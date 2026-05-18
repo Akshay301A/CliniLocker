@@ -30,6 +30,7 @@ import {
   getPatientReports,
   getProfile,
   getFounding500State,
+  markFounding500PhoneVerified,
   markEmergencyQrGenerated,
   markEmergencyQrSaved,
   startFounding500Validation,
@@ -46,6 +47,7 @@ import {
   isMsg91OtpConfigured,
   retryMsg91Otp,
   sendMsg91Otp,
+  verifyMsg91Otp,
 } from "@/lib/msg91";
 import type { HealthCardRow } from "@/lib/supabase";
 
@@ -499,8 +501,13 @@ export default function EmergencyIdentity() {
     setVerifyingOtp(true);
     try {
       if (!otpRequested) throw new Error("Request the verification code first.");
-      if (!otpReqId) throw new Error("OTP request ID is missing. Please request a new code.");
-      await verifyFounding500Msg91Otp(phone, otp, otpReqId);
+      if (otpReqId) {
+        await verifyFounding500Msg91Otp(phone, otp, otpReqId);
+      } else {
+        await ensureMsg91Widget();
+        await verifyMsg91Otp(otp);
+        await markFounding500PhoneVerified(phone);
+      }
       setOtp("");
       setOtpRequested(false);
       setOtpReqId(null);
