@@ -701,8 +701,13 @@ Deno.serve(async (req) => {
     if (action === "create_order") {
       if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
       const state = await getProgressState(adminClient, user.id);
+      const forceLaunchOffer = body.forceLaunchOffer === true;
       const shipping = body.shipping as JsonRecord | undefined;
       if (!shipping) return jsonResponse({ error: "Shipping details are required." }, 400);
+
+      if (forceLaunchOffer) {
+        await requireAdmin(adminClient, user.id);
+      }
 
       const shippingPayload = {
         shipping_name: String(shipping.shipping_name ?? "").trim(),
@@ -757,7 +762,11 @@ Deno.serve(async (req) => {
 
       const campaignClosed = state.campaignClosed;
       const pricingMode =
-        state.activation.eligibility_status === "approved" && !campaignClosed ? "founding500" : "launch_offer";
+        forceLaunchOffer
+          ? "launch_offer"
+          : state.activation.eligibility_status === "approved" && !campaignClosed
+            ? "founding500"
+            : "launch_offer";
       const originalPrice = Number(state.pricing.originalPrice);
       const discountedPrice = pricingMode === "founding500" ? 0 : Number(state.campaign.launch_price ?? 199);
       const shippingPrice = Number(state.pricing.shippingPrice);
@@ -860,6 +869,7 @@ Deno.serve(async (req) => {
         order_tags: {
           campaign: CAMPAIGN_SLUG,
           pricing_mode: pricingMode,
+          test_mode: forceLaunchOffer ? "launch_offer" : "none",
         },
       };
 

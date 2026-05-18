@@ -408,6 +408,7 @@ export default function EmergencyIdentity() {
 
   const approved = state.activation?.eligibility_status === "approved";
   const launchOfferOnly = state.activation?.eligibility_status === "launch_offer" || state.campaignClosed;
+  const launchTestMode = searchParams.get("mode") === "launch-test" && Boolean(state.profile?.is_admin);
   const serverCompletion = getStepCompletion(state);
   const localProfileComplete = Boolean(
     profileForm.blood_group &&
@@ -561,7 +562,7 @@ export default function EmergencyIdentity() {
   const handleOrder = async () => {
     setCreatingOrder(true);
     try {
-      const created = await createFounding500Order(shipping);
+      const created = await createFounding500Order(shipping, { forceLaunchOffer: launchTestMode });
       await refreshState();
       if (created.checkoutMode === "internal") {
         setActiveStep("order");
@@ -637,9 +638,14 @@ export default function EmergencyIdentity() {
             <div className="grid w-full gap-3 sm:grid-cols-3 lg:max-w-[420px]">
               <StatChip label="Kits Left" value={state.counts.kitsRemaining} />
               <StatChip label="Progress" value={`${state.progressPercent}%`} />
-              <StatChip label="Price" value={`₹${state.pricing.discountedPrice}`} />
+              <StatChip label="Price" value={`₹${launchTestMode ? Number(state.campaign.launch_price ?? 199) : state.pricing.discountedPrice}`} />
             </div>
           </div>
+          {launchTestMode && (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Admin launch-test mode is active for this account. Secure order will open the Launch Offer Cashfree flow for testing.
+            </div>
+          )}
         </section>
 
         <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">

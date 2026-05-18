@@ -245,14 +245,20 @@ export async function completeFounding500Validation(): Promise<{
   return invokeFounding500("complete_validation");
 }
 
-export async function createFounding500Order(shipping: Founding500ShippingAddress): Promise<{
+export async function createFounding500Order(
+  shipping: Founding500ShippingAddress,
+  options?: { forceLaunchOffer?: boolean },
+): Promise<{
   ok: boolean;
   checkoutMode: "cashfree" | "internal";
   paymentSessionId?: string;
   merchantOrderId?: string;
   order: Record<string, unknown>;
 }> {
-  return invokeFounding500("create_order", { shipping });
+  return invokeFounding500("create_order", {
+    shipping,
+    forceLaunchOffer: options?.forceLaunchOffer === true,
+  });
 }
 
 export async function syncFounding500Order(orderId: string): Promise<{
