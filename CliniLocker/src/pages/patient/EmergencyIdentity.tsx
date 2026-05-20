@@ -834,16 +834,29 @@ export default function EmergencyIdentity() {
             <div className="grid gap-6 px-6 py-6 md:px-10 md:py-8 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="rounded-[30px] border border-slate-200 bg-slate-50/70 p-5 md:p-6">
                 <p className="text-lg font-semibold text-slate-950">Order summary</p>
-                <div className="mt-5 flex gap-4 rounded-[26px] border border-slate-200 bg-white p-4">
-                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[22px] bg-[linear-gradient(135deg,_#dbeafe_0%,_#eff6ff_45%,_#ffffff_100%)]">
-                    <ShieldCheck className="h-9 w-9 text-sky-700" />
+                <div className="mt-5 rounded-[26px] border border-slate-200 bg-white p-4">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[22px] bg-[linear-gradient(135deg,_#dbeafe_0%,_#eff6ff_45%,_#ffffff_100%)]">
+                      <ShieldCheck className="h-8 w-8 text-sky-700" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-lg font-semibold text-slate-950">CliniLocker Emergency Kit</p>
+                      <p className="mt-1 text-sm text-slate-500">Founding500 rollout kit with digital health ID support</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-lg font-semibold text-slate-950">CliniLocker Emergency Kit</p>
-                    <p className="mt-1 text-sm text-slate-500">Founding500 rollout kit with digital health ID support</p>
-                    <p className="mt-3 text-sm leading-6 text-slate-600">
-                      Includes Emergency Identity activation, physical emergency card support, and a linked QR sticker pack for urgent care access.
-                    </p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Included</p>
+                      <p className="mt-2 text-sm font-medium leading-6 text-slate-700">
+                        Emergency Identity activation and physical emergency card support
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Also included</p>
+                      <p className="mt-2 text-sm font-medium leading-6 text-slate-700">
+                        Linked QR sticker pack for urgent care access
+                      </p>
+                    </div>
                   </div>
                 </div>
 

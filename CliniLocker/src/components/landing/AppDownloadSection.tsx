@@ -225,7 +225,7 @@ const AppDownloadSection = () => {
             <div className="space-y-6">
               <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">What people feel</p>
-                <div className="mt-5 flex flex-col gap-5 rounded-[28px] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] p-5">
+                <div className="mt-5 rounded-[28px] border border-slate-100 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] p-5">
                   <div className="flex items-end justify-between gap-4">
                     <div>
                       <p className="text-5xl font-extrabold tracking-tight text-slate-950">{averageRating.toFixed(1)}</p>
@@ -235,26 +235,9 @@ const AppDownloadSection = () => {
                         ))}
                       </div>
                     </div>
-                    <div className="max-w-[220px] text-right">
-                      <p className="text-sm font-semibold text-slate-950">Home screen experience</p>
-                      <p className="mt-1 text-sm leading-6 text-slate-500">
-                        Mixed from recent CliniLocker feedback and curated install-experience ratings.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Users sampled</p>
-                      <p className="mt-2 text-2xl font-bold text-slate-950">{mixedRatings.length}+</p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Most loved</p>
-                      <p className="mt-2 text-base font-semibold text-slate-950">Quick report access</p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Best use case</p>
-                      <p className="mt-2 text-base font-semibold text-slate-950">Home screen emergencies</p>
+                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-right">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Users</p>
+                      <p className="mt-2 text-2xl font-bold text-slate-950">500+</p>
                     </div>
                   </div>
                 </div>
