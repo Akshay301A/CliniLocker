@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
+  AlertCircle,
   CheckCircle2,
   ChevronRight,
   CreditCard,
@@ -13,7 +14,6 @@ import {
   UserRound,
   WalletCards,
 } from "lucide-react";
-import { toast } from "sonner";
 import { PatientLayout } from "@/components/PatientLayout";
 import { Preloader } from "@/components/Preloader";
 import { Button } from "@/components/ui/button";
@@ -63,6 +63,11 @@ const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const RELATIONSHIP_OPTIONS = ["Parent", "Spouse", "Sibling", "Child", "Guardian", "Friend", "Other"];
 const STEP_ORDER = ["verify", "records", "profile", "qr", "validation", "order"] as const;
 type StepKey = (typeof STEP_ORDER)[number];
+type FeedbackState = {
+  tone: "success" | "error" | "info";
+  title: string;
+  message: string;
+} | null;
 type EmergencyIdentityCache = {
   state: EmergencyCampaignState | null;
   phone: string;
@@ -181,6 +186,43 @@ function getOrderErrorMessage(error: unknown) {
 
   return message.replace(/^Edge Function returned a non-2xx status code:\s*/i, "");
 }
+function getFriendlyMessage(error: unknown, fallback: string) {
+  const message = error instanceof Error ? error.message : fallback;
+  return message.replace(/^Edge Function returned a non-2xx status code:\s*/i, "");
+}
+
+function getOrderReferenceValue(state: EmergencyCampaignState | null) {
+  return String(
+    state?.latestOrder?.merchant_order_id ??
+      state?.latestOrder?.id ??
+      state?.activation?.founding_member_id ??
+      "",
+  ).trim();
+}
+
+function FeedbackCard({ feedback }: { feedback: Exclude<FeedbackState, null> }) {
+  const toneClass =
+    feedback.tone === "success"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+      : feedback.tone === "error"
+        ? "border-rose-200 bg-rose-50 text-rose-900"
+        : "border-sky-200 bg-sky-50 text-sky-900";
+  const Icon = feedback.tone === "success" ? CheckCircle2 : AlertCircle;
+
+  return (
+    <div className={`rounded-[28px] border px-5 py-5 shadow-sm ${toneClass}`}>
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/90 shadow-sm">
+          <Icon className="h-4.5 w-4.5" />
+        </div>
+        <div>
+          <p className="text-base font-semibold tracking-tight">{feedback.title}</p>
+          <p className="mt-1 text-sm leading-6 opacity-90 md:text-[15px]">{feedback.message}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function getStepCompletion(state: EmergencyCampaignState) {
   return {
@@ -242,6 +284,7 @@ export default function EmergencyIdentity() {
   const [state, setState] = useState<EmergencyCampaignState | null>(emergencyIdentityPageCache?.state ?? null);
   const [loading, setLoading] = useState(!emergencyIdentityPageCache?.state);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [activeStep, setActiveStep] = useState<StepKey>(emergencyIdentityPageCache?.activeStep ?? "verify");
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
@@ -331,7 +374,11 @@ export default function EmergencyIdentity() {
         if (mounted) {
           const message = error instanceof Error ? error.message : "Unable to load Emergency Identity rollout.";
           setLoadError(message);
-          toast.error(message);
+          setFeedback({
+            tone: "error",
+            title: "Emergency Identity is temporarily unavailable",
+            message,
+          });
         }
       })
       .finally(() => {
@@ -371,13 +418,22 @@ export default function EmergencyIdentity() {
           const next = await refreshState();
           setActiveStep(result.status === "approved" ? "order" : firstIncompleteStep(next));
           setValidationOpen(false);
-          toast.success(
-            result.status === "approved"
-              ? `Emergency Identity activated${result.foundingMemberId ? ` • ${result.foundingMemberId}` : ""}`
-              : "Founding500 free allocation has closed. Launch Offer is now active.",
-          );
+          setFeedback({
+            tone: "success",
+            title: result.status === "approved" ? "Emergency Identity activated" : "Launch Offer active",
+            message:
+              result.status === "approved"
+                ? `Your medical identity is now active${result.foundingMemberId ? ` â€¢ ${result.foundingMemberId}` : ""}.`
+                : "The complimentary Founding500 allocation has closed. Launch Offer pricing is now active.",
+          });
         })
-        .catch((error) => toast.error(error instanceof Error ? error.message : "Secure validation failed."))
+        .catch((error) =>
+          setFeedback({
+            tone: "error",
+            title: "Secure validation could not be completed",
+            message: getFriendlyMessage(error, "Secure validation failed."),
+          }),
+        )
         .finally(() => setValidationSubmitting(false));
       return;
     }
@@ -442,6 +498,9 @@ export default function EmergencyIdentity() {
   };
   const canValidate = completion.verify && completion.records && completion.profile && completion.qr;
   const latestOrderStatus = String(state.latestOrder?.status ?? "");
+  const orderClaimed = Boolean(state.activation?.order_claimed_at);
+  const orderConfirmed = completion.order || ["paid", "fulfilled"].includes(latestOrderStatus) || orderClaimed;
+  const orderReference = getOrderReferenceValue(state);
   const stepDefs: Array<{ key: StepKey; label: string; short: string }> = [
     { key: "verify", label: "Phone verification", short: "Verify" },
     { key: "records", label: "Medical records", short: "Records" },
@@ -466,8 +525,17 @@ export default function EmergencyIdentity() {
       setCard(ensured);
       await refreshState();
       setActiveStep("qr");
+      setFeedback({
+        tone: "info",
+        title: "Digital health ID card is ready",
+        message: "Review the card, save it to your device, and then continue to secure validation.",
+      });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to open Emergency QR.");
+      setFeedback({
+        tone: "error",
+        title: "Unable to open the digital health ID card",
+        message: getFriendlyMessage(error, "Unable to open the digital health ID card right now."),
+      });
       setCardOpen(false);
     } finally {
       setCardLoading(false);
@@ -486,12 +554,20 @@ export default function EmergencyIdentity() {
     });
     setSavingProfile(false);
     if (result && "error" in result) {
-      toast.error(result.error || "Unable to save emergency profile.");
+      setFeedback({
+        tone: "error",
+        title: "Emergency profile could not be saved",
+        message: result.error || "Please review the details and try again.",
+      });
       return;
     }
     await refreshState();
     setActiveStep(getNextStep("profile"));
-    toast.success("Emergency profile secured.");
+    setFeedback({
+      tone: "success",
+      title: "Emergency profile secured",
+      message: "Your emergency contact and medical basics are now attached to this identity.",
+    });
   };
 
   const handleSendOtp = async () => {
@@ -508,10 +584,18 @@ export default function EmergencyIdentity() {
       setOtpReqId(extractMsg91ReqId(result) ?? getMsg91ReqId());
       setOtp("");
       setPhone(`+${normalizedPhone}`);
-      toast.success("Verification code sent by SMS.");
+      setFeedback({
+        tone: "info",
+        title: "Verification code sent",
+        message: `An OTP has been sent to ${`+${normalizedPhone}`}. Enter it below to secure this step.`,
+      });
     } catch (error) {
       cleanupOtpWidget();
-      toast.error(getOtpErrorMessage(error));
+      setFeedback({
+        tone: "error",
+        title: "Unable to send verification code",
+        message: getOtpErrorMessage(error),
+      });
     } finally {
       setSendingOtp(false);
     }
@@ -556,9 +640,17 @@ export default function EmergencyIdentity() {
       );
       await refreshState();
       setActiveStep(getNextStep("verify"));
-      toast.success("Phone number secured.");
+      setFeedback({
+        tone: "success",
+        title: "Phone number secured",
+        message: "This emergency identity now has a verified contact channel.",
+      });
     } catch (error) {
-      toast.error(getOtpErrorMessage(error));
+      setFeedback({
+        tone: "error",
+        title: "Verification could not be completed",
+        message: getOtpErrorMessage(error),
+      });
     } finally {
       setVerifyingOtp(false);
     }
@@ -570,9 +662,17 @@ export default function EmergencyIdentity() {
       if (!otpReqId) throw new Error("Send the OTP first.");
       const result = await retryMsg91Otp(otpReqId);
       setOtpReqId(extractMsg91ReqId(result) ?? getMsg91ReqId() ?? otpReqId);
-      toast.success("A new verification code has been sent.");
+      setFeedback({
+        tone: "info",
+        title: "A new OTP has been sent",
+        message: "Use the latest SMS code to continue verification.",
+      });
     } catch (error) {
-      toast.error(getOtpErrorMessage(error));
+      setFeedback({
+        tone: "error",
+        title: "Unable to resend OTP",
+        message: getOtpErrorMessage(error),
+      });
     } finally {
       setResendingOtp(false);
     }
@@ -582,14 +682,35 @@ export default function EmergencyIdentity() {
     setCreatingOrder(true);
     try {
       const created = await createFounding500Order(shipping, { forceLaunchOffer: launchTestMode });
-      await refreshState();
       if (created.checkoutMode === "internal") {
+        setState((current) =>
+          current
+            ? {
+                ...current,
+                activation: {
+                  ...current.activation,
+                  order_claimed_at: new Date().toISOString(),
+                },
+                latestOrder: {
+                  ...(current.latestOrder ?? {}),
+                  ...(created.order ?? {}),
+                  status: "fulfilled",
+                },
+              }
+            : current,
+        );
         setActiveStep("order");
-        toast.success("Emergency kit order secured.");
+        setFeedback({
+          tone: "success",
+          title: "Order confirmed",
+          message: "Your Founding500 Emergency Kit has been secured successfully.",
+        });
+        await refreshState();
         return;
       }
 
       if (!created.paymentSessionId) throw new Error("Cashfree payment session missing.");
+      await refreshState();
       await loadCashfreeSdk();
       const cashfree = window.Cashfree?.({
         mode: import.meta.env.PROD ? "production" : "sandbox",
@@ -606,17 +727,23 @@ export default function EmergencyIdentity() {
         await refreshState();
       }
     } catch (error) {
-      toast.error(getOrderErrorMessage(error));
+      setFeedback({
+        tone: "error",
+        title: "Order could not be continued",
+        message: getOrderErrorMessage(error),
+      });
     } finally {
       setCreatingOrder(false);
     }
   };
 
-  const heroStatus = approved
-    ? `Emergency Identity secured${state.activation?.founding_member_id ? ` • ${state.activation.founding_member_id}` : ""}`
-    : launchOfferOnly
-      ? "Launch Offer is active."
-      : `${state.completedSteps} of ${state.steps.length} checkpoints completed.`;
+  const heroStatus = orderConfirmed
+    ? `Emergency Identity activated${state.activation?.founding_member_id ? ` â€¢ ${state.activation.founding_member_id}` : ""}. Your physical kit request is already secured.`
+    : approved
+      ? `Emergency Identity secured${state.activation?.founding_member_id ? ` â€¢ ${state.activation.founding_member_id}` : ""}`
+      : launchOfferOnly
+        ? "Launch Offer is active."
+        : `${state.completedSteps} of ${state.steps.length} checkpoints completed.`;
 
   const renderFooterNav = () => (
     <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
@@ -647,17 +774,19 @@ export default function EmergencyIdentity() {
         <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,_#f8fbff_0%,_#eef5ff_45%,_#ffffff_100%)] p-4 shadow-sm md:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-2xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-700">Emergency Identity</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-700">
+                {orderConfirmed ? "Activation complete" : "Emergency Identity"}
+              </p>
               <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-slate-950 md:text-4xl">
-                Activate your emergency kit access step by step.
+                {orderConfirmed ? "Emergency Identity is active." : "Activate your emergency kit access step by step."}
               </h1>
               <p className="mt-3 text-sm leading-7 text-slate-600 md:text-base">{heroStatus}</p>
             </div>
 
             <div className="grid w-full gap-3 sm:grid-cols-3 lg:max-w-[420px]">
               <StatChip label="Kits Left" value={state.counts.kitsRemaining} />
-              <StatChip label="Progress" value={`${state.progressPercent}%`} />
-              <StatChip label="Price" value={`₹${launchTestMode ? Number(state.campaign.launch_price ?? 199) : state.pricing.discountedPrice}`} />
+              <StatChip label={orderConfirmed ? "Order" : "Progress"} value={orderConfirmed ? (orderReference || "Secured") : `${state.progressPercent}%`} />
+              <StatChip label="Price" value={`â‚¹${launchTestMode ? Number(state.campaign.launch_price ?? 199) : state.pricing.discountedPrice}`} />
             </div>
           </div>
           {launchTestMode && (
@@ -667,6 +796,70 @@ export default function EmergencyIdentity() {
           )}
         </section>
 
+        {feedback && <FeedbackCard feedback={feedback} />}
+
+        {orderConfirmed && (
+          <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Emergency Kit Activated</p>
+                <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight text-slate-950 md:text-5xl">
+                  Order confirmed
+                </h2>
+                <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600 md:text-base">
+                  Your Emergency Identity is active and your physical kit has been secured. You can return here anytime to review the order reference and activation status.
+                </p>
+
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Founding member ID</p>
+                    <p className="mt-3 text-xl font-semibold text-slate-950">
+                      {String(state.activation?.founding_member_id ?? "Secured")}
+                    </p>
+                  </div>
+                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Order reference</p>
+                    <p className="mt-3 text-xl font-semibold text-slate-950">{orderReference || "Order secured"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#f8fbff_100%)] p-5">
+                <p className="text-lg font-semibold text-slate-950">Emergency Kit Summary</p>
+                <div className="mt-5 rounded-[24px] border border-slate-200 bg-white p-4">
+                  <p className="font-medium text-slate-950">CliniLocker Emergency Kit</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Digital health ID activation, physical emergency card kit, and the linked QR identity pack for urgent care access.
+                  </p>
+                </div>
+                <div className="mt-5 space-y-3 border-t border-slate-200 pt-5 text-sm text-slate-600">
+                  <div className="flex items-center justify-between">
+                    <span>Original price</span>
+                    <span className="line-through">â‚¹{state.pricing.originalPrice}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Founding500 access</span>
+                    <span className="font-semibold text-emerald-700">â‚¹0</span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-slate-200 pt-3 font-semibold text-slate-950">
+                    <span>Total</span>
+                    <span>â‚¹0</span>
+                  </div>
+                </div>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Button asChild className="rounded-2xl">
+                    <Link to="/patient/dashboard">Back to dashboard</Link>
+                  </Button>
+                  <Button asChild variant="outline" className="rounded-2xl">
+                    <Link to="/patient/reports">View reports</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {!orderConfirmed && (
         <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -740,8 +933,9 @@ export default function EmergencyIdentity() {
             })}
           </div>
         </section>
+        )}
 
-        {activeStep === "verify" && (
+        {!orderConfirmed && activeStep === "verify" && (
           <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
             <SectionIntro
               eyebrow="Step 1"
@@ -793,7 +987,7 @@ export default function EmergencyIdentity() {
           </section>
         )}
 
-        {activeStep === "records" && (
+        {!orderConfirmed && activeStep === "records" && (
           <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
             <SectionIntro
               eyebrow="Step 2"
@@ -825,7 +1019,7 @@ export default function EmergencyIdentity() {
           </section>
         )}
 
-        {activeStep === "profile" && (
+        {!orderConfirmed && activeStep === "profile" && (
           <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
             <SectionIntro
               eyebrow="Step 3"
@@ -888,7 +1082,7 @@ export default function EmergencyIdentity() {
           </section>
         )}
 
-        {activeStep === "qr" && (
+        {!orderConfirmed && activeStep === "qr" && (
           <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
             <SectionIntro
               eyebrow="Steps 4 & 5"
@@ -913,7 +1107,11 @@ export default function EmergencyIdentity() {
                         await markEmergencyQrSaved();
                       await refreshState();
                       setActiveStep(getNextStep("qr"));
-                      toast.success("Digital health ID card marked as saved.");
+                      setFeedback({
+                        tone: "success",
+                        title: "Digital health ID card saved",
+                        message: "You can now continue to secure validation.",
+                      });
                     }}
                   >
                     <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -935,7 +1133,7 @@ export default function EmergencyIdentity() {
           </section>
         )}
 
-        {activeStep === "validation" && (
+        {!orderConfirmed && activeStep === "validation" && (
           <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
             <SectionIntro
               eyebrow="Secure validation"
@@ -964,7 +1162,11 @@ export default function EmergencyIdentity() {
                       await refreshState();
                       setValidationOpen(true);
                     } catch (error) {
-                      toast.error(error instanceof Error ? error.message : "Unable to start secure validation.");
+                      setFeedback({
+                        tone: "error",
+                        title: "Secure validation could not be started",
+                        message: getFriendlyMessage(error, "Unable to start secure validation."),
+                      });
                     }
                   }}
                 >
@@ -982,7 +1184,7 @@ export default function EmergencyIdentity() {
           </section>
         )}
 
-        {activeStep === "order" && (
+        {!orderConfirmed && activeStep === "order" && (
           <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
             <SectionIntro
               eyebrow="Founding500 access"
@@ -993,10 +1195,10 @@ export default function EmergencyIdentity() {
             <div className="mt-6 grid gap-4 lg:grid-cols-[1fr,260px]">
               <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-5">
                 <div className="flex flex-wrap items-baseline gap-3">
-                  <span className="text-sm text-slate-400 line-through">₹{state.pricing.originalPrice}</span>
-                  <span className="text-3xl font-semibold text-slate-950">₹{state.pricing.discountedPrice}</span>
+                  <span className="text-sm text-slate-400 line-through">Rs. {state.pricing.originalPrice}</span>
+                  <span className="text-3xl font-semibold text-slate-950">Rs. {state.pricing.discountedPrice}</span>
                   {state.pricing.shippingPrice > 0 && (
-                    <span className="text-sm text-slate-500">+ ₹{state.pricing.shippingPrice} shipping</span>
+                    <span className="text-sm text-slate-500">+ Rs. {state.pricing.shippingPrice} shipping</span>
                   )}
                 </div>
                 <p className="mt-2 text-sm text-slate-600">
@@ -1050,9 +1252,17 @@ export default function EmergencyIdentity() {
                         try {
                           await syncFounding500Order(String(state.latestOrder?.id ?? ""));
                           await refreshState();
-                          toast.success("Payment status refreshed.");
+                          setFeedback({
+                            tone: "info",
+                            title: "Payment status refreshed",
+                            message: "The latest order status has been updated.",
+                          });
                         } catch (error) {
-                          toast.error(error instanceof Error ? error.message : "Unable to refresh payment.");
+                          setFeedback({
+                            tone: "error",
+                            title: "Payment status could not be refreshed",
+                            message: getFriendlyMessage(error, "Unable to refresh payment."),
+                          });
                         }
                       }}
                     >
@@ -1064,7 +1274,7 @@ export default function EmergencyIdentity() {
               <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,_#f8fbff_0%,_#eef6ff_100%)] p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Order state</p>
                 <p className="mt-3 text-lg font-semibold text-slate-950">
-                  {completion.order ? "Order confirmed" : latestOrderStatus ? latestOrderStatus.replace(/_/g, " ") : "Not started"}
+                  {orderConfirmed ? "Order confirmed" : latestOrderStatus ? latestOrderStatus.replace(/_/g, " ") : "Not started"}
                 </p>
                 <p className="mt-2 text-sm text-slate-600">One verified phone number, one account, one confirmed claim.</p>
               </div>

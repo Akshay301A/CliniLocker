@@ -79,16 +79,35 @@ export function EmergencyIdentityBanner() {
 
   const approved = state.activation?.eligibility_status === "approved";
   const closed = state.activation?.eligibility_status === "launch_offer" || state.campaignClosed;
+  const orderConfirmed =
+    ["paid", "fulfilled"].includes(String(state.latestOrder?.status ?? "")) ||
+    Boolean(state.activation?.order_claimed_at);
+  const orderReference = String(
+    state.latestOrder?.merchant_order_id ??
+      state.latestOrder?.id ??
+      state.activation?.founding_member_id ??
+      "",
+  ).trim();
 
-  const headline = approved
-    ? `Emergency Identity active • ${String(state.activation?.founding_member_id ?? "Founding access secured")}`
-    : closed
-      ? "Founding500 complimentary allocation is closed. Launch Offer is active."
-      : `${state.completedSteps} of ${state.steps.length} Emergency Identity checkpoints completed`;
+  const headline = orderConfirmed
+    ? `Emergency Identity activated • ${String(state.activation?.founding_member_id ?? "Founding access secured")}`
+    : approved
+      ? `Emergency Identity active • ${String(state.activation?.founding_member_id ?? "Founding access secured")}`
+      : closed
+        ? "Founding500 complimentary allocation is closed. Launch Offer is active."
+        : `${state.completedSteps} of ${state.steps.length} Emergency Identity checkpoints completed`;
 
-  const subline = approved
-    ? "You can continue to secure ordering for the physical emergency kit."
-    : `${state.counts.kitsRemaining} kits remain in the current rollout. Secure your medical history to continue.`;
+  const subline = orderConfirmed
+    ? `Your Emergency Kit request is secured${orderReference ? ` • ${orderReference}` : ""}.`
+    : approved
+      ? "Your identity is active and ready for the final kit confirmation."
+      : `${state.counts.kitsRemaining} kits remain in the current rollout. Secure your medical history to continue.`;
 
-  return <BannerShell headline={headline} subline={subline} cta={approved ? "Continue activation" : "Activate identity"} />;
+  return (
+    <BannerShell
+      headline={headline}
+      subline={subline}
+      cta={orderConfirmed ? "View order status" : approved ? "Continue activation" : "Activate identity"}
+    />
+  );
 }
