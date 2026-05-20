@@ -738,12 +738,14 @@ export default function EmergencyIdentity() {
   };
 
   const heroStatus = orderConfirmed
-    ? `Emergency Identity activated${state.activation?.founding_member_id ? ` â€¢ ${state.activation.founding_member_id}` : ""}. Your physical kit request is already secured.`
+    ? `Emergency Identity activated${state.activation?.founding_member_id ? ` - ${state.activation.founding_member_id}` : ""}. Your physical kit request is already secured.`
     : approved
-      ? `Emergency Identity secured${state.activation?.founding_member_id ? ` â€¢ ${state.activation.founding_member_id}` : ""}`
+      ? `Emergency Identity secured${state.activation?.founding_member_id ? ` - ${state.activation.founding_member_id}` : ""}`
       : launchOfferOnly
         ? "Launch Offer is active."
         : `${state.completedSteps} of ${state.steps.length} checkpoints completed.`;
+  const foundingSequence = String(state.activation?.founding_member_id ?? "").split("-").pop() || "";
+  const displayName = String(state.profile?.full_name ?? "CliniLocker member").trim();
 
   const renderFooterNav = () => (
     <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
@@ -786,7 +788,7 @@ export default function EmergencyIdentity() {
             <div className="grid w-full gap-3 sm:grid-cols-3 lg:max-w-[420px]">
               <StatChip label="Kits Left" value={state.counts.kitsRemaining} />
               <StatChip label={orderConfirmed ? "Order" : "Progress"} value={orderConfirmed ? (orderReference || "Secured") : `${state.progressPercent}%`} />
-              <StatChip label="Price" value={`â‚¹${launchTestMode ? Number(state.campaign.launch_price ?? 199) : state.pricing.discountedPrice}`} />
+              <StatChip label="Price" value={`Rs. ${launchTestMode ? Number(state.campaign.launch_price ?? 199) : state.pricing.discountedPrice}`} />
             </div>
           </div>
           {launchTestMode && (
@@ -799,60 +801,81 @@ export default function EmergencyIdentity() {
         {feedback && <FeedbackCard feedback={feedback} />}
 
         {orderConfirmed && (
-          <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Emergency Kit Activated</p>
-                <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight text-slate-950 md:text-5xl">
-                  Order confirmed
-                </h2>
-                <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600 md:text-base">
-                  Your Emergency Identity is active and your physical kit has been secured. You can return here anytime to review the order reference and activation status.
-                </p>
+          <section className="overflow-hidden rounded-[36px] border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 bg-[linear-gradient(180deg,_#ffffff_0%,_#f7fbff_100%)] px-6 py-8 md:px-10 md:py-10">
+              <p className="text-sm font-semibold tracking-tight text-slate-950">CliniLocker</p>
+              <div className="mt-6 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-2xl">
+                  <h2 className="font-display text-4xl font-semibold tracking-tight text-slate-950 md:text-6xl">
+                    Order
+                    <br />
+                    confirmation
+                  </h2>
+                  <p className="mt-6 text-lg font-medium text-slate-950">Hi {displayName},</p>
+                  <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600 md:text-base">
+                    Your Emergency Identity is active and we have successfully secured your Founding500 Emergency Kit request. We will keep this order linked to your medical identity while the rollout is being processed.
+                  </p>
+                </div>
 
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Founding member ID</p>
-                    <p className="mt-3 text-xl font-semibold text-slate-950">
-                      {String(state.activation?.founding_member_id ?? "Secured")}
+                <div className="rounded-[28px] border border-emerald-100 bg-emerald-50 px-5 py-4 text-emerald-900 shadow-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">Activation status</p>
+                  <p className="mt-2 text-lg font-semibold">Emergency Identity activated</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-6 px-6 py-6 md:px-10 md:py-8 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="rounded-[30px] border border-slate-200 bg-slate-50/70 p-5 md:p-6">
+                <p className="text-lg font-semibold text-slate-950">Order summary</p>
+                <div className="mt-5 flex gap-4 rounded-[26px] border border-slate-200 bg-white p-4">
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[22px] bg-[linear-gradient(135deg,_#dbeafe_0%,_#eff6ff_45%,_#ffffff_100%)]">
+                    <ShieldCheck className="h-9 w-9 text-sky-700" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-lg font-semibold text-slate-950">CliniLocker Emergency Kit</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Founding500 rollout kit with digital health ID support
+                    </p>
+                    <p className="mt-3 text-sm leading-6 text-slate-600">
+                      Includes emergency identity activation, physical emergency card support, and the linked QR sticker pack for urgent care access.
                     </p>
                   </div>
-                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Order reference</p>
-                    <p className="mt-3 text-xl font-semibold text-slate-950">{orderReference || "Order secured"}</p>
+                </div>
+
+                <div className="mt-6 space-y-3 border-t border-slate-200 pt-5 text-sm text-slate-600">
+                  <div className="flex items-center justify-between">
+                    <span>Original price</span>
+                    <span className="line-through">Rs. {state.pricing.originalPrice}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Founding500 access</span>
+                    <span className="font-semibold text-emerald-700">Rs. 0</span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-slate-200 pt-3 font-semibold text-slate-950">
+                    <span>Total</span>
+                    <span>Rs. 0</span>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#f8fbff_100%)] p-5">
-                <p className="text-lg font-semibold text-slate-950">Emergency Kit Summary</p>
-                <div className="mt-5 rounded-[24px] border border-slate-200 bg-white p-4">
-                  <p className="font-medium text-slate-950">CliniLocker Emergency Kit</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Digital health ID activation, physical emergency card kit, and the linked QR identity pack for urgent care access.
+              <div className="space-y-4">
+                <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Founding member ID</p>
+                  <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
+                    {String(state.activation?.founding_member_id ?? "Secured")}
                   </p>
+                  {foundingSequence && (
+                    <p className="mt-2 text-sm text-slate-500">Founding slot number {foundingSequence}</p>
+                  )}
                 </div>
-                <div className="mt-5 space-y-3 border-t border-slate-200 pt-5 text-sm text-slate-600">
-                  <div className="flex items-center justify-between">
-                    <span>Original price</span>
-                    <span className="line-through">â‚¹{state.pricing.originalPrice}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Founding500 access</span>
-                    <span className="font-semibold text-emerald-700">â‚¹0</span>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-slate-200 pt-3 font-semibold text-slate-950">
-                    <span>Total</span>
-                    <span>â‚¹0</span>
-                  </div>
-                </div>
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <Button asChild className="rounded-2xl">
-                    <Link to="/patient/dashboard">Back to dashboard</Link>
-                  </Button>
-                  <Button asChild variant="outline" className="rounded-2xl">
-                    <Link to="/patient/reports">View reports</Link>
-                  </Button>
+                <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Order reference</p>
+                  <p className="mt-3 break-all text-2xl font-semibold tracking-tight text-slate-950">
+                    {orderReference || "Order secured"}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-500">
+                    This reference is generated by CliniLocker when your kit request is secured.
+                  </p>
                 </div>
               </div>
             </div>
