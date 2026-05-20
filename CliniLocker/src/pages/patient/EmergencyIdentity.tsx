@@ -423,7 +423,7 @@ export default function EmergencyIdentity() {
             title: result.status === "approved" ? "Emergency Identity activated" : "Launch Offer active",
             message:
               result.status === "approved"
-                ? `Your medical identity is now active${result.foundingMemberId ? ` â€¢ ${result.foundingMemberId}` : ""}.`
+                ? `Your medical identity is now active${result.foundingMemberId ? ` - ${result.foundingMemberId}` : ""}.`
                 : "The complimentary Founding500 allocation has closed. Launch Offer pricing is now active.",
           });
         })
@@ -785,11 +785,18 @@ export default function EmergencyIdentity() {
               <p className="mt-3 text-sm leading-7 text-slate-600 md:text-base">{heroStatus}</p>
             </div>
 
-            <div className="grid w-full gap-3 sm:grid-cols-3 lg:max-w-[420px]">
-              <StatChip label="Kits Left" value={state.counts.kitsRemaining} />
-              <StatChip label={orderConfirmed ? "Order" : "Progress"} value={orderConfirmed ? (orderReference || "Secured") : `${state.progressPercent}%`} />
-              <StatChip label="Price" value={`Rs. ${launchTestMode ? Number(state.campaign.launch_price ?? 199) : state.pricing.discountedPrice}`} />
-            </div>
+            {orderConfirmed ? (
+              <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-[420px]">
+                <StatChip label="Founding slot" value={foundingSequence ? `#${foundingSequence}` : "Secured"} />
+                <StatChip label="Order state" value="Confirmed" />
+              </div>
+            ) : (
+              <div className="grid w-full gap-3 sm:grid-cols-3 lg:max-w-[420px]">
+                <StatChip label="Kits Left" value={state.counts.kitsRemaining} />
+                <StatChip label="Progress" value={`${state.progressPercent}%`} />
+                <StatChip label="Price" value={`Rs. ${launchTestMode ? Number(state.campaign.launch_price ?? 199) : state.pricing.discountedPrice}`} />
+              </div>
+            )}
           </div>
           {launchTestMode && (
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -833,11 +840,9 @@ export default function EmergencyIdentity() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-lg font-semibold text-slate-950">CliniLocker Emergency Kit</p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Founding500 rollout kit with digital health ID support
-                    </p>
+                    <p className="mt-1 text-sm text-slate-500">Founding500 rollout kit with digital health ID support</p>
                     <p className="mt-3 text-sm leading-6 text-slate-600">
-                      Includes emergency identity activation, physical emergency card support, and the linked QR sticker pack for urgent care access.
+                      Includes Emergency Identity activation, physical emergency card support, and a linked QR sticker pack for urgent care access.
                     </p>
                   </div>
                 </div>
@@ -851,8 +856,12 @@ export default function EmergencyIdentity() {
                     <span>Founding500 access</span>
                     <span className="font-semibold text-emerald-700">Rs. 0</span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <span>Shipping</span>
+                    <span>Rs. 0</span>
+                  </div>
                   <div className="flex items-center justify-between border-t border-slate-200 pt-3 font-semibold text-slate-950">
-                    <span>Total</span>
+                    <span>Total secured</span>
                     <span>Rs. 0</span>
                   </div>
                 </div>
@@ -860,21 +869,21 @@ export default function EmergencyIdentity() {
 
               <div className="space-y-4">
                 <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Founding member ID</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Founding500 access</p>
                   <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
                     {String(state.activation?.founding_member_id ?? "Secured")}
                   </p>
                   {foundingSequence && (
-                    <p className="mt-2 text-sm text-slate-500">Founding slot number {foundingSequence}</p>
+                    <p className="mt-2 text-sm text-slate-500">Rollout order number #{foundingSequence}</p>
                   )}
                 </div>
                 <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Order reference</p>
-                  <p className="mt-3 break-all text-2xl font-semibold tracking-tight text-slate-950">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Kit reference</p>
+                  <p className="mt-3 break-all text-lg font-semibold tracking-tight text-slate-950">
                     {orderReference || "Order secured"}
                   </p>
                   <p className="mt-2 text-sm text-slate-500">
-                    This reference is generated by CliniLocker when your kit request is secured.
+                    Keep this reference for support queries while the Founding500 rollout is being processed.
                   </p>
                 </div>
               </div>

@@ -90,15 +90,15 @@ export function EmergencyIdentityBanner() {
   ).trim();
 
   const headline = orderConfirmed
-    ? `Emergency Identity activated • ${String(state.activation?.founding_member_id ?? "Founding access secured")}`
+    ? `Emergency Identity activated - ${String(state.activation?.founding_member_id ?? "Founding access secured")}`
     : approved
-      ? `Emergency Identity active • ${String(state.activation?.founding_member_id ?? "Founding access secured")}`
+      ? `Emergency Identity active - ${String(state.activation?.founding_member_id ?? "Founding access secured")}`
       : closed
         ? "Founding500 complimentary allocation is closed. Launch Offer is active."
         : `${state.completedSteps} of ${state.steps.length} Emergency Identity checkpoints completed`;
 
   const subline = orderConfirmed
-    ? `Your Emergency Kit request is secured${orderReference ? ` • ${orderReference}` : ""}.`
+    ? `Your Emergency Kit request is secured${orderReference ? ` - ${orderReference}` : ""}.`
     : approved
       ? "Your identity is active and ready for the final kit confirmation."
       : `${state.counts.kitsRemaining} kits remain in the current rollout. Secure your medical history to continue.`;
