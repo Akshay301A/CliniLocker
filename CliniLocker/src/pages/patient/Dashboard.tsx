@@ -191,33 +191,33 @@ const PatientDashboard = () => {
 
   return (
     <PatientLayout>
-      <div className="space-y-5 animate-fade-in md:space-y-6">
-        <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,_#1d4ed8_0%,_#2563eb_52%,_#4f46e5_100%)] p-5 text-white shadow-[0_22px_55px_rgba(37,99,235,0.18)] md:p-7">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+      <div className="space-y-4 animate-fade-in md:space-y-6">
+        <section className="rounded-[26px] border border-slate-200 bg-[linear-gradient(135deg,_#1d4ed8_0%,_#2563eb_52%,_#4f46e5_100%)] p-4 text-white shadow-[0_18px_45px_rgba(37,99,235,0.16)] md:rounded-[28px] md:p-7">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-2xl">
-              <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
+              <h1 className="font-display text-[1.8rem] font-semibold leading-[1.02] tracking-tight md:text-4xl">
                 {t("Welcome back")}, {displayName(userName)}.
               </h1>
-              <p className="mt-3 max-w-xl text-sm leading-7 text-blue-50 md:text-base">
+              <p className="mt-2 max-w-xl text-[15px] leading-6 text-blue-50 md:mt-3 md:text-base md:leading-7">
                 {t("Track reports, manage family records, reminders, and diet plans from one clean dashboard.")}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:min-w-[360px]">
+            <div className="grid grid-cols-2 gap-2 sm:min-w-[360px] sm:gap-3">
               <Link to="/patient/upload" className="min-w-0">
-                <Button className="h-12 w-full rounded-2xl bg-white px-4 text-blue-700 shadow-sm hover:bg-blue-50">
+                <Button className="h-10.5 w-full rounded-2xl bg-white px-3 text-[14px] text-blue-700 shadow-sm hover:bg-blue-50">
                   <Upload className="mr-2 h-4 w-4" />
                   {t("Upload report")}
                 </Button>
               </Link>
               <Link to="/patient/reports" className="min-w-0">
-                <Button variant="outline" className="h-12 w-full rounded-2xl border-white/30 bg-white/10 px-4 text-white hover:bg-white/15">
+                <Button variant="outline" className="h-10.5 w-full rounded-2xl border-white/30 bg-white/10 px-3 text-[14px] text-white hover:bg-white/15">
                   <FileText className="mr-2 h-4 w-4" />
                   {t("Browse reports")}
                 </Button>
               </Link>
               <Link to={lastReport ? `/patient/report/${lastReport.id}/diet` : "/patient/reports"} className="col-span-2 min-w-0">
-                <Button variant="outline" className="h-12 w-full rounded-2xl border-white/30 bg-white/10 px-4 text-white hover:bg-white/15">
+                <Button variant="outline" className="h-10.5 w-full rounded-2xl border-white/30 bg-white/10 px-3 text-[14px] text-white hover:bg-white/15">
                   <Utensils className="mr-2 h-4 w-4" />
                   {t("Diet planner")}
                 </Button>
@@ -225,56 +225,56 @@ const PatientDashboard = () => {
             </div>
           </div>
 
-          <div className="mt-6 rounded-[24px] border border-white/15 bg-white/10 p-4 backdrop-blur">
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-blue-100">
+          <div className="mt-3.5 rounded-[22px] border border-white/15 bg-white/10 p-3 backdrop-blur md:mt-6 md:rounded-[24px] md:p-4">
+            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-blue-100">
               <Sparkles className="h-3.5 w-3.5" />
               {t("Today")}
             </p>
-            <p className="mt-2 text-sm leading-7 text-white/95 md:text-base">{quote}</p>
+            <p className="mt-1.5 text-[15px] leading-6 text-white/95 md:text-base md:leading-7">{quote}</p>
           </div>
         </section>
 
-        <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
-          <div className="overflow-hidden rounded-[24px] border border-blue-200/60 bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-md md:p-5">
+        <div className="grid grid-cols-2 gap-2.5 md:gap-4 xl:grid-cols-4">
+          <div className="overflow-hidden rounded-[22px] border border-blue-200/60 bg-gradient-to-br from-blue-50 to-blue-100 p-3.5 shadow-md md:rounded-[24px] md:p-5">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md md:h-12 md:w-12">
               <FileText className="h-5 w-5 md:h-6 md:w-6" />
             </div>
-            <p className="mt-4 text-3xl font-bold text-blue-700 md:mt-5 md:text-4xl">{reports.length}</p>
-            <p className="mt-2 text-sm font-semibold text-blue-600">{t("Total reports")}</p>
+            <p className="mt-3 text-[1.85rem] font-bold leading-none text-blue-700 md:mt-5 md:text-4xl">{reports.length}</p>
+            <p className="mt-2 text-[13px] font-semibold text-blue-600 md:text-sm">{t("Total reports")}</p>
           </div>
 
-          <div className="overflow-hidden rounded-[24px] border border-rose-200/60 bg-gradient-to-br from-rose-50 to-pink-100 p-4 shadow-md md:p-5">
+          <div className="overflow-hidden rounded-[22px] border border-rose-200/60 bg-gradient-to-br from-rose-50 to-pink-100 p-3.5 shadow-md md:rounded-[24px] md:p-5">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md md:h-12 md:w-12">
               <Heart className="h-5 w-5 md:h-6 md:w-6" />
             </div>
             <p className="mt-4 text-[2rem] font-bold leading-none text-slate-900 md:mt-5 md:text-4xl">{bloodPressure ?? "—"}</p>
-            <p className="mt-2 text-sm font-semibold text-rose-600">{t("Blood pressure")}</p>
-            {weight != null && <p className="mt-2 text-xs font-medium text-rose-500">{t("Weight")}: {weight} kg</p>}
+            <p className="mt-2 text-[13px] font-semibold text-rose-600 md:text-sm">{t("Blood pressure")}</p>
+            {weight != null && <p className="mt-1.5 text-[11px] font-medium text-rose-500 md:mt-2 md:text-xs">{t("Weight")}: {weight} kg</p>}
           </div>
 
-          <div className="overflow-hidden rounded-[24px] border border-amber-200/60 bg-gradient-to-br from-amber-50 to-orange-100 p-4 shadow-md md:p-5">
+          <div className="overflow-hidden rounded-[22px] border border-amber-200/60 bg-gradient-to-br from-amber-50 to-orange-100 p-3.5 shadow-md md:rounded-[24px] md:p-5">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-md md:h-12 md:w-12">
               <Calendar className="h-5 w-5 md:h-6 md:w-6" />
             </div>
-            <p className="mt-4 text-xl font-bold leading-tight text-amber-700 md:mt-5 md:text-3xl">{formatDate(lastReport?.uploaded_at)}</p>
-            <p className="mt-2 text-sm font-semibold text-amber-600">{t("Last upload")}</p>
+            <p className="mt-3 text-lg font-bold leading-tight text-amber-700 md:mt-5 md:text-3xl">{formatDate(lastReport?.uploaded_at)}</p>
+            <p className="mt-2 text-[13px] font-semibold text-amber-600 md:text-sm">{t("Last upload")}</p>
           </div>
 
-          <div className="overflow-hidden rounded-[24px] border border-violet-200/60 bg-gradient-to-br from-violet-50 to-purple-100 p-4 shadow-md md:p-5">
+          <div className="overflow-hidden rounded-[22px] border border-violet-200/60 bg-gradient-to-br from-violet-50 to-purple-100 p-3.5 shadow-md md:rounded-[24px] md:p-5">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-md md:h-12 md:w-12">
               <Users className="h-5 w-5 md:h-6 md:w-6" />
             </div>
-            <p className="mt-4 text-3xl font-bold text-violet-700 md:mt-5 md:text-4xl">{familyCount}</p>
-            <p className="mt-2 text-sm font-semibold text-violet-600">{t("Family linked")}</p>
+            <p className="mt-3 text-[1.85rem] font-bold leading-none text-violet-700 md:mt-5 md:text-4xl">{familyCount}</p>
+            <p className="mt-2 text-[13px] font-semibold text-violet-600 md:text-sm">{t("Family linked")}</p>
           </div>
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[1.1fr,0.9fr]">
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-            <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
+          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:rounded-[28px] md:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
               <div>
                 <p className="text-xs uppercase tracking-[0.22em] text-slate-400">{t("Reports")}</p>
-                <h2 className="mt-1 font-display text-2xl font-semibold text-slate-900">{t("Recent reports")}</h2>
+                <h2 className="mt-1 font-display text-[1.4rem] font-semibold text-slate-900 md:text-2xl">{t("Recent reports")}</h2>
               </div>
               <Link to="/patient/reports" className="text-sm font-medium text-blue-600 hover:text-blue-700">
                 {t("View all")}
@@ -287,10 +287,10 @@ const PatientDashboard = () => {
                   <Link
                     key={report.id}
                     to={`/patient/report/${report.id}`}
-                    className="flex items-start gap-3 rounded-[22px] border border-slate-200 bg-slate-50/70 p-4 transition hover:bg-white hover:shadow-md"
+                    className="flex items-start gap-3 rounded-[20px] border border-slate-200 bg-slate-50/70 p-3.5 transition hover:bg-white hover:shadow-md md:rounded-[22px] md:p-4"
                   >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
-                      <FileText className="h-5 w-5" />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm md:h-11 md:w-11">
+                      <FileText className="h-4.5 w-4.5 md:h-5 md:w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold text-slate-900">{report.test_name}</p>
@@ -308,15 +308,15 @@ const PatientDashboard = () => {
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-            <div className="mb-5 flex items-center justify-between gap-3">
+          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:rounded-[28px] md:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-500 text-white shadow-sm">
-                  <Bell className="h-5 w-5" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-500 text-white shadow-sm md:h-11 md:w-11">
+                  <Bell className="h-4.5 w-4.5 md:h-5 md:w-5" />
                 </div>
                 <div>
                 <p className="text-xs uppercase tracking-[0.22em] text-slate-400">{t("Reminders")}</p>
-                <h2 className="mt-1 font-display text-2xl font-semibold text-slate-900">{t("Latest reminders")}</h2>
+                <h2 className="mt-1 font-display text-[1.4rem] font-semibold text-slate-900 md:text-2xl">{t("Latest reminders")}</h2>
                 </div>
               </div>
               <Link to="/patient/reminders" className="text-sm font-medium text-blue-600 hover:text-blue-700">
@@ -330,10 +330,10 @@ const PatientDashboard = () => {
                   <Link
                     key={reminder.id}
                     to="/patient/reminders"
-                    className="flex items-start gap-3 rounded-[22px] border border-slate-200 bg-slate-50/70 p-4 transition hover:bg-white hover:shadow-md"
+                    className="flex items-start gap-3 rounded-[20px] border border-slate-200 bg-slate-50/70 p-3.5 transition hover:bg-white hover:shadow-md md:rounded-[22px] md:p-4"
                   >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-500 text-white shadow-sm">
-                      <Bell className="h-5 w-5" />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-500 text-white shadow-sm md:h-11 md:w-11">
+                      <Bell className="h-4.5 w-4.5 md:h-5 md:w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold text-slate-900">{reminder.medication_name}</p>
@@ -358,16 +358,16 @@ const PatientDashboard = () => {
           </section>
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[0.95fr,1.05fr]">
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-            <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="grid gap-4 xl:grid-cols-[0.95fr,1.05fr]">
+          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:rounded-[28px] md:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-sm">
-                  <Utensils className="h-5 w-5" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-sm md:h-11 md:w-11">
+                  <Utensils className="h-4.5 w-4.5 md:h-5 md:w-5" />
                 </div>
                 <div>
                 <p className="text-xs uppercase tracking-[0.22em] text-slate-400">{t("Diet plans")}</p>
-                <h2 className="mt-1 font-display text-2xl font-semibold text-slate-900">{t("Recent diet plans")}</h2>
+                <h2 className="mt-1 font-display text-[1.4rem] font-semibold text-slate-900 md:text-2xl">{t("Recent diet plans")}</h2>
                 </div>
               </div>
               <Link to={lastReport ? `/patient/report/${lastReport.id}/diet` : "/patient/reports"} className="text-sm font-medium text-blue-600 hover:text-blue-700">
@@ -381,10 +381,10 @@ const PatientDashboard = () => {
                   <Link
                     key={plan.reportId}
                     to={`/patient/report/${plan.reportId}/diet`}
-                    className="flex items-start gap-3 rounded-[22px] border border-slate-200 bg-slate-50/70 p-4 transition hover:bg-white hover:shadow-md"
+                    className="flex items-start gap-3 rounded-[20px] border border-slate-200 bg-slate-50/70 p-3.5 transition hover:bg-white hover:shadow-md md:rounded-[22px] md:p-4"
                   >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-sm">
-                      <Utensils className="h-5 w-5" />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-sm md:h-11 md:w-11">
+                      <Utensils className="h-4.5 w-4.5 md:h-5 md:w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold text-slate-900">{plan.title}</p>
@@ -403,30 +403,30 @@ const PatientDashboard = () => {
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:rounded-[28px] md:p-6">
             <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
-                <Shield className="h-6 w-6" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm md:h-12 md:w-12">
+                <Shield className="h-5 w-5 md:h-6 md:w-6" />
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.22em] text-slate-400">{t("Health inspiration")}</p>
-                <h2 className="mt-1 font-display text-2xl font-semibold text-slate-900">{t("Daily motivation")}</h2>
+                <h2 className="mt-1 font-display text-[1.4rem] font-semibold text-slate-900 md:text-2xl">{t("Daily motivation")}</h2>
               </div>
             </div>
 
-            <div className="rounded-[22px] bg-slate-50 p-5">
+            <div className="rounded-[20px] bg-slate-50 p-4 md:rounded-[22px] md:p-5">
               <div className="flex items-start gap-3">
                 <Shield className="mt-1 h-5 w-5 shrink-0 text-blue-600" />
-                <p className="text-base leading-7 text-slate-700">{t(HEALTH_TIPS[tipIndex])}</p>
+                <p className="text-[15px] leading-6 text-slate-700 md:text-base md:leading-7">{t(HEALTH_TIPS[tipIndex])}</p>
               </div>
             </div>
 
-            <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50/70 p-5">
+            <div className="mt-4 rounded-[20px] border border-slate-200 bg-slate-50/70 p-4 md:rounded-[22px] md:p-5">
               <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
                 <Sparkles className="h-3.5 w-3.5 text-blue-600" />
                 {t("Quote")}
               </p>
-              <p className="mt-3 text-sm leading-7 text-slate-600 md:text-base">{quote}</p>
+              <p className="mt-2.5 text-[15px] leading-6 text-slate-600 md:text-base md:leading-7">{quote}</p>
             </div>
           </section>
         </div>

@@ -210,7 +210,7 @@ function FeedbackCard({ feedback }: { feedback: Exclude<FeedbackState, null> }) 
   const Icon = feedback.tone === "success" ? CheckCircle2 : AlertCircle;
 
   return (
-    <div className={`rounded-[28px] border px-5 py-5 shadow-sm ${toneClass}`}>
+    <div className={`rounded-[24px] border px-4 py-4 shadow-sm md:rounded-[28px] md:px-5 md:py-5 ${toneClass}`}>
       <div className="flex items-start gap-3">
         <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/90 shadow-sm">
           <Icon className="h-4.5 w-4.5" />
@@ -249,7 +249,7 @@ function StatChip({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 shadow-sm">
       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
+      <p className="mt-1.5 text-[1.7rem] font-semibold leading-none text-slate-950 md:mt-2 md:text-2xl">{value}</p>
     </div>
   );
 }
@@ -272,8 +272,8 @@ function SectionIntro({
       </div>
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">{eyebrow}</p>
-        <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-slate-950">{title}</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">{description}</p>
+        <h2 className="mt-2 font-display text-[1.4rem] font-semibold tracking-tight text-slate-950 md:text-2xl">{title}</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 md:leading-7">{description}</p>
       </div>
     </div>
   );
@@ -772,14 +772,14 @@ export default function EmergencyIdentity() {
 
   return (
     <PatientLayout>
-      <div className="mx-auto max-w-5xl space-y-4 animate-fade-in">
-        <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,_#f8fbff_0%,_#eef5ff_45%,_#ffffff_100%)] p-4 shadow-sm md:p-6">
+      <div className="mx-auto max-w-5xl space-y-3.5 animate-fade-in md:space-y-4">
+        <section className="rounded-[24px] border border-slate-200 bg-[linear-gradient(135deg,_#f8fbff_0%,_#eef5ff_45%,_#ffffff_100%)] p-4 shadow-sm md:rounded-[28px] md:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-2xl">
               <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-700">
                 {orderConfirmed ? "Activation complete" : "Emergency Identity"}
               </p>
-              <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-slate-950 md:text-4xl">
+              <h1 className="mt-2 font-display text-[1.75rem] font-semibold tracking-tight text-slate-950 md:text-4xl">
                 {orderConfirmed ? "Emergency Identity is active." : "Activate your emergency kit access step by step."}
               </h1>
               <p className="mt-3 text-sm leading-7 text-slate-600 md:text-base">{heroStatus}</p>
@@ -905,7 +905,7 @@ export default function EmergencyIdentity() {
         )}
 
         {!orderConfirmed && (
-        <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:rounded-[28px] md:p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
@@ -981,7 +981,7 @@ export default function EmergencyIdentity() {
         )}
 
         {!orderConfirmed && activeStep === "verify" && (
-          <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:rounded-[30px] md:p-6">
             <SectionIntro
               eyebrow="Step 1"
               title="Verify your phone number"
@@ -1033,7 +1033,7 @@ export default function EmergencyIdentity() {
         )}
 
         {!orderConfirmed && activeStep === "records" && (
-          <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:rounded-[30px] md:p-6">
             <SectionIntro
               eyebrow="Step 2"
               title="Secure your medical history"
@@ -1065,7 +1065,7 @@ export default function EmergencyIdentity() {
         )}
 
         {!orderConfirmed && activeStep === "profile" && (
-          <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:rounded-[30px] md:p-6">
             <SectionIntro
               eyebrow="Step 3"
               title="Complete the emergency profile"
@@ -1128,7 +1128,7 @@ export default function EmergencyIdentity() {
         )}
 
         {!orderConfirmed && activeStep === "qr" && (
-          <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:rounded-[30px] md:p-6">
             <SectionIntro
               eyebrow="Steps 4 & 5"
               title="Activate the Digital Health ID card"
@@ -1179,7 +1179,7 @@ export default function EmergencyIdentity() {
         )}
 
         {!orderConfirmed && activeStep === "validation" && (
-          <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:rounded-[30px] md:p-6">
             <SectionIntro
               eyebrow="Secure validation"
               title="Finalize eligibility with a protected activation sequence"
@@ -1230,7 +1230,7 @@ export default function EmergencyIdentity() {
         )}
 
         {!orderConfirmed && activeStep === "order" && (
-          <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:rounded-[30px] md:p-6">
             <SectionIntro
               eyebrow="Founding500 access"
               title="Secure ordering for the physical Emergency Kit"
